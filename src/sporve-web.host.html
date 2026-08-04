@@ -1,6 +1,7 @@
 <title>Sporve for Web</title>
 
 <style>
+/*__FONTFACE__*/
 /* ═══════════════════════════════════════════════════════════════════
    SPORVE WEB — light counterpart to the dark mobile app.
    Ground/ink inverted per spec; slate #475569 brand accent carried
@@ -11,7 +12,7 @@
   --paper:#FFFFFF;
   --raise:#F7F8FA;      /* surface-1 — slate-cast, not neutral grey */
   --raise2:#EFF2F5;     /* surface-2 */
-  --ink:#0B0C0E;
+  --ink:#000000;
   /* Text runs BLACKER than a typical marketing page on purpose: the app's dark
      theme puts near-white on black, so the light counterpart holds the same
      contrast weight rather than fading to grey. */
@@ -34,22 +35,54 @@
   --danger:#C4362F;
   --shadow:0 1px 2px rgba(11,12,14,.05),0 8px 24px -12px rgba(11,12,14,.16);
   --shadow-lift:0 2px 6px rgba(11,12,14,.07),0 18px 48px -18px rgba(11,12,14,.26);
-  --r-s:8px; --r-m:12px; --r-l:16px; --r-xl:22px;
-  /* ── TYPE: two roles, two families (spec Part 1) ────────────────────────
-     The spec calls for Bricolage Grotesque (display) + Hanken Grotesk (body).
-     Neither is loaded here: this page runs under a CSP that blocks font CDNs,
-     and embedding them needs the .woff2 binaries as data URIs, which aren't
-     available offline. Linking Google Fonts would silently fall back to a
-     system face and LOOK like the spec was followed when it wasn't.
-     So the two ROLES are real CSS variables and the whole page is wired
-     through them — dropping the real faces in is a two-line change:
-       @font-face{font-family:"Bricolage Grotesque";src:url(data:font/woff2;base64,...)}
-       --display:"Bricolage Grotesque",<fallback stack below>;
-     Until then both roles resolve to the platform grotesque, and the display
-     role carries its character through weight and tracking instead. */
-  /* Arial across both roles — ships on every OS, so nothing silently falls
-     back. Hierarchy comes from weight and tracking instead of two families. */
-  --display:Arial,"Helvetica Neue",Helvetica,"Liberation Sans","Nimbus Sans",sans-serif;
+  /* ── RADII: exactly three values. control / card / pill.
+     The four legacy names are kept as aliases so the ten feature modules keep
+     working, but they now resolve to only these three, app-wide. */
+  --r-ctl:10px; --r-card:16px; --r-pill:999px;
+  --r-s:var(--r-ctl); --r-m:var(--r-ctl); --r-l:var(--r-card); --r-xl:var(--r-card);
+
+  /* ── ACCENT: one hue, for the filled primary and active states only.
+     Deliberately NOT persimmon (~#EC5800): the sport ramp already owns that
+     band — Basketball #DA5A05, Climbing #CE6600, Football #C27000 — and a brand
+     accent inside it would read as "the basketball colour" on a page whose whole
+     premise is that sport colour means sport. #C2410C sits darker and redder
+     than every sport token. */
+  --accent:#C2410C; --accent-ink:#9A3412; --accent-tint:#FDF0E9;
+  --accent-ring:rgba(194,65,12,.30);
+
+  /* ── TYPE SCALE: six steps, no seventh. Every text element maps to one. */
+  --t-display:clamp(38px,4.2vw,56px);
+  --t-h2:30px; --t-h3:19px; --t-body:16px; --t-small:14px; --t-micro:11.5px;
+
+  /* ── CONTROL HEIGHTS: two only. */
+  --h-ctl:48px; --h-compact:36px;
+
+  /* type on the dark hero panel — never mid-grey on black */
+  --on-dark:#FFFFFF; --on-dark-2:#C7D0DA;
+  /* ── TYPE: Sentinel (Hoefler&Co) ────────────────────────────────────────
+     Sentinel is a LICENSED, PAID face. It is not bundled here and cannot be:
+     redistributing the binaries inside this file would breach Hoefler&Co's
+     licence, and the page runs under a CSP that blocks cloud.typography
+     anyway. Both roles therefore NAME Sentinel first and fall through a
+     deliberately slab-serif stack, so an unlicensed viewer still reads a slab
+     rather than silently collapsing to Arial and hiding the gap.
+
+     To ship the real face, drop the licensed webfont files in:
+         assets/fonts/Sentinel-<Weight>.woff2
+     and run `python3 src/build.py`. It emits the @font-face rules and inlines
+     each file as a data URI, so the page stays one self-contained file.
+     Recognised weights: Light 300, Book 400, Medium 500, Semibold 600,
+     Bold 700, Black 800 — plus any -Italic variant of those.
+
+     Fallbacks, in order: Hoefler's cloud.typography split families, a
+     self-hosted "Sentinel", then Rockwell (a true geometric slab, ships with
+     MS Office), the free Google slabs if present, Charter/Georgia as sturdy
+     serifs, and finally the platform serif. */
+  --display:"Sentinel A","Sentinel B",Sentinel,"Sentinel SSm A","Sentinel SSm B",
+            Rockwell,"Roboto Slab","Zilla Slab","Bitter",Charter,"Iowan Old Style",
+            Georgia,"Times New Roman",serif;
+  /* Reading size stays on the plain grotesque — it ships on every OS, so
+     nothing at body size silently falls back to something unchosen. */
   --sans:Arial,"Helvetica Neue",Helvetica,"Liberation Sans","Nimbus Sans",sans-serif;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   --shell:1240px;
@@ -73,20 +106,35 @@ body{
   font-family:var(--sans);font-size:15px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
 }
-/* Display role: headings, nav links, buttons, toggle labels, wordmark.
-   Body role (--sans, set on <body>): placeholders, card metadata, descriptions,
-   footer. Two families total — nothing on the page uses a third. */
-h1,h2,h3,h4,.display,.wordmark,.navlink,.btn,.roleswitch button,.seg2 button,
-.faqq,.stile b,.feat b,.step3 b,.tritem,.bignum{font-family:var(--display)}
-h1,h2,h3,h4{margin:0;text-wrap:balance;letter-spacing:-.022em;font-weight:700;line-height:1.15}
-h1{font-size:clamp(28px,3.4vw,40px);font-weight:800;letter-spacing:-.032em}
-h2{font-size:22px}
-h3{font-size:17px}
+/* A cool wash behind the browse grid so white cards read as surfaces rather
+   than as holes in the page. Fixed, so it does not slide under the footer. */
+#app{
+  background:
+    radial-gradient(1100px 520px at 88% 4%,rgba(99,124,180,.10),transparent 62%),
+    linear-gradient(180deg,var(--paper) 0%,var(--paper) 12%,rgba(238,241,251,.72) 100%);
+}
+/* ── TYPE CONTRACT ───────────────────────────────────────────────────
+   The display face appears in exactly ONE place: the hero H1. Everything
+   else on the page — nav, headings, body, cards, buttons, chips, footer —
+   runs in the body face. Previously the slab also took h1, h2, .wordmark
+   and .bignum, which is what made the page read as a poster. */
+.hero .display{font-family:var(--display)}
+body,h1,h2,h3,h4,.wordmark,.bignum,.navlink,.btn,.roleswitch button,.seg2 button,
+.faqq,.stile b,.feat b,.step3 b,.tritem,.tnav,.fchip,.advfilters,.prodcard b,
+.card .ttl,input,select,textarea,button{font-family:var(--sans)}
+h1,h2,h3,h4{margin:0;text-wrap:balance;letter-spacing:-.022em;font-weight:700;line-height:1.2}
+h1{font-size:var(--t-h2);font-weight:700;letter-spacing:-.028em}
+h2{font-size:var(--t-h2);letter-spacing:-.026em}
+h3{font-size:var(--t-h3);letter-spacing:-.018em}
+h4{font-size:var(--t-body)}
 p{margin:0}
 a{color:inherit}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 img{max-width:100%;display:block}
-:focus-visible{outline:2px solid var(--slate);outline-offset:2px;border-radius:4px}
+:focus-visible{outline:2px solid var(--slate);outline-offset:2px;border-radius:var(--r-ctl)}
+/* a square ring around a pill reads as a bug — match the target's shape */
+.acct:focus-visible,.roleswitch button:focus-visible,.fchip:focus-visible,
+.searchpill .go:focus-visible,.heart:focus-visible{border-radius:var(--r-pill)}
 .num{font-variant-numeric:tabular-nums}
 .eyebrow{
   font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
@@ -107,6 +155,13 @@ img{max-width:100%;display:block}
   display:grid;place-items:center;font-weight:800;font-size:17px;letter-spacing:-.04em;
 }
 .wordmark{font-size:20px;font-weight:800;letter-spacing:-.045em;color:var(--slate)}
+/* Lockup in the bar and the footer: uppercase, no badge — the badge survives
+   where it stands alone (auth sheet, avatar fallbacks). The wordmark is the
+   one piece of text that is NOT black: it carries the slate brand colour. */
+.topbar .brand .mark,.footbase .mark{display:none}
+.topbar .wordmark,.footbase .wordmark,.footbrand .wordmark{
+  text-transform:uppercase;letter-spacing:-.005em;color:var(--slate);font-size:var(--t-h3);
+}
 .searchpill{
   flex:1;max-width:520px;display:flex;align-items:center;gap:0;
   border:1px solid var(--rule-strong);border-radius:999px;box-shadow:var(--shadow);
@@ -122,62 +177,46 @@ img{max-width:100%;display:block}
   width:36px;height:36px;border-radius:999px;background:var(--slate);color:#fff;
   display:grid;place-items:center;flex:0 0 auto;
 }
-.topnav{display:flex;align-items:center;gap:4px;margin-left:auto;flex:0 0 auto}
-.tnav{
-  padding:9px 13px;border-radius:999px;font-size:14px;font-weight:600;color:var(--ink-2);
-  transition:background .15s,color .15s;white-space:nowrap;
+/* ── primary nav cluster — Product · Filters · Saved · Sport ──────────
+   Sits where the search pill used to, at Amboras' nav scale rather than the
+   14px the folded-away subnav used. */
+.tnav-row{display:flex;align-items:center;gap:28px;flex:0 0 auto;margin-left:20px;min-width:0}
+.tnav-row .tnav{
+  display:inline-flex;align-items:center;gap:7px;height:var(--h-compact);padding:0 2px;
+  border-radius:0;font-size:var(--t-body);font-weight:600;letter-spacing:-.012em;
+  color:var(--ink-2);background:none;
 }
-.tnav:hover{background:var(--raise)}
-.tnav.on{background:var(--slate-tint);color:var(--slate)}
-.acct{
-  display:flex;align-items:center;gap:8px;border:1px solid var(--rule-strong);
-  border-radius:999px;padding:5px 6px 5px 12px;box-shadow:var(--shadow);
-}
-.acct:hover{box-shadow:var(--shadow-lift)}
-.avatar{
-  width:30px;height:30px;border-radius:999px;background:var(--slate);color:#fff;
-  display:grid;place-items:center;font-size:12px;font-weight:700;overflow:hidden;flex:0 0 auto;
-}
-.avatar img{width:100%;height:100%;object-fit:cover}
-/* role switch — the app's two portals, side by side on web */
-.roleswitch{display:flex;background:var(--raise2);border-radius:999px;padding:3px;gap:2px}
-.roleswitch button{
-  padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--muted);
-  letter-spacing:-.01em;transition:.15s;
-}
-.roleswitch button.on{background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}
-
-/* sub-nav (client tabs — the app's bottom nav, promoted to a top rail) */
-.subnav{border-bottom:1px solid var(--rule);background:var(--paper);position:sticky;top:76px;z-index:55}
-.subnav-in{display:flex;gap:26px;overflow-x:auto}
-.snav{
-  padding:15px 0;font-size:14px;font-weight:600;color:var(--muted);
-  border-bottom:2px solid transparent;white-space:nowrap;transition:.15s;
-}
-.snav:hover{color:var(--ink)}
-.snav.on{color:var(--ink);border-bottom-color:var(--ink)}
-.snav .badge{
-  display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 5px;margin-left:6px;
+.tnav-row .tnav:hover{background:none;color:var(--ink)}
+.tnav-row .tnav.on{background:none;color:var(--ink)}
+.tnav-row .badge{
+  display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;
   border-radius:999px;background:var(--slate);color:#fff;font-size:10.5px;font-weight:700;
 }
+.sportbtn.on .chev{transform:rotate(180deg)}
+.chev{transition:transform .18s}
 
-/* ── nav links + product mega-menu ───────────────────────────────── */
-.navlink{
-  display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;
-  font-size:14px;font-weight:650;color:var(--ink);white-space:nowrap;transition:background .15s;
+/* ── Product mega-menu, on hover ──────────────────────────────────────
+   Pure CSS, no state. render() rewrites #app wholesale on every click, which
+   would strand a JS-tracked hover (mouseleave never fires on a node that has
+   been replaced). :hover/:focus-within cannot desync. The invisible ::after
+   bridges the gap between button and panel so a diagonal mouse path does not
+   drop the hover mid-travel. */
+.prodwrap{position:static;display:inline-flex}
+.prodwrap>.tnav::after{
+  content:"";position:absolute;left:0;right:0;top:100%;height:14px;
 }
-.navlink:hover{background:var(--raise2)}
-.navlink.prod{flex:0 0 auto}
-.navlink.prod.on{background:var(--raise2)}
-.navlink .cnt{
-  display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;
-  border-radius:999px;background:var(--slate);color:#fff;font-size:11px;font-weight:700;
-}
-.becomecoach{color:var(--slate)}
 .productmenu{
-  position:absolute;left:0;right:0;top:100%;background:var(--paper);
-  border-bottom:1px solid var(--rule);box-shadow:var(--shadow-lift);z-index:70;
+  position:absolute;left:0;right:0;top:100%;z-index:70;
+  background:var(--paper);border-bottom:1px solid var(--rule);
+  box-shadow:var(--shadow-lift);
+  opacity:0;visibility:hidden;transform:translateY(-6px);
+  transition:opacity .16s,transform .16s,visibility .16s;
 }
+.prodwrap:hover .productmenu,.prodwrap:focus-within .productmenu{
+  opacity:1;visibility:visible;transform:none;
+}
+.prodwrap:hover>.tnav,.prodwrap:focus-within>.tnav{color:var(--ink)}
+.prodwrap:hover .chev,.prodwrap:focus-within .chev{transform:rotate(180deg)}
 .pmgrid{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;padding:26px 24px 22px}
 .pmcol{display:flex;flex-direction:column;gap:2px;padding:0 26px}
 .pmcol:first-child{padding-left:0}
@@ -198,34 +237,287 @@ img{max-width:100%;display:block}
   font-weight:700;color:var(--slate);border-radius:var(--r-m);
 }
 .pmcta:hover{background:var(--slate-tint)}
-@media(max-width:900px){
-  .navlink.prod,.becomecoach,.navlink.saved{display:none}
-  .productmenu{display:none}
+@media(max-width:900px){.productmenu{display:none}}
+
+/* ── sport chooser — the disc rail folded into one dropdown ───────── */
+.sportmenu{
+  position:absolute;top:100%;z-index:70;margin-top:-6px;
+  background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-l);
+  box-shadow:var(--shadow-lift);padding:12px;width:min(560px,calc(100vw - 32px));
+  max-height:min(420px,70vh);overflow-y:auto;
+}
+.sportmenu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}
+.smrow{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--r-m);
+  text-align:left;font-size:14.5px;font-weight:600;color:var(--ink-2);transition:background .13s;
+}
+.smrow:hover{background:var(--raise)}
+.smrow .box{
+  width:19px;height:19px;border-radius:6px;border:1.6px solid var(--rule-strong);
+  display:grid;place-items:center;flex:0 0 auto;color:#fff;transition:.13s;
+}
+.smrow.on .box{background:var(--sc,var(--slate));border-color:var(--sc,var(--slate))}
+.smrow .box svg{opacity:0}
+.smrow.on .box svg{opacity:1}
+.smrow .em{font-size:17px;line-height:1;filter:grayscale(1) opacity(.8)}
+.smrow.on{color:var(--ink)}
+.smrow.on .em{filter:none}
+.smrow .n{margin-left:auto;color:var(--faint);font-size:12.5px;font-weight:600}
+.sportmenu-foot{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  margin-top:10px;padding-top:11px;border-top:1px solid var(--rule);
+}
+@media(max-width:560px){.sportmenu-grid{grid-template-columns:1fr}}
+
+.topnav{display:flex;align-items:center;gap:4px;margin-left:auto;flex:0 0 auto}
+.tnav{
+  padding:9px 13px;border-radius:999px;font-size:14px;font-weight:600;color:var(--ink-2);
+  transition:background .15s,color .15s;white-space:nowrap;
+}
+.tnav:hover{background:var(--raise)}
+.tnav.on{background:var(--slate-tint);color:var(--slate)}
+/* §4 — one pill, 46px, hairline, white. Shadow appears on hover only, so the
+   control sits quietly in the bar instead of announcing itself. */
+.acct{
+  display:flex;align-items:center;gap:9px;height:46px;padding:0 7px 0 14px;
+  border:1px solid var(--rule-strong);border-radius:var(--r-pill);
+  background:var(--paper);box-shadow:none;
+  transition:box-shadow .15s,border-color .15s;
+}
+.acct:hover{box-shadow:var(--shadow);border-color:var(--slate)}
+.acct .burger{width:16px;height:11px;display:grid;gap:3.2px;flex:0 0 auto}
+.acct .burger span{height:1.5px;background:currentColor;display:block}
+.acct .avatar{width:32px;height:32px;font-size:12.5px}
+.avatar{
+  width:32px;height:32px;border-radius:var(--r-pill);background:var(--slate);color:#fff;
+  display:grid;place-items:center;font-size:12.5px;font-weight:600;overflow:hidden;flex:0 0 auto;
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+/* §3 — one component, not two adjacent buttons: shared container, hairline
+   border, equal-width segments, active = white on near-black. */
+.roleswitch{
+  display:flex;height:var(--h-compact);padding:3px;gap:0;
+  background:var(--paper);border:1px solid var(--rule-strong);border-radius:var(--r-pill);
+}
+.roleswitch button{
+  flex:1 0 0;min-width:74px;padding:0 14px;border-radius:var(--r-pill);
+  font-size:var(--t-small);font-weight:600;color:var(--muted);letter-spacing:-.01em;
+  transition:background .15s ease,color .15s ease;
+}
+.roleswitch button:hover{color:var(--ink)}
+.roleswitch button.on{background:var(--ink);color:#fff;box-shadow:none}
+
+/* ── nav links ───────────────────────────────────────────────────── */
+/* §3 tertiary — a text link, not a pill. One weight, one size, matching the
+   primary nav row so the whole bar reads as one set. */
+.navlink{
+  display:inline-flex;align-items:center;gap:6px;height:var(--h-compact);padding:0 2px;
+  border-radius:0;font-size:var(--t-body);font-weight:600;color:var(--ink);
+  white-space:nowrap;transition:color .15s;
+}
+.navlink:hover{background:none;color:var(--slate)}
+@media(max-width:1180px){
+  .becomecoach{display:none}
+  .tnav-row{gap:18px;margin-left:8px}
+  .tnav-row .tnav{font-size:15.5px}
+}
+@media(max-width:820px){
+  .tnav-row{overflow-x:auto;scrollbar-width:none}
+  .tnav-row::-webkit-scrollbar{display:none}
 }
 
-/* ── sport filter rail ───────────────────────────────────────────── */
-.sportrail{display:flex;gap:26px;overflow-x:auto;padding:18px 0 16px;scrollbar-width:thin}
-.sportchip{
-  display:flex;flex-direction:column;align-items:center;gap:7px;min-width:64px;
-  color:var(--muted);border-bottom:2px solid transparent;padding-bottom:10px;transition:.15s;
+/* ── hero panel — inset rounded photograph, search sitting on it ───
+   Amboras' inset-panel geometry at a smaller height, with Zillow's
+   search-inside-the-image placement. The dark gradient is painted in the same
+   background shorthand as the photo, so a photo that never loads still leaves
+   white type on something dark rather than on white. */
+/* Sits directly under the bar now — the tab rail that used to divide
+   them is gone, and the panel absorbs its height. */
+/* §6 — same content, honest proportions. The panel's height is now defined by
+   its content (96 top + stack + 96 bottom) instead of a min-height clamp that
+   left ~160px of empty dark below the search bar. Margins match the page
+   gutter, so the panel's edges line up with the card grid beneath it. */
+.hero{padding:24px 0 0}
+.hero-panel{
+  position:relative;overflow:hidden;
+  width:min(100% - 48px, calc(var(--shell) - 48px));margin:0 auto;
+  border-radius:var(--r-card);
+  display:grid;place-items:center;
+  background:
+    var(--hero-img,none) center/cover no-repeat,
+    /* near-black with a slate tint under ~4% lightness variance — material,
+       not a void, and no visible banding */
+    radial-gradient(120% 88% at 50% 0%,#141922 0%,#0E1116 58%,var(--ink) 100%);
 }
-.sportchip .glyph{font-size:22px;line-height:1;filter:grayscale(1) opacity(.55);transition:.15s}
-.sportchip span{font-size:11.5px;font-weight:600;white-space:nowrap;letter-spacing:-.01em}
-.sportchip:hover{color:var(--ink)}
-.sportchip:hover .glyph{filter:none}
-.sportchip.on{color:var(--ink);border-bottom-color:var(--ink)}
-.sportchip.on .glyph{filter:none}
+/* the scrim only exists when a photograph is actually behind it */
+.hero-panel[style*="--hero-img"]::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(9,11,16,.42) 0%,rgba(9,11,16,.62) 55%,rgba(9,11,16,.80) 100%);
+}
+.hero-in{
+  position:relative;z-index:1;text-align:center;max-width:820px;width:100%;
+  padding:96px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;
+}
+.hero .display{
+  color:var(--on-dark);font-size:var(--t-display);font-weight:700;
+  letter-spacing:-.03em;line-height:1.05;max-width:24ch;
+}
+.sp-val{min-height:22px}
+.hero-lede{
+  color:var(--on-dark-2);font-size:var(--t-h3);font-weight:400;max-width:600px;line-height:1.5;
+}
+/* §5 — one continuous pill. Definition comes from a soft shadow and a hairline,
+   not a heavy border. Each side carries a micro-label so the field still says
+   what it is after the placeholder is typed over — the single biggest reason
+   the old bar read as generic. */
+.hero .searchpill{
+  width:min(720px,100%);max-width:none;height:64px;margin-top:16px;flex:0 0 auto;
+  align-items:stretch;gap:0;padding:0 8px 0 0;
+  border:1px solid var(--rule);border-radius:var(--r-pill);
+  background:var(--paper);box-shadow:var(--shadow);
+  transition:box-shadow .18s;
+}
+.hero .searchpill:hover{box-shadow:var(--shadow-lift)}
+.hero .searchpill:focus-within{box-shadow:var(--shadow-lift),0 0 0 3px var(--accent-ring)}
+.sp-seg{
+  display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:left;
+  flex:1;min-width:0;padding:0 24px;cursor:text;
+  border-radius:var(--r-pill);transition:background .15s;
+}
+.sp-seg:focus-within{background:var(--raise)}
+.sp-where{flex:0 0 34%}
+.sp-lbl{
+  font-size:var(--t-micro);font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--faint);line-height:1;
+}
+.sp-val{display:flex;align-items:center;gap:8px;min-width:0}
+.sp-val svg{width:16px;height:16px;flex:0 0 auto;color:var(--faint)}
+.hero .searchpill .seg{padding:0;font-size:var(--t-body);line-height:1.3;height:auto}
+.hero .searchpill .divider{height:34px;align-self:center;background:var(--rule)}
+.hero .searchpill:focus-within .divider{background:transparent}
+.hero .searchpill .go{
+  width:46px;height:46px;align-self:center;flex:0 0 auto;
+  background:var(--accent);color:#fff;transition:background .15s,transform .12s;
+}
+.hero .searchpill .go:hover{background:var(--accent-ink)}
+.hero .searchpill .go:active{transform:scale(.96)}
+.hero .searchpill .go svg{width:18px;height:18px}
+
+@media(max-width:640px){
+  .hero{padding:16px 0 0}
+  .hero-panel{width:calc(100% - 24px);border-radius:var(--r-card)}
+  .hero-in{padding:56px 18px;gap:14px}
+  .hero .searchpill{height:auto;flex-wrap:wrap;padding:8px;gap:6px;border-radius:var(--r-card)}
+  .sp-seg,.sp-where{flex:1 0 100%;padding:10px 14px;border:1px solid var(--rule);border-radius:var(--r-ctl)}
+  .hero .searchpill .divider{display:none}
+  .hero .searchpill .go{width:100%;height:var(--h-ctl);border-radius:var(--r-ctl)}
+}
+
+/* ── quick filter chips ──────────────────────────────────────────── */
+/* §3 — 36px, pill, hairline. Real toggle states: active is a near-black fill,
+   not a tint. The count shares the row's baseline rather than floating. */
+.fchips{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  padding:0 0 24px;border-bottom:1px solid var(--rule);
+}
+.fchip{
+  display:inline-flex;align-items:center;gap:8px;height:var(--h-compact);padding:0 16px;
+  border-radius:var(--r-pill);background:var(--paper);border:1px solid var(--rule-strong);
+  color:var(--ink-2);font-size:var(--t-small);font-weight:500;letter-spacing:-.008em;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.fchip:hover{background:var(--raise);border-color:var(--ink-2);color:var(--ink)}
+.fchip:focus-visible{outline:none;box-shadow:0 0 0 3px var(--slate-ring)}
+.fchip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.fchip.on:hover{background:var(--ink-2);border-color:var(--ink-2)}
+.fchip svg{width:16px;height:16px;flex:0 0 auto}
+.fchip .xm{display:inline-flex;opacity:.7}
+.fchip.on:hover .xm{opacity:1}
+.fcount{margin-left:auto;color:var(--faint);font-size:var(--t-small);line-height:var(--h-compact)}
+
+/* ── product overview page ───────────────────────────────────────── */
+.exhero{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:30px;
+  padding:48px 0 4px;flex-wrap:wrap;
+}
+.exhero h1{font-size:clamp(30px,4.2vw,50px);letter-spacing:-.042em;font-weight:800;line-height:1.04}
+.exlede{color:var(--muted);font-size:16px;max-width:560px;margin-top:14px;line-height:1.5}
+.advfilters{
+  display:inline-flex;align-items:center;gap:9px;padding:12px 20px;border-radius:999px;
+  background:var(--paper);border:1px solid var(--rule-strong);font-weight:650;font-size:14.5px;
+  box-shadow:var(--shadow);transition:.15s;flex:0 0 auto;
+}
+.advfilters:hover{border-color:var(--ink);transform:translateY(-1px)}
+.prodgrid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));
+  gap:18px;padding:6px 0 12px;
+}
+.prodcard{
+  text-align:left;display:flex;flex-direction:column;gap:7px;padding:22px;
+  background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-l);transition:.16s;
+}
+.prodcard:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:var(--shadow-lift)}
+.prodcard .ic{
+  width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+  background:var(--slate-tint);font-size:20px;margin-bottom:7px;color:var(--slate);
+}
+.prodcard .ic svg{width:20px;height:20px}
+.prodcard b{font-size:16.5px;letter-spacing:-.022em}
+.prodcard span{color:var(--muted);font-size:14px;line-height:1.5}
+.prodsec{padding:34px 0 8px}
+.prodsec h2{font-size:24px;letter-spacing:-.03em}
+.prodsec .sub{color:var(--muted);font-size:15.5px;margin-top:8px;max-width:620px}
 
 /* ── cards ───────────────────────────────────────────────────────── */
 .grid{
-  display:grid;gap:26px 22px;
+  display:grid;gap:24px 22px;
   grid-template-columns:repeat(auto-fill,minmax(258px,1fr));
-  padding:8px 0 56px;
+  padding:30px 0 56px;
 }
-.card{text-align:left;display:flex;flex-direction:column;gap:9px;position:relative}
+.card{
+  text-align:left;display:flex;flex-direction:column;gap:9px;position:relative;
+  background:var(--paper);border-radius:var(--r-xl);overflow:hidden;
+  box-shadow:0 1px 2px rgba(11,12,14,.05),0 12px 30px -20px rgba(11,12,14,.3);
+  transition:transform .18s cubic-bezier(.2,.7,.3,1),box-shadow .18s;
+}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}
+.card>*:not(.shot):not(.featfoot){padding-left:16px;padding-right:16px}
+.card>*:last-child:not(.featfoot){padding-bottom:17px}
 .card .shot{
-  position:relative;aspect-ratio:20/19;border-radius:var(--r-l);overflow:hidden;background:var(--raise2);
+  position:relative;aspect-ratio:20/19;overflow:hidden;background:var(--raise2);
 }
+
+/* ── featured card — two columns wide, content over the photograph ─ */
+/* order:-1 rather than DOM position: MOD_SEARCH sorts the grid by reordering
+   the card nodes, so the wide card has to hold the lead slot in the layout. */
+.card.feature{grid-column:span 2;gap:0;order:-1}
+.card.feature .shot{aspect-ratio:16/9}
+.card.feature .fov{
+  position:absolute;inset:auto 0 0 0;z-index:2;padding:22px;pointer-events:none;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:18px;color:#fff;
+  background:linear-gradient(to top,rgba(8,10,14,.88),rgba(8,10,14,.34) 58%,transparent);
+}
+.card.feature .fov h3{font-size:clamp(22px,2.4vw,30px);font-weight:800;letter-spacing:-.032em;color:#fff}
+.card.feature .fov .biz2{color:rgba(255,255,255,.8);font-size:14.5px;margin-top:5px}
+.featbadge{
+  display:inline-flex;align-items:center;padding:5px 11px;border-radius:6px;margin-bottom:12px;
+  background:rgba(255,255,255,.16);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.26);
+  font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fff;
+}
+.featrate{
+  display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:999px;
+  background:rgba(255,255,255,.95);color:var(--ink);font-size:14px;font-weight:700;flex:0 0 auto;
+}
+.featfoot{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:17px 20px 19px;
+}
+.featloc{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14.5px}
+.featprice{
+  padding:9px 17px;border-radius:999px;background:var(--slate-tint);color:var(--ink);
+  font-size:14px;font-weight:700;flex:0 0 auto;
+}
+@media(max-width:640px){.card.feature{grid-column:span 1}.card.feature .shot{aspect-ratio:20/19}}
 .card .shot img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.2,.7,.3,1)}
 .card:hover .shot img{transform:scale(1.045)}
 .heart{
@@ -252,18 +544,29 @@ img{max-width:100%;display:block}
 .pendline{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--warn)}
 
 /* ── generic ui ──────────────────────────────────────────────────── */
+/* §3 — three variants, two heights, nothing else.
+   primary  = .btn          filled accent
+   secondary= .btn.ghost    outline, near-black text
+   tertiary = .navlink/.tlink  text link
+   48px is the default height; .sm is the only other, at 36px. */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  padding:13px 20px;border-radius:var(--r-m);font-weight:650;font-size:15px;
-  background:var(--slate);color:#fff;transition:.15s;letter-spacing:-.012em;
+  height:var(--h-ctl);padding:0 20px;border-radius:var(--r-ctl);
+  font-weight:600;font-size:var(--t-small);letter-spacing:-.008em;
+  background:var(--accent);color:#fff;
+  transition:background .15s,box-shadow .15s,transform .12s;
 }
-.btn:hover{background:var(--slate-deep)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:hover{background:var(--accent-ink)}
+.btn:active{transform:scale(.985)}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-ring)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn[aria-busy="true"]{opacity:.7;cursor:progress}
 .btn.ghost{background:var(--paper);color:var(--ink);border:1px solid var(--rule-strong)}
-.btn.ghost:hover{background:var(--raise);border-color:var(--ink-2)}
+.btn.ghost:hover{background:var(--raise);border-color:var(--ink)}
+.btn.ghost:focus-visible{box-shadow:0 0 0 3px var(--slate-ring)}
 .btn.dark{background:var(--ink);color:var(--paper)}
-.btn.dark:hover{opacity:.86}
-.btn.sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-s)}
+.btn.dark:hover{background:var(--ink-2)}
+.btn.sm{height:var(--h-compact);padding:0 14px;font-size:var(--t-small);border-radius:var(--r-ctl)}
 .btn.wide{width:100%}
 .pill{
   display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;
@@ -701,8 +1004,14 @@ h2.ctr{margin-bottom:10px}
 }
 
 /* ── site footer ─────────────────────────────────────────────────── */
-.sitefoot{border-top:1px solid var(--rule);padding:52px 0 34px;background:var(--paper)}
-.footgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:30px}
+.sitefoot{border-top:1px solid var(--rule);padding:56px 0 30px;background:#EEF1FB}
+:root[data-theme="dark"] .sitefoot{background:var(--raise)}
+.footgrid{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:30px}
+.footbrand{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding-right:20px}
+.footbrand .wordmark{
+  text-transform:uppercase;letter-spacing:-.01em;color:var(--ink);font-size:22px;
+}
+.footbrand p{color:var(--muted);font-size:14px;line-height:1.5;max-width:250px}
 .footcol{display:flex;flex-direction:column;align-items:flex-start;gap:9px}
 .footcol .eyebrow{margin-bottom:3px}
 .footcol button,.footcol a{
@@ -714,6 +1023,10 @@ h2.ctr{margin-bottom:10px}
   margin-top:38px;padding-top:24px;border-top:1px solid var(--rule);
 }
 .footlegal{display:flex;gap:18px;flex-wrap:wrap;color:var(--faint);font-size:13px}
+.footbase{justify-content:center;text-align:center;border-top-color:var(--rule-strong)}
+.footbase .footlegal{justify-content:center}
+@media(max-width:1000px){.footgrid{grid-template-columns:repeat(3,1fr);gap:28px}
+  .footbrand{grid-column:1/-1;padding-right:0}}
 @media(max-width:760px){.footgrid{grid-template-columns:repeat(2,1fr);gap:26px}}
 
 /* ── notification settings ───────────────────────────────────────── */
@@ -776,6 +1089,45 @@ h2.ctr{margin-bottom:10px}
   .incl{grid-template-columns:1fr}
   .shell{padding:0 16px}
 }
+/* ═══════════════════════════════════════════════════════════════════
+   §2 / §7 ENFORCEMENT — the type scale and the radius scale, applied last.
+   Everything above is the design; this block is the audit made executable.
+   Six sizes: 11.5 micro · 14 small · 16 body · 19 h3 · 30 h2 · 56 display.
+   Three radii: 10 control · 16 card · 999 pill.
+   The `#app` prefix is deliberate: module CSS is injected into a <style> that
+   lands after this one, so an id in the selector is what wins without editing
+   ten module files that other work depends on.
+   ═══════════════════════════════════════════════════════════════════ */
+#app .eyebrow,#app .featbadge,#app .verifline,#app .pendline,#app .sporttag,
+#app .se-lbl,#app .se-cmp,#app .co-n,#app .co-lbl,#app .pill,#app .badge,
+#app .fcount .num,#app .card .meta{font-size:var(--t-micro)}
+#app .card .biz,#app .card .ttl,#app .card .price,#app .card .rate,
+#app .fchip,#app .btn,#app .btn.sm,#app select,#app option,#app .se-bar,
+#app .se-sortwrap,#app .co-tpill,#app .fcount,#app .tlink,
+#app .footcol button,#app .footcol a,#app .footlegal,
+#app .footbrand p{font-size:var(--t-small)}
+#app .pmrow b,#app .pmrow span span,#app .se-live,#app .biz2{font-size:var(--t-small)}
+#app .mark,#app input,#app textarea{font-size:var(--t-body)}
+#app .wordmark{font-size:var(--t-h3)}
+
+/* §3 — the sort control shipped as a raw native <select> sitting between two
+   bespoke pills, keeping the OS chrome, radius and font. Same 36px pill as the
+   chips, with a drawn chevron so it reads as part of the set. */
+#app .se-select{
+  height:var(--h-compact);padding:0 34px 0 14px;border-radius:var(--r-pill);
+  border:1px solid var(--rule-strong);background:var(--paper);color:var(--ink-2);
+  font-size:var(--t-small);font-weight:500;line-height:var(--h-compact);
+  appearance:none;-webkit-appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233E4753' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 13px center;
+  transition:border-color .15s,background-color .15s;
+}
+#app .se-select:hover{border-color:var(--ink-2)}
+#app .se-select:focus-visible{outline:none;box-shadow:0 0 0 3px var(--slate-ring)}
+
+/* radii — every rounded thing resolves to one of three */
+#app .mark,#app .featbadge,#app .payst,#app .gscheck{border-radius:var(--r-ctl)}
+#app .pmdot,#app .sporttag i,#app .qdot,#app .tspine,#app .co-dot{border-radius:var(--r-pill)}
 </style>
 
 <div id="app"></div>
@@ -810,6 +1162,12 @@ const SPORT_GLYPH = {
   Gymnastics:"🤸",Squash:"🎾",Wrestling:"🤼",Diving:"🤿",Surfing:"🏄",
   Karate:"🥋",Judo:"🥋",Pickleball:"🏓","Table Tennis":"🏓",
 };
+/* Hero photograph. build.py replaces this token with a base64 data URI when
+   assets/hero-stadium.* exists, so the page stays a single self-contained file
+   and survives the CSP that blocks every external request. Empty means the
+   panel falls back to its dusk-stadium gradient — legible, never white. */
+const HERO_IMG = "__HERO_IMG__".indexOf("__HERO") === 0 ? "" : "__HERO_IMG__";
+
 const sportColor = s => SPORT_COLOR[s] || "#475569";
 const sportGlyph = s => SPORT_GLYPH[s] || "🏅";
 
@@ -933,7 +1291,8 @@ const S={
   /* Home IS the browse grid — the original landing. The marketing scroll that
      briefly lived here is gone; only the nav additions above it were kept. */
   route:{name:"explore",arg:null},
-  productOpen:false,
+  sportOpen:false,                 // the topbar sport chooser
+  sportAnchor:null,                // px offset of the Sport button, for the panel
   showcaseSide:"families",
   faqOpen:null,
   portal:"family",                 // family | coach
@@ -941,7 +1300,7 @@ const S={
   pendingIntent:null,
   guestSaves:0,
   favorites:[],
-  sport:null,
+  sports:[],                       // multi-select; see the S.sport shim below
   query:"",
   filters:{maxPrice:null,verifiedOnly:false,model:null},
   athletes:JSON.parse(JSON.stringify(SEED.athletes)),
@@ -974,6 +1333,20 @@ const S={
     marketing:{email:false,sms:false,push:false},
   },
 };
+/* Sport selection became multi-select, but modules (and saved searches) were
+   written against a single S.sport. This shim keeps that contract honest:
+   reading gives the first selection, writing replaces the whole set. */
+Object.defineProperty(S,"sport",{
+  configurable:true,enumerable:true,
+  get(){return S.sports[0]||null;},
+  set(v){S.sports=v?[v]:[];},
+});
+const toggleSport=s=>{
+  if(!s){S.sports=[];return;}
+  const i=S.sports.indexOf(s);
+  if(i<0) S.sports.push(s); else S.sports.splice(i,1);
+};
+
 const isVerified=()=>S.auth.status==="verified";
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const money=n=>"$"+Number(n).toLocaleString("en-US");
@@ -1013,7 +1386,7 @@ function toggleFav(id){
 /* ═══════════════════ FILTERING ═══════════════════ */
 function visiblePrograms(){
   let list=PROGRAMS.slice();
-  if(S.sport) list=list.filter(p=>p.sport===S.sport);
+  if(S.sports.length) list=list.filter(p=>S.sports.includes(p.sport));
   if(S.query.trim()){
     const q=S.query.toLowerCase();
     list=list.filter(p=>(p.title+" "+p.biz+" "+p.sport+" "+p.desc).toLowerCase().includes(q));
@@ -1032,6 +1405,9 @@ const ICON={
   shield:'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3.4v6c0 5-3.4 9.6-8 10.6-4.6-1-8-5.6-8-10.6v-6z"/></svg>',
   check:'<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M4 12.5l5.5 5.5L20 6"/></svg>',
   x:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  xs:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  sliders:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7h11M18 7h3M3 17h3M10 17h11"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>',
+  pin:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z"/><circle cx="12" cy="11" r="2.6"/></svg>',
   send:'<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20l18-8L3 4l4 8z"/></svg>',
   google:'<svg width="17" height="17" viewBox="0 0 48 48"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.6 5-4.5 7l6.9 5.3C42.5 36.2 45 30.6 45 24z"/><path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.3l-6.9-5.3c-1.9 1.3-4.4 2.2-7.7 2.2-5.9 0-10.9-3.9-12.7-9.2l-7.2 5.5C7.7 41 15.3 46 24 46z"/><path fill="#FBBC05" d="M11.3 28.4c-.5-1.4-.7-2.9-.7-4.4s.3-3 .7-4.4l-7.2-5.5C2.7 17 2 20.4 2 24s.7 7 2.1 9.9z"/><path fill="#EA4335" d="M24 10.2c3.3 0 5.6 1.4 6.9 2.6l5-4.9C32.9 5 28.9 3 24 3 15.3 3 7.7 8 4.1 14.1l7.2 5.5C13.1 14.1 18.1 10.2 24 10.2z"/></svg>',
 };
@@ -1058,23 +1434,44 @@ function cardHTML(p){
   </div>`;
 }
 
-/* Seven-slot nav. Crowding order (spec Part 2): Saved -> Become a coach ->
-   Product fold into the menu. Search pill and Family/Coach toggle never fold. */
+/* The wide card at the head of the grid. Same data as cardHTML — the trust
+   line is kept, because a featured slot must not be able to outrank a missing
+   background check. */
+function featureCardHTML(p){
+  const fav=S.favorites.includes(p.id);
+  return `<div class="card feature">
+    <div class="shot">
+      <img src="${p.img}" alt="${esc(p.title)}" loading="lazy">
+      <button class="heart ${fav?"on":""}" data-fav="${p.id}" aria-label="${fav?"Remove from saved":"Save"} ${esc(p.title)}">${ICON.heart(fav)}</button>
+      <div class="fov">
+        <div>
+          <span class="featbadge">Featured</span>
+          <h3>${esc(p.title)}</h3>
+          <div class="biz2">${esc(p.biz)}</div>
+        </div>
+        <span class="featrate num">${ICON.star}&nbsp;${p.rating}</span>
+      </div>
+      <button data-open="${p.id}" style="position:absolute;inset:0;width:100%;height:100%;z-index:1" aria-label="View ${esc(p.title)}"></button>
+    </div>
+    <div class="featfoot">
+      <span class="featloc">${ICON.pin}${esc(p.address)}</span>
+      ${p.verified
+        ? `<span class="verifline" style="padding:0">${ICON.shield} Background-checked</span>`
+        : `<span class="pendline" style="padding:0">${ICON.shield} Verification pending</span>`}
+      <span class="featprice num">${money(p.price)} / ${esc(modelLabel(p.model).replace(/^per /,""))}</span>
+    </div>
+  </div>`;
+}
+
+/* The bar carries the brand, the four primary controls, and the account
+   cluster. The search pill moved onto the hero photograph; the Product
+   mega-dropdown is gone, replaced by the single Product tab below. */
 function topbarHTML(){
   const u=S.auth.user;
   return `<header class="topbar"><div class="shell topbar-in">
     <button class="brand" data-nav="explore" aria-label="Sporve home">
       <span class="mark">S</span><span class="wordmark">sporve</span></button>
-    <button class="navlink prod ${S.productOpen?"on":""}" data-product="1"
-            aria-expanded="${!!S.productOpen}" aria-haspopup="true">Product
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg></button>
-    <div class="searchpill">
-      <input class="seg" id="q" placeholder="Search sports, coaches, or programs" value="${esc(S.query)}" aria-label="Search">
-      <span class="divider"></span>
-      <input class="seg" id="qloc" placeholder="Miami, FL" style="max-width:120px" aria-label="Location">
-      <button class="go" id="qgo" aria-label="Search">${ICON.search}</button>
-    </div>
+    ${S.portal==="family"?primaryNavHTML():""}
     <nav class="topnav" aria-label="Main">
       <div class="roleswitch" role="tablist" aria-label="View">
         <button role="tab" aria-selected="${S.portal==="family"}" class="${S.portal==="family"?"on":""}" data-portal="family">Family</button>
@@ -1083,62 +1480,109 @@ function topbarHTML(){
       ${S.portal==="family"
         ? `<button class="navlink becomecoach" data-becomecoach="1">Become a coach</button>`
         : `<button class="navlink becomecoach" data-portal="coach" data-coachdash="1">Coach dashboard</button>`}
-      <button class="navlink saved" data-nav="saved">Saved${S.favorites.length?` <span class="cnt num">${S.favorites.length}</span>`:""}</button>
       <button class="acct" data-acct="1" aria-label="Account menu">
-        <span style="width:15px;height:11px;display:grid;gap:3px" aria-hidden="true">
-          <span style="height:1.6px;background:currentColor;display:block"></span>
-          <span style="height:1.6px;background:currentColor;display:block"></span>
-          <span style="height:1.6px;background:currentColor;display:block"></span>
-        </span>
+        <span class="burger" aria-hidden="true"><span></span><span></span><span></span></span>
         <span class="avatar">${u?esc(u.firstName[0]+u.lastName[0]):`<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>`}</span>
       </button>
     </nav>
-  </div>${S.productOpen?productMenuHTML():""}</header>`;
+  </div>${S.sportOpen?sportMenuHTML():""}</header>`;
 }
 
-/* Product mega-dropdown (spec Part 5) — two columns, anchored under the nav. */
+/* Product · Filters · Saved · Sport — the four things a searcher reaches for.
+   Product is a route (one button, no dropdown); Filters and Sport open sheets
+   over whatever is on screen; Saved is a route. */
+function primaryNavHTML(){
+  const advCount=(window.MOD_SEARCH&&MOD_SEARCH.activeCount)?MOD_SEARCH.activeCount():0;
+  const n=S.sports.length;
+  const sportLabel=n===0?"Sport":n===1?S.sports[0]:`${n} sports`;
+  const badge=v=>v?`<span class="badge num">${v}</span>`:"";
+  return `<nav class="tnav-row" aria-label="Primary">
+    <span class="prodwrap">
+      <button class="tnav ${S.route.name==="product"?"on":""}" data-nav="product"
+              aria-haspopup="true">Product
+        <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg></button>
+      ${productMenuHTML()}
+    </span>
+    <button class="tnav ${S.modal&&S.modal.type==="filters"?"on":""}" data-openfilters="1">Filters${badge(advCount)}</button>
+    <button class="tnav ${S.route.name==="saved"?"on":""}" data-nav="saved">Saved${badge(S.favorites.length)}</button>
+    <button class="tnav sportbtn ${S.sportOpen?"on":""}" data-sportmenu="1"
+            aria-expanded="${!!S.sportOpen}" aria-haspopup="true">${esc(sportLabel)}
+      <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg></button>
+  </nav>`;
+}
+
+/* Hover panel under the single Product button. It previews the feature set;
+   clicking Product itself still opens the full page, which remains the
+   complete inventory. Rows reuse the data-pdest contract from productHTML. */
 function productMenuHTML(){
-  const fam=[["Coach search","Filter 20+ sports by age, level, and budget","explore"],
-    ["Verified coaches","Every coach clears a per-person background check","trust"],
-    ["Instant booking","Pick a slot, add your athlete, pay in one flow","explore"],
-    ["Messaging","Ask questions before you commit","messages"],
-    ["Bookings & receipts","Every session and payment in one thread","bookings"]];
-  const co=[["Command center","Your day, roster, and revenue at a glance","dashboard"],
-    ["Scheduling & availability","Set it once; families book real open slots","slots"],
-    ["Payments & payouts","In-app checkout, automatic payouts","finances"],
-    ["Client roster","Every family, session, and note in one place","roster"],
-    ["AI assistant","Run the day by chat","messages"],
-    ["Services & locations","Define offerings, pricing, and where you coach","listings"]];
-  const row=(t,d,k,side)=>`<button class="pmrow" data-pm="${side}:${k}">
+  const fam=[["Coach & program search","Filter 20+ sports by age, level, and budget","nav:explore"],
+    ["Per-person background checks","Every coach clears their own check","nav:trust"],
+    ["Map search","See what is genuinely near you","nav:map"],
+    ["Advanced filters","Price, availability, distance, rating — and saved searches","filters"],
+    ["Instant booking","Pick a slot, add your athlete, pay in one flow","nav:explore"],
+    ["Messaging","Ask a coach anything before you commit","nav:messages"],
+    ["Bookings & receipts","Every session and payment in one thread","nav:bookings"],
+    ["AI Coach","Grounded — it only ever cites checked coaches","nav:assistant"]];
+  const co=[["Command centre","Your day, roster, and revenue at a glance","tab:dashboard"],
+    ["Scheduling & availability","Set it once; families book real open slots","tab:slots"],
+    ["Payments & payouts","In-app checkout, automatic payouts","tab:finances"],
+    ["Client roster","Every family, session, and note in one place","tab:roster"],
+    ["Media & consent","Per-athlete consent enforced, not requested","tab:media"],
+    ["Session notes","Write once; the family sees the progress report","tab:notes"],
+    ["Insights","Demand, funnel, and price positioning","tab:insights"],
+    ["Services & locations","What you offer, what it costs, where you coach","tab:listings"]];
+  const row=(t,d,a)=>`<button class="pmrow" data-pdest="${esc(a)}">
     <span class="pmdot" aria-hidden="true"></span>
     <span><b>${esc(t)}</b><span>${esc(d)}</span></span></button>`;
   return `<div class="productmenu" role="menu"><div class="shell pmgrid">
     <div class="pmcol">
       <div class="eyebrow">For families</div>
-      ${fam.map(r=>row(r[0],r[1],r[2],"fam")).join("")}
+      ${fam.map(r=>row(r[0],r[1],r[2])).join("")}
       <button class="pmcta" data-nav="explore">Find a coach →</button>
     </div>
     <div class="pmdiv" aria-hidden="true"></div>
     <div class="pmcol">
       <div class="eyebrow">For coaches</div>
-      ${co.map(r=>row(r[0],r[1],r[2],"co")).join("")}
-      <button class="pmcta" data-becomecoach="1">Become a coach →</button>
+      ${co.map(r=>row(r[0],r[1],r[2])).join("")}
+      <button class="pmcta" data-nav="product">See everything →</button>
     </div>
   </div></div>`;
 }
 
-function subnavHTML(){
-  if(S.portal==="coach") return "";
-  /* Four tabs, not eight. Saved moved into the header; Map / AI Coach /
-     Schedule / Progress / Goals reachable from Explore and the account menu. */
-  const tabs=[["explore","Explore"],["bookings","Bookings"],["messages","Messages"],["profile","Profile"]];
-  const unread=S.conversations.length;
-  return `<div class="subnav"><nav class="shell subnav-in">
-    ${tabs.map(([k,l])=>`<button class="snav ${S.route.name===k?"on":""}" data-nav="${k}">${l}${
-      k==="messages"&&isVerified()?`<span class="badge num">${unread}</span>`:""}${
-      k==="saved"&&S.favorites.length?`<span class="badge num">${S.favorites.length}</span>`:""}</button>`).join("")}
-  </nav></div>`;
+/* The disc rail folded into a dropdown. Same data-sport contract, so the
+   existing toggle wiring and the S.sport shim are untouched. */
+function sportMenuHTML(){
+  const count=s=>PROGRAMS.filter(p=>p.sport===s).length;
+  const sports=[...new Set(PROGRAMS.map(p=>p.sport))]
+    .sort((a,b)=>count(b)-count(a)||a.localeCompare(b));
+  const row=s=>{const on=S.sports.includes(s);
+    return `<button class="smrow ${on?"on":""}" data-sport="${esc(s)}"
+                    style="--sc:${sportColor(s)}" aria-pressed="${on}">
+      <span class="box">${ICON.check}</span>
+      <span class="em">${sportGlyph(s)}</span>
+      <span>${esc(s)}</span><span class="n num">${count(s)}</span></button>`;};
+  return `<div class="sportmenu" role="group" aria-label="Choose your sports"
+               style="left:${S.sportAnchor||240}px">
+    <div class="sportmenu-grid">${sports.map(row).join("")}</div>
+    <div class="sportmenu-foot">
+      <span style="color:var(--faint);font-size:13px">${
+        S.sports.length?`${S.sports.length} selected`:"Every sport"}</span>
+      <div style="display:flex;gap:8px">
+        ${S.sports.length?`<button class="btn ghost sm" data-sport="">Clear</button>`:""}
+        <button class="btn sm" data-sportdone="1">Done</button>
+      </div>
+    </div>
+  </div>`;
 }
+
+/* The tab rail is gone: Product / Filters / Saved / Sport live in the top bar,
+   and the hero photograph now occupies the strip this used to hold. Kept as a
+   shim returning nothing, so every view that calls it stays untouched.
+   Explore is the brand click; Bookings / Messages / Profile are in the
+   account menu, which now lists them for guests too (see modalHTML). */
+function subnavHTML(){return "";}
 
 /* ═══════════════════ LANDING — FAMILY VIEW (spec Part 3) ═══════════════════
    Full-width bands stacked vertically. Search lives in the nav only — never
@@ -1419,30 +1863,140 @@ function coachLandingHTML(){
 }
 
 /* ── explore ─────────────────────────────────────────────────────── */
+/* The hero photograph. Search lives on top of it (Zillow), inside an inset
+   rounded panel (Amboras). Kept OUTSIDE <main class="shell"> on purpose:
+   MOD_SEARCH finds its anchor by walking up from the "verified" chip and
+   inserts its toolbar as a sibling, then looks for .grid under the same
+   parent — so .fchips and .grid must stay direct children of main.shell. */
+function heroHTML(){
+  return `<section class="hero">
+    <div class="hero-panel"${HERO_IMG?` style="--hero-img:url('${HERO_IMG}')"`:""}>
+      <div class="hero-in">
+        <h1 class="display">Find Your Next Challenge.</h1>
+        <p class="hero-lede">Discover elite coaching and premium facilities tailored to your goals.</p>
+        <div class="searchpill">
+          <label class="sp-seg" for="q">
+            <span class="sp-lbl">What</span>
+            <span class="sp-val"><input class="seg" id="q" placeholder="Search sports, coaches, or programs"
+                   value="${esc(S.query)}" aria-label="Search"></span></label>
+          <span class="divider"></span>
+          <label class="sp-seg sp-where" for="qloc">
+            <span class="sp-lbl">Where</span>
+            <span class="sp-val">${ICON.pin}<input class="seg" id="qloc" placeholder="Miami, FL"
+                   value="${esc(S.locQuery||"")}" aria-label="Location"></span></label>
+          <button class="go" id="qgo" aria-label="Search">${ICON.search}</button>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
 function exploreHTML(){
   const list=visiblePrograms();
-  const sports=[...new Set(PROGRAMS.map(p=>p.sport))].sort();
   const f=S.filters;
-  return `${subnavHTML()}<main class="shell">
-    <div class="sportrail" role="tablist" aria-label="Filter by sport">
-      <button class="sportchip ${!S.sport?"on":""}" data-sport="" role="tab" aria-selected="${!S.sport}">
-        <span class="glyph">✦</span><span>All</span></button>
-      ${sports.map(s=>`<button class="sportchip ${S.sport===s?"on":""}" data-sport="${esc(s)}" role="tab" aria-selected="${S.sport===s}">
-        <span class="glyph">${sportGlyph(s)}</span><span>${esc(s)}</span></button>`).join("")}
+  const dirty=f.verifiedOnly||f.maxPrice||f.model||S.sports.length||S.query;
+  /* The first featured listing in the current result set carries the wide
+     card. It is a listing like any other — not a slot sold to anyone. */
+  const heroIdx=list.findIndex(p=>p.featured);
+  const chip=(key,label,on)=>`<button class="fchip ${on?"on":""}" data-filter="${key}" aria-pressed="${!!on}">
+    ${key==="verified"?ICON.shield:""}${esc(label)}${on?`<span class="xm" aria-hidden="true">${ICON.xs}</span>`:""}</button>`;
+  return `${subnavHTML()}${heroHTML()}<main class="shell">
+    <div class="fchips" style="padding-top:26px">
+      ${chip("verified","Background-checked only",f.verifiedOnly)}
+      ${chip("under50","Under $50",f.maxPrice===50)}
+      ${chip("single","Single session",f.model==="single_session")}
+      ${chip("monthly","Monthly",f.model==="monthly")}
+      ${dirty?`<button class="fchip" data-filter="clear">Clear all</button>`:""}
+      <span class="fcount num">${list.length} of ${PROGRAMS.length} programs</span>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-bottom:18px;border-bottom:1px solid var(--rule)">
-      <button class="btn ghost sm" data-filter="verified" ${f.verifiedOnly?'style="border-color:var(--slate);background:var(--slate-tint);color:var(--slate)"':""}>
-        ${ICON.shield} Background-checked only</button>
-      <button class="btn ghost sm" data-filter="under50" ${f.maxPrice===50?'style="border-color:var(--slate);background:var(--slate-tint);color:var(--slate)"':""}>Under $50</button>
-      <button class="btn ghost sm" data-filter="single" ${f.model==="single_session"?'style="border-color:var(--slate);background:var(--slate-tint);color:var(--slate)"':""}>Single session</button>
-      <button class="btn ghost sm" data-filter="monthly" ${f.model==="monthly"?'style="border-color:var(--slate);background:var(--slate-tint);color:var(--slate)"':""}>Monthly</button>
-      ${(f.verifiedOnly||f.maxPrice||f.model||S.sport||S.query)?`<button class="btn ghost sm" data-filter="clear">Clear all</button>`:""}
-      <span style="margin-left:auto;color:var(--muted);font-size:13.5px" class="num">${list.length} of ${PROGRAMS.length} programs</span>
-    </div>
-    ${list.length?`<div class="grid">${list.map(cardHTML).join("")}</div>`
+
+    ${list.length?`<div class="grid">${list.map((p,i)=>i===heroIdx?featureCardHTML(p):cardHTML(p)).join("")}</div>`
       :`<div class="empty"><div class="big">🔍</div><h3>No programs match those filters</h3>
         <p style="margin-top:6px">Try clearing a filter or picking a different sport.</p>
         <button class="btn ghost sm" data-filter="clear" style="margin-top:18px">Clear all filters</button></div>`}
+  </main>`;
+}
+
+/* ═══════════════════ PRODUCT — everything the platform does ═══════════════
+   The nav's first tab. The mega-dropdown lists the same destinations, but a
+   dropdown cannot hold the whole surface area, so this is the full inventory:
+   what a family gets, what a coach gets, and what the platform enforces.    */
+function productHTML(){
+  const fam=[
+    ["🔎","Coach & program search","Filter 20+ sports by age, level, price, and format. Thirty published programs across six businesses.","nav:explore"],
+    ["🛡️","Per-person background checks","Every coach clears their own check. An approved organisation never vouches for an individual on its roster.","nav:trust"],
+    ["🗺️","Map search","See what is actually near you before you filter on anything else.","nav:map"],
+    ["🎛️","Advanced filters","Age, skill level, price band, format, availability, distance, rating — plus saved searches you can re-apply.","filters"],
+    ["⚖️","Side-by-side compare","Put shortlisted programs next to each other on price, level, capacity, and trust status.","nav:compare"],
+    ["📅","Instant booking","Pick a real open slot, add your athlete, and pay in one flow. No callback, no waiting.","nav:explore"],
+    ["💬","Message before you commit","Ask a coach anything first. Conversations stay attached to the booking.","nav:messages"],
+    ["🧾","Bookings & receipts","Every session, payment, and cancellation in one thread.","nav:bookings"],
+    ["🤖","AI Coach","A grounded assistant that only ever recommends background-checked coaches.","nav:assistant"],
+    ["📈","Athlete progress","Session notes, goals, and a plan that follows your athlete rather than a coach.","nav:timeline"],
+    ["♡","Saved","Keep the shortlist. Guests get three saves before signing in.","nav:saved"],
+    ["🔔","Notifications","Choose what reaches you by email, SMS, or push — per event type.","nav:notifications"],
+  ];
+  const co=[
+    ["🏠","Command centre","Your day, your roster, and your revenue on one screen.","tab:dashboard"],
+    ["🗓️","Scheduling & availability","Set availability once; families book the slots that are genuinely open.","tab:slots"],
+    ["💳","Payments & payouts","In-app checkout with automatic payouts and the platform fee itemised.","tab:finances"],
+    ["👥","Client roster","Every family, session, and note in one place.","tab:roster"],
+    ["📋","Services & locations","Define what you offer, what it costs, and where you coach.","tab:listings"],
+    ["📸","Media library","Photos and video with per-athlete consent enforced, not merely requested.","tab:media"],
+    ["📝","Session notes","Write once; the family sees the progress report.","tab:notes"],
+    ["📊","Insights","Demand, funnel, price positioning, and a client watchlist.","tab:insights"],
+    ["⏳","Waitlist & recurring slots","Fill cancellations automatically and repeat the sessions that work.","tab:waitlist"],
+    ["📜","Policies","Your cancellation policy is snapshotted onto every booking at purchase.","tab:policies"],
+    ["⭐","Reviews","Unlocked by a completed session — never merely by a booking.","tab:reviews"],
+    ["✅","Onboarding","Seven steps from application to bookable, background check included.","coach"],
+  ];
+  const rules=[
+    ["Background checks are per person","An approved organisation never vouches for an individual on its roster. Unverified coaches are filtered out before sport, age, or budget."],
+    ["Parental consent gates child profiles","No consent, no athlete record. Consent is stamped with a version and a timestamp."],
+    ["Media consent is enforced","A coach can request consent for a photo of a minor. A coach can never grant it on a family's behalf."],
+    ["Reviews follow completed sessions","Booking something is not an opinion about it."],
+    ["Refunds follow the policy at purchase","Not whatever the listing says later."],
+    ["Guests browse freely","Auth is triggered by an action — book, message, save — never by a wall, and the action resumes itself afterwards."],
+  ];
+  const card=(g,t,d,a)=>`<button class="prodcard" data-pdest="${esc(a)}">
+    <span class="ic" aria-hidden="true">${g}</span>
+    <b>${esc(t)}</b><span>${esc(d)}</span></button>`;
+  return `${subnavHTML()}<main class="shell" style="padding-bottom:64px">
+    <div class="exhero">
+      <div>
+        <h1 class="display">Everything Sporve does.</h1>
+        <p class="exlede">One product, two sides. The platform families book on is the same
+          one coaches run their week on — and the rules below hold in both.</p>
+      </div>
+      <button class="advfilters" data-nav="explore">Start searching</button>
+    </div>
+
+    <div class="prodsec">
+      <h2>For families and athletes</h2>
+      <p class="sub">Find someone you would trust with your kid, then book them without leaving the page.</p>
+    </div>
+    <div class="prodgrid">${fam.map(r=>card(r[0],r[1],r[2],r[3])).join("")}</div>
+
+    <div class="prodsec">
+      <h2>For coaches and programs</h2>
+      <p class="sub">Free to join and list. Sporve takes 9% only when you get paid.</p>
+    </div>
+    <div class="prodgrid">${co.map(r=>card(r[0],r[1],r[2],r[3])).join("")}</div>
+
+    <div class="prodsec">
+      <h2>What the platform enforces</h2>
+      <p class="sub">These are not labels on a marketing page. They hold in the code.</p>
+    </div>
+    <div class="prodgrid">
+      ${rules.map(([t,d])=>`<div class="prodcard" style="cursor:default">
+        <span class="ic" aria-hidden="true">${ICON.shield}</span>
+        <b>${esc(t)}</b><span>${esc(d)}</span></div>`).join("")}
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:34px">
+      <button class="btn" data-nav="explore">Find a coach</button>
+      <button class="btn ghost" data-becomecoach="1">Become a coach</button>
+    </div>
   </main>`;
 }
 
@@ -2612,6 +3166,16 @@ Marcus Chen, marcus@example.com"></textarea></div>
       :`<button class="btn wide" data-modal="signup">Sign up</button>
         <button class="btn ghost wide" data-modal="login" style="margin-top:9px">Log in</button>
         <div style="height:1px;background:var(--rule);margin:18px 0"></div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          ${/* With the tab rail gone these are otherwise unreachable for a
+                guest. They render their own sign-in prompts, so listing them
+                costs nothing and strands nobody. */
+            [["explore","Explore"],["bookings","Bookings"],["messages","Messages"],
+             ["profile","Profile"],["saved","Saved"],["map","Map"],["assistant","AI Coach"],
+             ["trust","Trust & safety"]]
+            .map(([k,l])=>`<button class="rail-lite" data-nav="${k}" style="text-align:left;padding:11px 12px;border-radius:var(--r-m);font-weight:600">${l}</button>`).join("")}
+        </div>
+        <div style="height:1px;background:var(--rule);margin:18px 0"></div>
         <button class="rail-lite" data-portal="coach" style="text-align:left;padding:11px 12px;width:100%;border-radius:var(--r-m);font-weight:600">Switch to the coach portal</button>`}`);
   }
   const mv=modModal(m.type);
@@ -2741,6 +3305,11 @@ function footerHTML(){
   return `<footer class="sitefoot">
     <div class="shell">
       <div class="footgrid">
+        <div class="footbrand">
+          <span class="wordmark">sporve</span>
+          <p>Connecting families with background-checked coaches and world-class facilities.
+            Every sport. One app.</p>
+        </div>
         ${cols.map(([h,links])=>`<div class="footcol">
           <div class="eyebrow">${esc(h)}</div>
           ${links.map(([t,a])=>a==="mail"
@@ -2749,13 +3318,8 @@ function footerHTML(){
         </div>`).join("")}
       </div>
       <div class="footbase">
-        <div style="display:flex;align-items:center;gap:9px">
-          <span class="mark" style="width:24px;height:24px;font-size:14px">S</span>
-          <span class="wordmark" style="font-size:16px">sporve</span>
-          <span style="color:var(--faint);font-size:13.5px;margin-left:6px">Every sport. One app.</span>
-        </div>
         <div class="footlegal">
-          <span>Miami, FL</span><span>© 2026 Sporve</span>
+          <span>© 2026 Sporve Inc. All rights reserved.</span><span>Miami, FL</span>
           <span>Sporve is a marketplace connecting families with independent coaches.</span>
         </div>
       </div>
@@ -2770,6 +3334,7 @@ function render(){
      slot 4). On the landing route that means two different marketing scrolls;
      inside the app it means the family app vs the coach dashboard. */
   if(r.name==="home"||S.portal==="coach") body=S.portal==="coach"?coachHTML():exploreHTML();
+  else if(r.name==="product") body=productHTML();
   else if(r.name==="detail") body=detailHTML(r.arg);
   else if(r.name==="bookings") body=bookingsHTML();
   else if(r.name==="saved") body=savedHTML();
@@ -2800,11 +3365,26 @@ function wire(){
   $("[data-nav]").forEach(b=>b.onclick=()=>{S.modal=null;go(b.dataset.nav);});
   $("[data-open]").forEach(b=>b.onclick=()=>go("detail",b.dataset.open));
   $("[data-fav]").forEach(b=>b.onclick=e=>{e.stopPropagation();toggleFav(b.dataset.fav);});
-  $("[data-sport]").forEach(b=>b.onclick=()=>{S.sport=b.dataset.sport||null;render();});
+  /* Multi-select: each disc adds or removes its sport; "All" clears the set. */
+  $("[data-sport]").forEach(b=>b.onclick=()=>{toggleSport(b.dataset.sport||"");render();});
+  /* Filters is a tab that opens a sheet — the grid behind it stays put. */
+  $("[data-openfilters]").forEach(b=>b.onclick=()=>{
+    if(!modModal("filters")){toast("Advanced filters are still loading");return;}
+    S.modal={type:"filters"};render();});
+  $("[data-pdest]").forEach(b=>b.onclick=()=>{
+    const [kind,arg]=b.dataset.pdest.split(":");
+    if(kind==="filters"){if(modModal("filters")){S.modal={type:"filters"};render();}return;}
+    if(kind==="coach"){S.portal="coach";S.signupRole="coach";
+      if(!isVerified()){S.onboardStep=0;S.modal={type:"onboard"};}
+      else{S.coachTab="dashboard";S.route={name:"dashboard",arg:null};}
+      window.scrollTo(0,0);render();return;}
+    if(kind==="tab"){S.portal="coach";S.coachTab=arg;go("dashboard");return;}
+    go(arg);
+  });
   /* Toggle flips the view in place — same route, swapped scroll (spec Part 2). */
   $("[data-portal]").forEach(b=>b.onclick=()=>{
     if(b.dataset.coachdash) return;               // handled by its own binding
-    S.portal=b.dataset.portal;S.modal=null;S.productOpen=false;
+    S.portal=b.dataset.portal;S.modal=null;S.sportOpen=false;
     S.route=S.portal==="coach"?{name:"dashboard",arg:null}:{name:"explore",arg:null};
     window.scrollTo(0,0);render();});
   $("[data-ctab]").forEach(b=>b.onclick=()=>{S.coachTab=b.dataset.ctab;window.scrollTo(0,0);render();});
@@ -2851,22 +3431,27 @@ function wire(){
   $("[data-pin]").forEach(b=>b.onclick=()=>{S.mapPick=b.dataset.pin;render();});
   $("[data-info]").forEach(b=>b.onclick=()=>{S.modal=null;go("info",b.dataset.info);});
   /* ── landing wiring ── */
-  $("[data-product]").forEach(b=>b.onclick=e=>{e.stopPropagation();S.productOpen=!S.productOpen;render();});
+  $("[data-sportmenu]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const shell=b.closest(".shell");
+    S.sportAnchor=shell?Math.round(b.getBoundingClientRect().left-shell.getBoundingClientRect().left):240;
+    S.sportOpen=!S.sportOpen;render();});
+  $("[data-sportdone]").forEach(b=>b.onclick=()=>{S.sportOpen=false;render();});
   $("[data-showcase]").forEach(b=>b.onclick=()=>{S.showcaseSide=b.dataset.showcase;render();});
   $("[data-faq]").forEach(b=>b.onclick=()=>{
     const i=+b.dataset.faq; S.faqOpen=S.faqOpen===i?null:i; render();});
   /* Become a coach opens the signup wizard directly — there is no marketing
      page in front of it any more. */
   $("[data-becomecoach]").forEach(b=>b.onclick=()=>{
-    S.productOpen=false;S.portal="coach";S.signupRole="coach";
+    S.portal="coach";S.signupRole="coach";
     if(!isVerified()){S.onboardStep=0;S.modal={type:"onboard"};}
     else {S.coachTab=modView("onboard")?"onboard":"dashboard";S.route={name:"dashboard",arg:null};}
     window.scrollTo(0,0);render();
   });
   $("[data-coachdash]").forEach(b=>b.onclick=()=>{
-    S.productOpen=false;S.portal="coach";S.coachTab="dashboard";go("dashboard");});
+    S.portal="coach";S.coachTab="dashboard";go("dashboard");});
   $("[data-sportjump]").forEach(b=>b.onclick=()=>{
-    S.sport=b.dataset.sportjump;S.productOpen=false;go("explore");});
+    S.sport=b.dataset.sportjump;S.sportOpen=false;go("explore");});
   $("[data-scrollto]").forEach(b=>b.onclick=()=>{
     const el=document.getElementById(b.dataset.scrollto);
     if(el) el.scrollIntoView({behavior:"smooth",block:"start"});});
@@ -2915,7 +3500,7 @@ function wire(){
 
   $("[data-foot]").forEach(b=>b.onclick=()=>{
     const [kind,val]=b.dataset.foot.split(":");
-    S.productOpen=false;
+    S.sportOpen=false;
     if(kind==="nav") go(val);
     else if(kind==="info") go("info",val);
     else if(kind==="tab"){S.portal="coach";S.coachTab=val;go("dashboard");}
@@ -2923,7 +3508,7 @@ function wire(){
   });
   $("[data-pm]").forEach(b=>b.onclick=()=>{
     const [side,key]=b.dataset.pm.split(":");
-    S.productOpen=false;
+    S.sportOpen=false;
     if(side==="co"){S.portal="coach";S.coachTab=key;go("dashboard");}
     else go(key);
   });
@@ -3166,16 +3751,42 @@ function askCoach(q){
   },700);
 }
 
+/* Photography comes from picsum.photos. Behind a strict CSP — or simply
+   offline — those requests never land, and every card collapses to an empty
+   box. Capture-phase, because `error` on <img> does not bubble. The stand-in
+   is tinted with the listing's own sport colour, read off the badge that sits
+   in the same frame, so a blocked page still reads as the same product. */
+document.addEventListener("error",e=>{
+  const img=e.target;
+  if(!img||img.tagName!=="IMG"||img.dataset.fallback) return;
+  img.dataset.fallback="1";
+  const dot=img.parentElement&&img.parentElement.querySelector(".sporttag i");
+  const c=(dot&&dot.style.background)||"#475569";
+  img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="${c}" stop-opacity=".30"/>
+        <stop offset="1" stop-color="${c}" stop-opacity=".08"/>
+      </linearGradient></defs>
+      <rect width="600" height="400" fill="#EFF2F5"/>
+      <rect width="600" height="400" fill="url(#g)"/>
+      <text x="300" y="212" text-anchor="middle" font-family="Arial,sans-serif"
+            font-size="34" font-weight="800" letter-spacing="6"
+            fill="${c}" fill-opacity=".55">SPORVE</text>
+    </svg>`);
+},true);
+
 document.addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
   if(S.modal){S.modal=null;render();}
-  else if(S.productOpen){S.productOpen=false;render();}
+  else if(S.sportOpen){S.sportOpen=false;render();}
 });
-/* Click anywhere outside the mega-menu closes it. */
+/* Click anywhere outside the sport chooser closes it. Clicks INSIDE it are
+   selections, and must not close — multi-select means several in a row. */
 document.addEventListener("click",e=>{
-  if(!S.productOpen) return;
-  if(e.target.closest(".productmenu")||e.target.closest("[data-product]")) return;
-  S.productOpen=false;render();
+  if(!S.sportOpen) return;
+  if(e.target.closest(".sportmenu")||e.target.closest("[data-sportmenu]")) return;
+  S.sportOpen=false;render();
 });
 </script>
 

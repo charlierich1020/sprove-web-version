@@ -92,6 +92,7 @@ src/
   mod-media.js          media library with per-athlete consent enforcement
   mod-notes.js          session notes and progress reports
   mod-insights.js       demand, funnel, price positioning, client watchlist
+  mod-companies.js      the six businesses as entities; offering-type-aware booking
   build.py              inlines every module into index.html
 ```
 

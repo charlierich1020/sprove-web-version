@@ -430,7 +430,10 @@ const CSS = `
 .in-note{font-size:12.5px;color:var(--faint);margin-top:10px;line-height:1.5;max-width:78ch}
 .in-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px}
 .in-card{border:1px solid var(--rule);border-radius:var(--r-l);padding:20px;background:var(--paper)}
-.in-cardhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+/* wrap + don't shrink the pill: without these the "Sample data" badge was
+   squeezed past the card's padding at narrow widths (.in-head already wraps) */
+.in-cardhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.in-cardhead>.pill{flex:0 0 auto}
 .in-big{font-size:15.5px;color:var(--ink);line-height:1.5;letter-spacing:-.012em}
 .in-big b{font-weight:750}
 .in-sub{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}

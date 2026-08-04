@@ -847,8 +847,16 @@
         </div>
         <p class="pm-fine">${st === "expired"
           ? `This request expired on ${esc(fmtDate(existing.expiresAt))}. Nothing was collected from it.`
+          : st === "accepted"
+          ? `Accepted on ${esc(fmtDate(existing.acceptedAt))}. ${usd(existing.guardianCents)} was collected
+             from the other guardian and credited back to your card, leaving ${usd(existing.requesterCents)} on it.`
           : `The request expires on ${esc(fmtDate(existing.expiresAt))}. Until the other guardian accepts,
              the full ${usd(existing.totalCents)} stays on your card — a split request does not move money on its own.`}</p>
+        ${st === "pending" ? `<div class="pm-note pm-gap">
+          <p>The other guardian accepts by opening that link on their own device. There is no server here,
+             so you can play their side of it to see how the split settles.</p>
+          <button class="btn ghost sm" data-pm-splitaccept="${esc(existing.id)}">Preview: accept as ${esc(existing.email)}</button>
+        </div>` : ""}
         <button class="btn ghost wide pm-gap" data-close="1">Close</button>`);
     }
 
@@ -1298,6 +1306,31 @@
       render();
       toast(`Split request sent to ${email}`);
     };
+
+    /* Settle a split. Nothing else in this module could ever move a request
+       off "pending", which left the share link promising a settlement that
+       could not happen. The guardian's half is collected and credited back
+       against the requester's original charge — one ledger row, no invention. */
+    all("[data-pm-splitaccept]").forEach(el => el.onclick = () => {
+      const req = splits().find(r => r.id === el.dataset.pmSplitaccept);
+      if (!req || splitStatus(req) !== "pending") return;
+      const bk = (S.bookings || []).find(x => x.id === req.bookingId);
+      req.status = "accepted";
+      req.acceptedAt = TODAY;
+      txns().unshift({
+        id: "tx_split_" + req.id,
+        at: TODAY,
+        kind: "split",
+        bookingId: req.bookingId,
+        programId: bk ? bk.programId : null,
+        desc: `Split accepted · ${req.email}`,
+        grossCents: req.guardianCents,
+        feeCents: 0,
+        totalCents: req.guardianCents,
+      });
+      render();
+      toast(`${usd(req.guardianCents)} collected — credited to your card`);
+    });
 
     all("[data-pm-copy]").forEach(b => b.onclick = () => {
       const text = b.dataset.pmCopy;

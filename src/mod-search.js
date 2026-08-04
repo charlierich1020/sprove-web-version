@@ -986,8 +986,12 @@ const CSS=`
 
 /* compare table */
 .se-cmpwrap{border:1px solid var(--rule);border-radius:var(--r-l);padding:6px 14px 14px;margin-top:6px}
-.se-cmp{min-width:640px}
-.se-cmp th,.se-cmp td{vertical-align:top}
+/* Scoped to the wrapper: se-cmp names TWO different things — the compare
+   table here, and the per-card compare button built at :611 (styled as a
+   button at :940). Unscoped, min-width:640px landed on all 30 card buttons
+   and rendered them as blank 640px capsules bleeding out of every card. */
+.se-cmpwrap .se-cmp{min-width:640px}
+.se-cmpwrap .se-cmp th,.se-cmpwrap .se-cmp td{vertical-align:top}
 .se-col{min-width:190px}
 .se-col b{display:block;font-size:14.5px;letter-spacing:-.015em;margin-top:7px;color:var(--ink);
   text-transform:none;font-weight:750}
