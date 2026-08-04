@@ -1,0 +1,1131 @@
+"use strict";
+/* ═══════════════════════════════════════════════════════════════════
+   MOD_MEDIA — the coach's media library, and the consent that governs it.
+
+   Mounts one tab inside the existing coach dash (left rail + body):
+   "Media". Two halves:
+     · Profile media  — headshot, intro video, facility, action shots.
+     · Session media  — clips and photos attached to a real session,
+                        grouped by session or by athlete.
+
+   These are photographs of children. Consent is therefore not a label
+   on the item, it is a gate in front of every outbound action. Each
+   athlete carries exactly one of three values:
+
+     public_profile — may be sent to that family AND shown publicly
+     private_share  — may be sent to that family, never shown publicly
+     none           — no photos or clips of this athlete, anywhere
+
+   Two invariants hold in code, not just in copy:
+     1. Consent is granted by a parent in the family app. Nothing in
+        this module writes to the consent map — it is frozen at load,
+        so a self-grant would throw rather than silently succeed.
+     2. Every share and publish path re-evaluates the gate at the
+        moment of the action. The disabled buttons are the courtesy;
+        the refusal in the handler is the enforcement.
+
+   Host contract used (never redefined here):
+     S, render(), toast(), esc(), fmtDate(), slotsFor(),
+     PROGRAMS, SEED, sportColor(), ICON.
+
+   The demo clock is pinned to the app's seeded "today" (2026-08-03).
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+
+/* ── clock ───────────────────────────────────────────────────────── */
+const NOW   = () => new Date(2026, 7, 3, 9, 30);      // Mon 3 Aug 2026, 9:30am
+const TODAY = "2026-08-03";
+const iso   = d => d.toISOString();
+const day   = d => d.toISOString().slice(0, 10);
+
+/* ── small language helpers ──────────────────────────────────────── */
+const plural = (n, one, many) => (n === 1 ? one : many);
+const countOf = (n, one) => n + " " + plural(n, one, one + "s");
+/* "1 athlete in this photo" / "2 athletes in this clip" — never a name.
+   Naming the child who lacks consent would shame a family for a choice
+   that is entirely theirs to make. */
+const subject = (n, noun) => (n === 1 ? "1 athlete in this " + noun : n + " athletes in this " + noun);
+const hasnt   = n => plural(n, "hasn't", "haven't");
+
+/* ── product rules, stated once and referenced everywhere ────────── */
+const RULE = {
+  featurePhotos: 5,     // Sporve's listing guideline: 5+ profile photos
+  introMin: 30,         // intro video runs 30–60 seconds
+  introMax: 60,
+  facilityMin: 2,
+  actionMin: 2,
+  captionMax: 280,
+};
+
+/* ═══════════════════ CONSENT VOCABULARY ═══════════════════ */
+/* Exactly three values. Anything unknown resolves to "none" — an absent
+   record is a refusal, never a permission. */
+const CONSENT = [
+  ["public_profile", "Profile + private", "good",
+   "Photos and clips may be sent to this family and may also appear on your public profile."],
+  ["private_share", "Private share only", "slate",
+   "Photos and clips may be sent to this family's own thread. They may never appear anywhere public."],
+  ["none", "No media", "warn",
+   "No photos or clips of this athlete may be sent to anyone or published."],
+];
+const consentRow = k => CONSENT.find(c => c[0] === k) || CONSENT[2];
+const consentLabel = k => consentRow(k)[1];
+const consentPill = k => consentRow(k)[2];
+
+/* ═══════════════════ PROFILE SLOTS ═══════════════════ */
+const SLOTS = [
+  { key: "headshot", label: "Headshot", need: 1, format: "photo",
+    why: "One clear photo of you, shoulders up. It is the first thing a family sees in search results." },
+  { key: "intro_video", label: "Intro video", need: 1, format: "video",
+    why: "Between " + RULE.introMin + " and " + RULE.introMax + " seconds, filmed on a phone. Say who you coach and how a session runs." },
+  { key: "facility", label: "Facility & courts", need: RULE.facilityMin, format: "photo",
+    why: "Where you train. Parents look for parking, fencing, and shade before they book." },
+  { key: "action", label: "Action shots", need: RULE.actionMin, format: "photo",
+    why: "Athletes mid-session. Every athlete in an action shot needs profile consent before it can go public." },
+];
+const slotRow = k => SLOTS.find(s => s.key === k) || SLOTS[0];
+
+/* ═══════════════════ SEEDS ═══════════════════ */
+const prog = id => PROGRAMS.find(p => p.id === id) || null;
+const myListings = () => PROGRAMS.filter(p => S.listings.includes(p.id));
+
+const AGE_REF = new Date(2026, 7, 3);
+function ageFromDob(dob){
+  const b = new Date(dob);
+  if (isNaN(b)) return null;
+  let a = AGE_REF.getFullYear() - b.getFullYear();
+  const m = AGE_REF.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && AGE_REF.getDate() < b.getDate())) a--;
+  return a;
+}
+
+/* The coach's own sessions, read from the host's real slot data. */
+function seedSessions(){
+  const mine = myListings();
+  const out = [];
+  mine.forEach(p => {
+    let sl = [];
+    if (typeof slotsFor === "function"){ try { sl = slotsFor(p.id) || []; } catch (e) { sl = []; } }
+    if (!sl.length) sl = [{ id: p.id + "_s1", title: "Training Session", date: "2026-07-29", startTime: "05:00 PM" }];
+    sl.slice(0, 2).forEach(s => out.push({
+      id: s.id, programId: p.id, title: s.title, date: s.date, startTime: s.startTime,
+    }));
+  });
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/* Athletes this coach actually trains. The first row is the host's real
+   seeded athlete; the rest carry the parent names already used by the
+   waitlist elsewhere in the portal, so one family reads the same in
+   both places. */
+function seedRoster(){
+  const mine = myListings();
+  const at = i => (mine[i] || PROGRAMS[i] || PROGRAMS[0]).id;
+  const host = (S.athletes && S.athletes[0]) || null;
+  const first = host
+    ? { id: host.id,
+        name: (host.firstName + " " + (host.lastName || "")).trim(),
+        age: ageFromDob(host.dob),
+        parent: (host.emergency && host.emergency.name) || "Parent",
+        programId: at(0),
+        consentAt: host.consentAt || "2026-05-01T10:00:00.000Z" }
+    : { id: "athlete_1", name: "Julian Mercer", age: 13, parent: "Alex Mercer",
+        programId: at(0), consentAt: "2026-05-01T10:00:00.000Z" };
+  return [
+    first,
+    { id: "athlete_2", name: "Nia Okafor",     age: 13, parent: "Renata Okafor",    programId: at(0), consentAt: "2026-07-22T09:15:00.000Z" },
+    { id: "athlete_3", name: "Cole Whitfield", age: 12, parent: "Daniel Whitfield", programId: at(2), consentAt: null },
+    { id: "athlete_4", name: "Sofia Ibarra",   age: 11, parent: "Marisol Ibarra",   programId: at(3), consentAt: "2026-06-30T17:40:00.000Z" },
+    { id: "athlete_5", name: "Aarav Raman",    age: 14, parent: "Priya Raman",      programId: at(1), consentAt: "2026-07-11T12:05:00.000Z" },
+    { id: "athlete_6", name: "Ida Nilsen",     age: 12, parent: "Tomas Nilsen",     programId: at(4), consentAt: null },
+  ];
+}
+
+/* The consent map. Written once here, then frozen — see the header. */
+function seedConsent(){
+  return {
+    athlete_1: "public_profile",
+    athlete_2: "private_share",
+    athlete_3: "none",
+    athlete_4: "public_profile",
+    athlete_5: "private_share",
+    athlete_6: "none",
+  };
+}
+
+const SESSIONS = seedSessions();
+const ROSTER = seedRoster();
+const sessAt = i => SESSIONS[i % SESSIONS.length];
+
+function seedItems(){
+  const s0 = sessAt(0), s1 = sessAt(1), s2 = sessAt(2), s3 = sessAt(3);
+  const base = { published: false, shareable: false, sharedWith: [] };
+  const mk = o => Object.assign({}, base, o, { sharedWith: (o.sharedWith || []).slice() });
+  return [
+    /* ── profile ──────────────────────────────────────────────── */
+    mk({ id: "md_1", kind: "profile", slot: "headshot", mediaType: "photo", durationSec: null,
+      sessionId: null, programId: null, athleteIds: [],
+      caption: "Head coach, Apex Performance Club", createdAt: "2026-06-02T14:00:00.000Z",
+      published: true }),
+    mk({ id: "md_2", kind: "profile", slot: "intro_video", mediaType: "video", durationSec: 72,
+      sessionId: null, programId: null, athleteIds: [],
+      caption: "Who we coach and how a session runs", createdAt: "2026-06-02T14:20:00.000Z",
+      published: true }),
+    mk({ id: "md_3", kind: "profile", slot: "facility", mediaType: "photo", durationSec: null,
+      sessionId: null, programId: (myListings()[0] || PROGRAMS[0]).id, athleteIds: [],
+      caption: "Main pitch, Coral Way — shaded parent seating along the east side",
+      createdAt: "2026-06-09T16:10:00.000Z", published: true }),
+    mk({ id: "md_4", kind: "profile", slot: "action", mediaType: "photo", durationSec: null,
+      sessionId: s0.id, programId: s0.programId, athleteIds: ["athlete_1"],
+      caption: "First touch under pressure", createdAt: "2026-07-14T18:05:00.000Z",
+      published: true, shareable: true }),
+    /* mixed tagging: one athlete has profile consent, one does not */
+    mk({ id: "md_5", kind: "profile", slot: "action", mediaType: "photo", durationSec: null,
+      sessionId: s0.id, programId: s0.programId, athleteIds: ["athlete_1", "athlete_2"],
+      caption: "Small-sided game, final ten minutes", createdAt: "2026-07-14T18:22:00.000Z" }),
+
+    /* ── session ──────────────────────────────────────────────── */
+    mk({ id: "md_6", kind: "session", slot: null, mediaType: "video", durationSec: 24,
+      sessionId: s0.id, programId: s0.programId, athleteIds: ["athlete_1"],
+      caption: "Wall-pass drill — six clean reps in a row", createdAt: "2026-07-14T18:40:00.000Z",
+      shareable: true, sharedWith: [{ athleteId: "athlete_1", at: "2026-07-14T19:02:00.000Z" }] }),
+    mk({ id: "md_7", kind: "session", slot: null, mediaType: "photo", durationSec: null,
+      sessionId: s0.id, programId: s0.programId, athleteIds: ["athlete_2"],
+      caption: "Receiving on the half-turn", createdAt: "2026-07-14T18:44:00.000Z",
+      shareable: true }),
+    mk({ id: "md_8", kind: "session", slot: null, mediaType: "photo", durationSec: null,
+      sessionId: s1.id, programId: s1.programId, athleteIds: ["athlete_3"],
+      caption: "Shooting form from the elbow", createdAt: "2026-07-21T17:30:00.000Z" }),
+    mk({ id: "md_9", kind: "session", slot: null, mediaType: "photo", durationSec: null,
+      sessionId: s0.id, programId: s0.programId, athleteIds: ["athlete_1", "athlete_2"],
+      caption: "Partner rondo before the scrimmage", createdAt: "2026-07-14T18:51:00.000Z",
+      shareable: true }),
+    mk({ id: "md_10", kind: "session", slot: null, mediaType: "video", durationSec: 31,
+      sessionId: s2.id, programId: s2.programId, athleteIds: ["athlete_5"],
+      caption: "Serve toss, slow motion", createdAt: "2026-07-28T16:15:00.000Z",
+      shareable: true }),
+    mk({ id: "md_11", kind: "session", slot: null, mediaType: "photo", durationSec: null,
+      sessionId: s3.id, programId: s3.programId, athleteIds: ["athlete_4"],
+      caption: "Overhand serve, first clean landing", createdAt: "2026-07-30T17:05:00.000Z",
+      shareable: true, sharedWith: [{ athleteId: "athlete_4", at: "2026-07-30T18:00:00.000Z" }] }),
+  ];
+}
+
+/* ═══════════════════ STATE ═══════════════════ */
+const state = {
+  mediaItems: seedItems(),
+  mediaConsent: seedConsent(),
+};
+/* A coach can never grant consent on a family's behalf. There is no
+   code path that writes this map, and the freeze makes an accidental
+   one throw in strict mode instead of quietly succeeding. */
+Object.freeze(state.mediaConsent);
+
+/* Not consent — just a record of having asked. Local to the module so
+   the exported state stays exactly the two documented keys. */
+const consentRequests = {};
+/* Session-media grouping. View preference, not data. */
+let grouping = "session";
+
+/* ═══════════════════ DERIVED LOGIC ═══════════════════ */
+const athleteById = id => ROSTER.find(a => a.id === id) || null;
+const athleteName = id => { const a = athleteById(id); return a ? a.name : "Removed athlete"; };
+const sessionById = id => SESSIONS.find(s => s.id === id) || null;
+const itemById = id => state.mediaItems.find(i => i.id === id) || null;
+
+/* Unknown athlete, missing record, typo — all resolve to "none". */
+function consentOf(athleteId){
+  const v = state.mediaConsent[athleteId];
+  return (v === "public_profile" || v === "private_share") ? v : "none";
+}
+
+/* ── THE GATE ─────────────────────────────────────────────────────
+   Everything outbound goes through here. Returns what may happen and,
+   when something may not, the reason in the words the coach will see. */
+function evaluate(item){
+  const ids = (item && item.athleteIds) || [];
+  const noun = (item && item.mediaType === "video") ? "clip" : "photo";
+  const noneIds = ids.filter(id => consentOf(id) === "none");
+  const privIds = ids.filter(id => consentOf(id) === "private_share");
+
+  const v = {
+    athleteIds: ids.slice(),
+    noneCount: noneIds.length,
+    privateCount: privIds.length,
+    canShare: true, shareReason: null,
+    canPublish: true, publishReason: null,
+    blockKind: null,          // "consent" | "untagged" | null
+  };
+
+  /* One athlete without consent blocks the whole item — the others in
+     the frame do not outvote the child who said no. */
+  if (noneIds.length){
+    const why = subject(noneIds.length, noun) + " " + hasnt(noneIds.length) +
+      " granted any media consent — this " + noun + " can't be sent to a family or published.";
+    v.canShare = false; v.shareReason = why;
+    v.canPublish = false; v.publishReason = why;
+    v.blockKind = "consent";
+    return v;
+  }
+  if (privIds.length){
+    v.canPublish = false;
+    v.publishReason = subject(privIds.length, noun) + " " + hasnt(privIds.length) +
+      " granted profile consent — you can send this to their family, but it can't appear on your public profile.";
+    v.blockKind = "consent";
+  }
+  /* Nothing to send when nobody is in the frame: not a consent block,
+     just an empty recipient list. */
+  if (!ids.length){
+    v.canShare = false;
+    v.shareReason = "No athlete is tagged, so there is no family thread to send this to.";
+    if (!v.blockKind) v.blockKind = "untagged";
+  }
+  return v;
+}
+
+/* ── counts, all computed, none hand-written ─────────────────────── */
+const profileItems  = () => state.mediaItems.filter(i => i.kind === "profile");
+const sessionItems  = () => state.mediaItems.filter(i => i.kind === "session");
+const profilePhotos = () => profileItems().filter(i => i.mediaType === "photo");
+const slotItems     = k => profileItems().filter(i => i.slot === k);
+const introItem     = () => slotItems("intro_video")[0] || null;
+const introOk = () => {
+  const v = introItem();
+  return !!(v && v.durationSec >= RULE.introMin && v.durationSec <= RULE.introMax);
+};
+const itemsForSession = id => sessionItems().filter(i => i.sessionId === id);
+const itemsForAthlete = id => sessionItems().filter(i => i.athleteIds.indexOf(id) >= 0);
+const taggedCount = id => state.mediaItems.filter(i => i.athleteIds.indexOf(id) >= 0).length;
+function consentCounts(){
+  const c = { public_profile: 0, private_share: 0, none: 0 };
+  ROSTER.forEach(a => { c[consentOf(a.id)]++; });
+  return c;
+}
+const publishedCount = () => state.mediaItems.filter(i => i.published).length;
+const blockedCount = () => state.mediaItems.filter(i => evaluate(i).blockKind === "consent").length;
+
+/* ── profile strength: media's contribution, and the next best move ─ */
+function strength(){
+  const photos = profilePhotos().length;
+  const fac = slotItems("facility").length;
+  const act = slotItems("action").length;
+  const intro = introItem();
+  const need = (have, want) => Math.max(0, want - have);
+
+  const steps = [
+    { w: 25, met: slotItems("headshot").length > 0,
+      next: "Add a coach headshot — it is the first thing a family sees in search." },
+    { w: 25, met: introOk(),
+      next: intro
+        ? "Re-cut your intro video to " + RULE.introMin + "–" + RULE.introMax + " seconds — the one on file runs " + intro.durationSec + "s."
+        : "Record a " + RULE.introMin + "–" + RULE.introMax + " second intro video." },
+    { w: 15, met: fac >= RULE.facilityMin,
+      next: "Add " + countOf(need(fac, RULE.facilityMin), "facility photo") + " so families can see where you train." },
+    { w: 15, met: act >= RULE.actionMin,
+      next: "Add " + countOf(need(act, RULE.actionMin), "action shot") + " from a session — every athlete in one needs profile consent." },
+    { w: 20, met: photos >= RULE.featurePhotos,
+      next: "Sporve's listing guideline asks for " + RULE.featurePhotos + " or more profile photos. You have " +
+        photos + " — add " + countOf(need(photos, RULE.featurePhotos), "more") + "." },
+  ];
+  const pct = steps.reduce((n, s) => n + (s.met ? s.w : 0), 0);
+  const first = steps.filter(s => !s.met)[0];
+  return {
+    pct: pct,
+    next: first ? first.next
+      : "Profile media is complete. Keep sending session clips — families read those as proof the coaching is working.",
+  };
+}
+
+/* ═══════════════════ CSS ═══════════════════ */
+const CSS = `
+.md-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:18px 0 6px;flex-wrap:wrap}
+.md-lede{color:var(--muted);font-size:14px;max-width:66ch;margin-top:5px;line-height:1.5}
+.md-actions{display:flex;gap:8px;flex-wrap:wrap}
+.md-note{background:var(--raise);border-radius:var(--r-m);padding:13px 15px;font-size:13.5px;
+  color:var(--ink-2);line-height:1.5}
+.md-note.warn{background:var(--warn-tint)}
+.md-note b{color:var(--ink)}
+.md-meter{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px;margin-top:16px;background:var(--paper)}
+.md-meterhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.md-pct{font-size:26px;font-weight:800;letter-spacing:-.03em}
+.md-bar{height:8px;border-radius:999px;background:var(--raise2);overflow:hidden;margin:12px 0 10px}
+.md-bar i{display:block;height:100%;border-radius:999px;background:var(--slate)}
+.md-next{font-size:14px;color:var(--ink-2);line-height:1.5}
+.md-secline{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:32px 0 14px}
+.md-secline p{color:var(--muted);font-size:13.5px;max-width:62ch;margin-top:4px;line-height:1.5}
+
+.md-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.md-slot{border:1px solid var(--rule);border-radius:var(--r-l);padding:16px;background:var(--paper);
+  display:flex;flex-direction:column;gap:11px}
+.md-slothead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.md-slot h4{margin:0;font-size:15px;letter-spacing:-.018em;font-weight:700}
+.md-why{font-size:12.5px;color:var(--muted);line-height:1.45}
+.md-hint{font-size:12.5px;line-height:1.45;color:var(--faint)}
+.md-hint.todo{color:var(--warn)}
+
+.md-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}
+.md-tile{border:1px solid var(--rule);border-radius:var(--r-m);background:var(--paper);
+  display:flex;flex-direction:column;overflow:hidden;margin:0}
+.md-ph{position:relative;aspect-ratio:4/3;display:grid;place-items:center;
+  background:linear-gradient(148deg,color-mix(in srgb,var(--tc) 34%,var(--paper)),
+                                    color-mix(in srgb,var(--tc) 9%,var(--paper)));
+  border-bottom:1px solid var(--rule)}
+.md-ini{font-size:19px;font-weight:800;letter-spacing:-.03em;color:var(--tc)}
+.md-play{width:34px;height:34px;border-radius:999px;background:var(--paper);display:grid;place-items:center;
+  color:var(--ink);box-shadow:0 0 0 1px var(--rule)}
+.md-dur{position:absolute;right:7px;bottom:7px;background:var(--ink);color:var(--paper);
+  font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px}
+.md-flag{position:absolute;left:7px;top:7px;background:var(--paper);border:1px solid var(--rule);
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:2px 7px;border-radius:999px;color:var(--ink-2)}
+.md-body{padding:11px 12px 13px;display:flex;flex-direction:column;gap:8px;flex:1}
+.md-cap{font-size:13.5px;color:var(--ink-2);line-height:1.45;margin:0}
+.md-tags{display:flex;gap:5px;flex-wrap:wrap}
+.md-verdict{font-size:12.5px;line-height:1.45;color:var(--muted)}
+.md-verdict.block{color:var(--warn)}
+.md-verdict.ok{color:var(--good)}
+.md-sent{font-size:12px;color:var(--faint)}
+.md-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:auto;padding-top:4px}
+.md-del{width:28px;height:28px}
+.md-del:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent)}
+.md-add{width:100%;aspect-ratio:4/3;border:1.5px dashed var(--rule-strong);border-radius:var(--r-m);
+  display:grid;place-items:center;font-size:13px;font-weight:650;color:var(--muted);
+  background:var(--paper);transition:border-color .14s,color .14s,background .14s}
+.md-add:hover{border-color:var(--slate);color:var(--slate);background:var(--slate-tint)}
+
+.md-seg{display:inline-flex;background:var(--raise2);border-radius:999px;padding:3px;gap:2px}
+.md-seg button{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:650;color:var(--muted);transition:.14s}
+.md-seg button.on{background:var(--paper);color:var(--ink)}
+.md-group{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px;margin-top:14px;background:var(--paper)}
+.md-grouphead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.md-grouphead b{font-size:15.5px;letter-spacing:-.02em}
+.md-groupmeta{font-size:13px;color:var(--muted);margin-top:3px}
+.md-who{display:flex;align-items:center;gap:11px;min-width:0}
+
+.md-opts{display:flex;flex-direction:column;gap:10px;margin:0 0 18px}
+.md-opt{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--rule);
+  border-radius:var(--r-m);cursor:pointer;transition:border-color .14s,background .14s}
+.md-opt:hover{border-color:var(--rule-strong);background:var(--raise)}
+.md-opt input{width:17px;height:17px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--slate)}
+.md-opt b{font-size:15px;letter-spacing:-.015em}
+.md-opt span span{display:block;font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+.md-checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.md-check{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--rule);
+  border-radius:var(--r-m);cursor:pointer;transition:border-color .14s,background .14s}
+.md-check:hover{border-color:var(--rule-strong);background:var(--raise)}
+.md-check input{width:16px;height:16px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--slate)}
+.md-check b{display:block;font-size:13.5px;letter-spacing:-.01em}
+.md-gate{border:1px solid var(--rule);border-radius:var(--r-m);padding:13px 15px;background:var(--raise);
+  margin:16px 0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.md-gate.block{background:var(--warn-tint);border-color:transparent}
+.md-gatehead{margin-bottom:6px}
+.md-cnt{font-size:12px;color:var(--faint);align-self:flex-end}
+.md-cnt.over{color:var(--danger);font-weight:700}
+.md-strip{display:flex;gap:9px;align-items:flex-start;padding:13px 15px;border-radius:var(--r-m);
+  background:var(--raise);font-size:13.5px;color:var(--ink-2);line-height:1.5;margin-top:14px}
+.md-legend{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.md-legend div{font-size:13px;color:var(--muted);line-height:1.45}
+.md-legend b{color:var(--ink);font-weight:700}
+.md-empty{border:1px dashed var(--rule-strong);border-radius:var(--r-l);padding:26px;text-align:center;
+  color:var(--muted);font-size:13.5px}
+.md-seg button:focus-visible,.md-add:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
+@media(max-width:760px){
+  .md-checks{grid-template-columns:1fr}
+  .md-tiles{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+}
+`;
+
+/* ═══════════════════ TILE RENDERING ═══════════════════ */
+/* No image assets exist and nothing may be fetched, so every tile is
+   drawn: a gradient in the program's sport colour with the initials of
+   whoever is in the frame. */
+const PLAY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5l12 7-12 7z"/></svg>';
+
+function initialsOf(text){
+  return String(text).trim().split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase();
+}
+function tileInitials(it){
+  if (it.athleteIds.length){
+    const base = initialsOf(athleteName(it.athleteIds[0]));
+    return it.athleteIds.length > 1 ? base + " +" + (it.athleteIds.length - 1) : base;
+  }
+  if (it.slot === "headshot" || it.slot === "intro_video") return initialsOf(SEED.providerProfile.businessName);
+  const p = prog(it.programId);
+  return p ? initialsOf(p.sport) : "AP";
+}
+function tileColor(it){
+  const p = prog(it.programId);
+  return p ? sportColor(p.sport) : "var(--slate)";
+}
+function tileAlt(it){
+  const who = it.athleteIds.length
+    ? it.athleteIds.map(athleteName).join(" and ")
+    : SEED.providerProfile.businessName;
+  return (it.mediaType === "video" ? "Video" : "Photo") + " — " + it.caption + " — " + who +
+    ". Shown as a placeholder tile; no image file is stored in this demo.";
+}
+function placeholder(it){
+  return `<div class="md-ph" style="--tc:${tileColor(it)}" role="img" aria-label="${esc(tileAlt(it))}">
+    ${it.mediaType === "video"
+      ? `<span class="md-play">${PLAY}</span>
+         <span class="md-dur num">${esc(String(it.durationSec == null ? "--" : it.durationSec))}s</span>`
+      : `<span class="md-ini">${esc(tileInitials(it))}</span>`}
+    ${it.published ? `<span class="md-flag">On profile</span>` : ""}
+  </div>`;
+}
+
+function athletePill(id){
+  const k = consentOf(id);
+  return `<span class="pill ${consentPill(k)}" title="${esc(consentLabel(k))}">${esc(athleteName(id))}</span>`;
+}
+
+function verdictLine(v){
+  if (v.blockKind === "consent"){
+    return `<p class="md-verdict block">${esc(v.canShare ? v.publishReason : v.shareReason)}</p>`;
+  }
+  if (!v.canShare && v.shareReason){
+    return `<p class="md-verdict">${esc(v.shareReason)}</p>`;
+  }
+  return `<p class="md-verdict ok">Cleared to send to the family and to publish.</p>`;
+}
+
+function itemTile(it){
+  const v = evaluate(it);
+  const sent = it.sharedWith.length;
+  return `<figure class="md-tile">
+    ${placeholder(it)}
+    <div class="md-body">
+      <figcaption class="md-cap">${esc(it.caption)}</figcaption>
+      ${it.athleteIds.length ? `<div class="md-tags">${it.athleteIds.map(athletePill).join("")}</div>` : ""}
+      ${verdictLine(v)}
+      ${sent ? `<p class="md-sent num">Sent to ${esc(countOf(sent, "family thread"))} · ${esc(fmtDate(it.sharedWith[sent - 1].at.slice(0, 10)))}</p>` : ""}
+      <div class="md-acts">
+        <button class="btn ghost sm" data-md-share="${esc(it.id)}" ${v.canShare ? "" : `disabled aria-disabled="true"`}
+          title="${esc(v.canShare ? "Send to the family thread" : v.shareReason)}">Send to family</button>
+        ${it.published
+          ? `<button class="btn ghost sm" data-md-unpublish="${esc(it.id)}">Remove from profile</button>`
+          : `<button class="btn sm" data-md-publish="${esc(it.id)}" ${v.canPublish ? "" : `disabled aria-disabled="true"`}
+              title="${esc(v.canPublish ? "Publish to your public profile" : v.publishReason)}">Publish</button>`}
+        <button class="x md-del" data-md-del="${esc(it.id)}"
+          aria-label="Delete ${esc(it.caption)}">${ICON.x}</button>
+      </div>
+    </div>
+  </figure>`;
+}
+
+/* ═══════════════════ VIEWS ═══════════════════ */
+
+function slotCard(sl){
+  const items = slotItems(sl.key);
+  const have = items.length, short = Math.max(0, sl.need - have);
+  const ok = have >= sl.need && (sl.key !== "intro_video" || introOk());
+  const hint = sl.key === "intro_video"
+    ? (have === 0
+        ? `Nothing on file. Sporve asks for ${RULE.introMin}–${RULE.introMax} seconds.`
+        : introOk()
+          ? `On file — ${items[0].durationSec}s, inside the ${RULE.introMin}–${RULE.introMax} second window.`
+          : `On file, but it runs ${items[0].durationSec}s. Sporve asks for ${RULE.introMin}–${RULE.introMax} seconds.`)
+    : short === 0
+      ? `Complete — ${countOf(have, "on file")}.`
+      : `${have} of ${sl.need} on file. Add ${countOf(short, "more")}.`;
+
+  return `<div class="md-slot">
+    <div class="md-slothead">
+      <h4>${esc(sl.label)}</h4>
+      <span class="pill ${ok ? "good" : "warn"} num">${have}/${sl.need}</span>
+    </div>
+    <p class="md-why">${esc(sl.why)}</p>
+    <p class="md-hint ${ok ? "" : "todo"}">${esc(hint)}</p>
+    <div class="md-tiles">
+      ${items.map(itemTile).join("")}
+      <button class="md-add" data-md-upload="${esc(sl.key)}"
+        aria-label="Add ${esc(sl.label.toLowerCase())}">+ Add ${esc(sl.format)}</button>
+    </div>
+  </div>`;
+}
+
+function sessionGroups(){
+  const used = SESSIONS.filter(s => itemsForSession(s.id).length);
+  if (!used.length) return `<div class="md-empty">No session media yet. Anything you capture at a session lands here first.</div>`;
+  return used.map(s => {
+    const p = prog(s.programId);
+    const items = itemsForSession(s.id);
+    const blocked = items.filter(i => evaluate(i).blockKind === "consent").length;
+    return `<section class="md-group">
+      <div class="md-grouphead">
+        <div style="min-width:0">
+          <b>${esc(s.title)}</b>
+          <div class="md-groupmeta num">${esc(fmtDate(s.date))} · ${esc(s.startTime)}${p ? " · " + esc(p.title) : ""}</div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+          ${p ? `<span class="pill" style="background:${sportColor(p.sport)}1A;color:${sportColor(p.sport)}">${esc(p.sport)}</span>` : ""}
+          <span class="pill slate num">${esc(countOf(items.length, "item"))}</span>
+          ${blocked ? `<span class="pill warn num">${blocked} held by consent</span>` : ""}
+        </div>
+      </div>
+      <div class="md-tiles">${items.map(itemTile).join("")}</div>
+    </section>`;
+  }).join("");
+}
+
+function athleteGroups(){
+  const used = ROSTER.filter(a => itemsForAthlete(a.id).length);
+  if (!used.length) return `<div class="md-empty">No session media is tagged to an athlete yet.</div>`;
+  return used.map(a => {
+    const items = itemsForAthlete(a.id);
+    const k = consentOf(a.id);
+    const p = prog(a.programId);
+    return `<section class="md-group">
+      <div class="md-grouphead">
+        <div class="md-who">
+          <span class="avatar" style="width:36px;height:36px">${esc(initialsOf(a.name))}</span>
+          <div style="min-width:0">
+            <b>${esc(a.name)}</b>
+            <div class="md-groupmeta num">Age ${a.age == null ? "—" : a.age}${p ? " · " + esc(p.title) : ""}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+          <span class="pill ${consentPill(k)}">${esc(consentLabel(k))}</span>
+          <span class="pill slate num">${esc(countOf(items.length, "item"))}</span>
+        </div>
+      </div>
+      <div class="md-tiles">${items.map(itemTile).join("")}</div>
+    </section>`;
+  }).join("");
+}
+
+function mediaView(){
+  const st = strength();
+  const photos = profilePhotos().length;
+  const shortPhotos = Math.max(0, RULE.featurePhotos - photos);
+  const cc = consentCounts();
+  const sItems = sessionItems();
+  const sessionsUsed = SESSIONS.filter(s => itemsForSession(s.id).length).length;
+  const held = blockedCount();
+
+  const tiles = [
+    ["Profile photos", String(photos), `guideline is ${RULE.featurePhotos}`],
+    ["Intro video", introItem() ? introItem().durationSec + "s" : "None", `${RULE.introMin}–${RULE.introMax} seconds`],
+    ["Session media", String(sItems.length), `across ${countOf(sessionsUsed, "session")}`],
+    ["On your profile", String(publishedCount()), `of ${state.mediaItems.length} in the library`],
+  ];
+
+  return `<div class="md-head"><div>
+      <h1>Media</h1>
+      <p class="md-lede">Your library, and the consent that governs it. Every athlete's parent chooses one of
+        three settings, and that choice decides what you may send and what you may publish. Nothing here can
+        change a family's answer — only ask for it.</p></div>
+    <div class="md-actions">
+      <button class="btn ghost" data-modal="consent">Consent roster</button>
+      <button class="btn" data-md-upload="new">+ Add media</button>
+    </div></div>
+
+  <div class="stats" style="margin-top:16px">
+    ${tiles.map(([k, v, d]) => `<div class="stat"><div class="k">${esc(k)}</div>
+      <div class="v num">${esc(v)}</div><div class="d num">${esc(d)}</div></div>`).join("")}
+  </div>
+
+  <div class="md-meter">
+    <div class="md-meterhead">
+      <div class="eyebrow">Profile media strength</div>
+      <div class="md-pct num">${st.pct}%</div>
+    </div>
+    <div class="md-bar" role="img" aria-label="Profile media is ${st.pct} percent complete">
+      <i style="width:${st.pct}%"></i></div>
+    <p class="md-next"><b>Next:</b> ${esc(st.next)}</p>
+  </div>
+
+  ${held ? `<div class="md-note warn" style="margin-top:14px">
+    <b>${esc(countOf(held, "item"))} held by consent.</b> ${held === 1 ? "It stays" : "They stay"} in your library and
+    ${held === 1 ? "is" : "are"} visible only to you until the ${plural(held, "family grants", "families grant")}
+    permission. Nothing was deleted.</div>` : ""}
+
+  <div class="md-secline"><div>
+      <h3>Profile media</h3>
+      <p>What appears on your public listing. Sporve's listing guideline asks for ${RULE.featurePhotos} or more
+        profile photos — you have <span class="num">${photos}</span>${shortPhotos
+          ? `, so add <span class="num">${shortPhotos}</span> more.`
+          : `, which meets it.`}</p>
+    </div></div>
+  <div class="md-slots">${SLOTS.map(slotCard).join("")}</div>
+
+  <div class="md-secline"><div>
+      <h3>Session media</h3>
+      <p>Clips and photos captured at a specific session. Every one is attached to the athletes in it, which is
+        what makes the consent gate enforceable.</p>
+    </div>
+    <div class="md-seg" role="group" aria-label="Group session media by">
+      <button class="${grouping === "session" ? "on" : ""}" data-md-group="session"
+        aria-pressed="${grouping === "session"}">By session</button>
+      <button class="${grouping === "athlete" ? "on" : ""}" data-md-group="athlete"
+        aria-pressed="${grouping === "athlete"}">By athlete</button>
+    </div></div>
+
+  ${grouping === "session" ? sessionGroups() : athleteGroups()}
+  ${grouping === "athlete"
+    ? `<p class="md-hint" style="margin-top:12px">Media with more than one athlete in it appears under each of them.</p>`
+    : ""}
+
+  <div class="md-strip">
+    <span>Consent on file: <span class="num">${cc.public_profile}</span> profile + private ·
+      <span class="num">${cc.private_share}</span> private only ·
+      <span class="num">${cc.none}</span> no media, across ${esc(countOf(ROSTER.length, "athlete"))}.
+      Parents change this in their own app at any time, and a withdrawal pulls the media immediately.</span>
+  </div>`;
+}
+
+/* ═══════════════════ MODALS ═══════════════════ */
+const wrap = (title, body) =>
+  `<div class="scrim" data-scrim="1"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="modal-head"><b>${esc(title)}</b><button class="x" data-close="1" aria-label="Close">${ICON.x}</button></div>
+    <div class="modal-body">${body}</div></div></div>`;
+
+/* Live gate copy, shared by the upload modal and its repaint. */
+function gateHTML(draft){
+  const v = evaluate(draft);
+  const kids = draft.athleteIds.length;
+  const lines = [];
+  if (!kids){
+    lines.push(draft.kind === "session"
+      ? "No athlete tagged yet. Session media must name the athletes in it before it can be sent anywhere."
+      : "No athlete tagged. This can go on your public profile without anyone's consent, and there is no family thread to send it to.");
+  } else if (v.canShare && v.canPublish){
+    lines.push("All " + countOf(kids, "tagged athlete") + " have profile consent. This can be sent to their families and published on your profile.");
+  } else if (v.canShare){
+    lines.push(v.publishReason);
+    lines.push("You can still send it privately to the tagged families.");
+  } else {
+    lines.push(v.shareReason);
+  }
+  return `<div class="eyebrow md-gatehead">Consent check</div>${lines.map(l => `<div>${esc(l)}</div>`).join("")}`;
+}
+
+function uploadModal(){
+  const preset = (S.modal && S.modal.mdSlot) || null;
+  const kind = preset && preset !== "new" ? "profile" : "session";
+  const slotKey = preset && preset !== "new" ? preset : "headshot";
+  const draft = { kind: kind, mediaType: slotRow(slotKey).format, athleteIds: [] };
+
+  return wrap("Add media", `
+    <p style="color:var(--muted);margin-bottom:18px">Tag the athletes who are actually in the frame. The consent
+      check below runs before anything can be marked shareable — and it runs again when you press send.</p>
+    <form id="mdUploadForm" novalidate>
+      <p class="eyebrow" style="margin-bottom:11px">What is this?</p>
+      <div class="md-opts">
+        <label class="md-opt">
+          <input type="radio" name="kind" value="profile" ${kind === "profile" ? "checked" : ""}>
+          <span style="min-width:0"><b>Profile media</b>
+            <span>Lives on your public listing — headshot, intro video, facility, action shots.</span></span>
+        </label>
+        <label class="md-opt">
+          <input type="radio" name="kind" value="session" ${kind === "session" ? "checked" : ""}>
+          <span style="min-width:0"><b>Session media</b>
+            <span>Captured at one session and attached to the athletes who were there.</span></span>
+        </label>
+      </div>
+
+      <div id="mdProfileWrap" class="${kind === "profile" ? "" : "hide"}">
+        <div class="field"><label for="mdSlot">Where it sits on your profile</label>
+          <select id="mdSlot" name="slot">
+            ${SLOTS.map(s => `<option value="${esc(s.key)}" ${s.key === slotKey ? "selected" : ""}>${esc(s.label)}</option>`).join("")}
+          </select></div>
+      </div>
+
+      <div id="mdSessionWrap" class="${kind === "session" ? "" : "hide"}">
+        <div class="field"><label for="mdSession">Session</label>
+          <select id="mdSession" name="sessionId">
+            <option value="">Pick a session</option>
+            ${SESSIONS.map(s => {
+              const p = prog(s.programId);
+              return `<option value="${esc(s.id)}">${esc(s.title)} · ${esc(fmtDate(s.date))}${p ? " · " + esc(p.title) : ""}</option>`;
+            }).join("")}
+          </select></div>
+      </div>
+
+      <div class="field"><label for="mdType">Format</label>
+        <select id="mdType" name="mediaType">
+          <option value="photo" ${draft.mediaType === "photo" ? "selected" : ""}>Photo</option>
+          <option value="video" ${draft.mediaType === "video" ? "selected" : ""}>Video</option>
+        </select></div>
+
+      <div class="field ${draft.mediaType === "video" ? "" : "hide"}" id="mdDurWrap">
+        <label for="mdDur">Length in seconds</label>
+        <input id="mdDur" name="durationSec" type="number" min="1" max="600" step="1" class="num" value="45">
+      </div>
+
+      <p class="eyebrow" style="margin-bottom:6px">Athletes in this media</p>
+      <p class="md-why" style="margin-bottom:10px">Required for session media. Optional for profile media — but an
+        action shot with a child in it counts as media of that child.</p>
+      <div class="md-checks">
+        ${ROSTER.map(a => {
+          const k = consentOf(a.id);
+          return `<label class="md-check">
+            <input type="checkbox" name="athlete" value="${esc(a.id)}" data-md-tag="1">
+            <span style="min-width:0"><b>${esc(a.name)}</b>
+              <span class="pill ${consentPill(k)}" style="margin-top:4px">${esc(consentLabel(k))}</span></span>
+          </label>`;
+        }).join("")}
+      </div>
+
+      <div class="field" style="margin-top:16px"><label for="mdCap">Caption</label>
+        <textarea id="mdCap" name="caption" rows="3" maxlength="400"
+          placeholder="What the family is looking at"></textarea>
+        <span class="md-cnt num" id="mdCnt">0 / ${RULE.captionMax}</span></div>
+
+      <div class="md-gate" id="mdGate">${gateHTML(draft)}</div>
+
+      <label class="md-check" id="mdShareWrap" style="margin-bottom:16px">
+        <input type="checkbox" id="mdShareable" name="shareable" disabled>
+        <span style="min-width:0"><b>Mark as shareable with the tagged families</b>
+          <span class="md-why" id="mdShareWhy">Tag at least one athlete with consent to enable this.</span></span>
+      </label>
+
+      <div id="mdUpErr" class="err hide" style="margin-bottom:10px"></div>
+      <button class="btn wide" type="submit">Add to library</button>
+    </form>`);
+}
+
+function consentModal(){
+  const cc = consentCounts();
+  return wrap("Media consent", `
+    <div class="md-note warn" style="margin-bottom:18px">
+      <b>Only a parent can grant this.</b> Consent is set by the family in their own Sporve app, against a
+      named athlete. You can see what they chose and ask them to reconsider — there is no control here, and no
+      code path in this app, that lets a coach answer on a family's behalf.</div>
+
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Athlete</th><th>Program</th><th>Tagged</th><th>Consent</th><th>Action</th></tr></thead>
+      <tbody>${ROSTER.map(a => {
+        const k = consentOf(a.id);
+        const p = prog(a.programId);
+        const req = consentRequests[a.id] || null;
+        return `<tr>
+          <td><b>${esc(a.name)}</b>
+            <div class="num" style="color:var(--muted);font-size:12.5px">Age ${a.age == null ? "—" : a.age} · ${esc(a.parent)}</div></td>
+          <td>${p ? esc(p.title) : `<span style="color:var(--muted)">—</span>`}</td>
+          <td class="num">${taggedCount(a.id)}</td>
+          <td><span class="pill ${consentPill(k)}">${esc(consentLabel(k))}</span>
+            ${a.consentAt
+              ? `<div class="num" style="color:var(--muted);font-size:12.5px;margin-top:3px">set ${esc(fmtDate(a.consentAt.slice(0, 10)))}</div>`
+              : `<div style="color:var(--muted);font-size:12.5px;margin-top:3px">never set</div>`}</td>
+          <td>${k === "public_profile"
+            ? `<span style="color:var(--muted);font-size:13px">Nothing to ask for</span>`
+            : `<button class="btn ghost sm" data-md-request="${esc(a.id)}">${req ? "Ask again" : "Request consent"}</button>
+               ${req ? `<div class="num" style="color:var(--muted);font-size:12.5px;margin-top:4px">asked ${esc(fmtDate(req.slice(0, 10)))}</div>` : ""}`}</td>
+        </tr>`;
+      }).join("")}</tbody></table></div>
+
+    <p class="eyebrow" style="margin-top:20px">What the three settings mean</p>
+    <div class="md-legend">
+      ${CONSENT.map(([k, label, , meaning]) =>
+        `<div><b>${esc(label)}</b> — ${esc(meaning)}</div>`).join("")}
+    </div>
+    <div class="md-strip">
+      <span>Counts: <span class="num">${cc.public_profile}</span> profile + private,
+        <span class="num">${cc.private_share}</span> private only,
+        <span class="num">${cc.none}</span> no media. A family can change or withdraw at any time.</span>
+    </div>`);
+}
+
+function shareMediaModal(){
+  const it = itemById(S.modal && S.modal.itemId);
+  if (!it) return wrap("Send to family", `<p style="color:var(--muted)">That media item no longer exists.</p>`);
+  const v = evaluate(it);
+  const noun = it.mediaType === "video" ? "clip" : "photo";
+  const s = it.sessionId ? sessionById(it.sessionId) : null;
+
+  const head = `<figure class="md-tile" style="max-width:210px;margin:0 0 18px">
+      ${placeholder(it)}
+      <div class="md-body"><figcaption class="md-cap">${esc(it.caption)}</figcaption>
+        ${s ? `<p class="md-sent num">${esc(s.title)} · ${esc(fmtDate(s.date))}</p>` : ""}</div>
+    </figure>`;
+
+  if (!v.canShare){
+    return wrap("Send to family", head + `
+      <div class="md-note warn" style="margin-bottom:18px">
+        <b>This ${esc(noun)} can't be sent.</b> ${esc(v.shareReason)}</div>
+      ${v.athleteIds.length ? `<p class="eyebrow" style="margin-bottom:8px">Tagged</p>
+        <div class="md-tags" style="margin-bottom:18px">${v.athleteIds.map(athletePill).join("")}</div>` : ""}
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">
+        Sending is blocked in code, not just in this dialog — the same check runs again on the send itself.</p>
+      <button class="btn wide" data-modal="consent">Open the consent roster</button>`);
+  }
+
+  const recipients = it.athleteIds.map(id => {
+    const a = athleteById(id), k = consentOf(id);
+    return `<div class="linerow"><span>${esc(a ? a.parent : "Parent")}
+        <span style="color:var(--muted)"> · ${esc(athleteName(id))}</span></span>
+      <span class="pill ${consentPill(k)}">${esc(consentLabel(k))}</span></div>`;
+  }).join("");
+
+  return wrap("Send to family", head + `
+    <p class="eyebrow" style="margin-bottom:4px">Goes to</p>
+    ${recipients}
+    ${v.canPublish ? "" : `<div class="md-note warn" style="margin-top:14px">
+      Private send only. ${esc(v.publishReason)}</div>`}
+    <form id="mdShareForm" style="margin-top:18px">
+      <div class="field"><label for="mdShareNote">Note to the family (optional)</label>
+        <textarea id="mdShareNote" name="note" rows="3" maxlength="400"
+          placeholder="What you want them to notice"></textarea>
+        <span class="md-cnt num" id="mdShareCnt">0 / ${RULE.captionMax}</span></div>
+      <div id="mdShareErr" class="err hide" style="margin-bottom:10px"></div>
+      <button class="btn wide" type="submit">${ICON.send} Send to ${esc(countOf(it.athleteIds.length, "family thread"))}</button>
+    </form>`);
+}
+
+/* ═══════════════════ WIRING ═══════════════════ */
+function ensureCSS(){
+  if (document.getElementById("mod-media-css")) return;
+  const el = document.createElement("style");
+  el.id = "mod-media-css";
+  el.textContent = CSS;
+  document.head.appendChild(el);
+}
+
+/* Read the upload form's current draft without touching state. */
+function readDraft(form){
+  const kindEl = form.querySelector('input[name="kind"]:checked');
+  const typeEl = form.querySelector('#mdType');
+  const ids = [];
+  form.querySelectorAll('input[name="athlete"]:checked').forEach(c => ids.push(c.value));
+  return {
+    kind: kindEl ? kindEl.value : "session",
+    mediaType: typeEl ? typeEl.value : "photo",
+    athleteIds: ids,
+  };
+}
+
+/* The host re-renders everything on state change, which would steal the
+   caret out of the caption box. So the gate, the counter, and the
+   shareable checkbox repaint in place. */
+function paintGate(){
+  const form = document.getElementById("mdUploadForm");
+  if (!form) return;
+  const draft = readDraft(form);
+  const v = evaluate(draft);
+  const gate = document.getElementById("mdGate");
+  if (gate){
+    gate.innerHTML = gateHTML(draft);
+    gate.classList.toggle("block", !v.canShare || !v.canPublish);
+  }
+  const cb = document.getElementById("mdShareable");
+  const why = document.getElementById("mdShareWhy");
+  if (cb){
+    const allowed = v.canShare;
+    if (!allowed) cb.checked = false;
+    cb.disabled = !allowed;
+    if (why){
+      why.textContent = allowed
+        ? "The tagged families can receive this in their own thread."
+        : (draft.athleteIds.length ? v.shareReason : "Tag at least one athlete with consent to enable this.");
+    }
+  }
+}
+function paintCount(taEl, outEl){
+  if (!taEl || !outEl) return;
+  const n = taEl.value.length;
+  outEl.textContent = n + " / " + RULE.captionMax;
+  outEl.classList.toggle("over", n > RULE.captionMax);
+}
+
+function wire(){
+  ensureCSS();
+  const q = s => document.querySelectorAll(s);
+
+  /* ── library actions ──────────────────────────────────────────── */
+  q("[data-md-upload]").forEach(b => b.onclick = () => {
+    S.modal = { type: "upload", mdSlot: b.dataset.mdUpload };
+    render();
+  });
+  q("[data-md-group]").forEach(b => b.onclick = () => {
+    grouping = b.dataset.mdGroup === "athlete" ? "athlete" : "session";
+    render();
+  });
+
+  /* Every outbound path re-checks the gate. The disabled attribute is
+     a courtesy to the coach; this is the actual rule. */
+  q("[data-md-share]").forEach(b => b.onclick = () => {
+    const it = itemById(b.dataset.mdShare);
+    if (!it) return;
+    const v = evaluate(it);
+    if (!v.canShare){ toast(v.shareReason); return; }
+    S.modal = { type: "sharemedia", itemId: it.id };
+    render();
+  });
+  q("[data-md-publish]").forEach(b => b.onclick = () => {
+    const it = itemById(b.dataset.mdPublish);
+    if (!it) return;
+    const v = evaluate(it);
+    if (!v.canPublish){ toast(v.publishReason); return; }
+    it.published = true;
+    render();
+    toast("Published to your profile");
+  });
+  q("[data-md-unpublish]").forEach(b => b.onclick = () => {
+    const it = itemById(b.dataset.mdUnpublish);
+    if (!it) return;
+    it.published = false;                       // taking something down is never gated
+    render();
+    toast("Removed from your public profile");
+  });
+  q("[data-md-del]").forEach(b => b.onclick = () => {
+    const it = itemById(b.dataset.mdDel);
+    if (!it) return;
+    state.mediaItems = state.mediaItems.filter(x => x.id !== it.id);
+    render();
+    toast("Deleted from your library");
+  });
+
+  /* ── consent roster: ask, never grant ─────────────────────────── */
+  q("[data-md-request]").forEach(b => b.onclick = () => {
+    const a = athleteById(b.dataset.mdRequest);
+    if (!a) return;
+    consentRequests[a.id] = iso(NOW());
+    render();
+    toast("Consent request sent to " + a.parent + " — only they can grant it");
+  });
+
+  /* ── upload form ──────────────────────────────────────────────── */
+  const uf = document.getElementById("mdUploadForm");
+  if (uf){
+    const cap = document.getElementById("mdCap");
+    const cnt = document.getElementById("mdCnt");
+    const durWrap = document.getElementById("mdDurWrap");
+    const typeEl = document.getElementById("mdType");
+    const profWrap = document.getElementById("mdProfileWrap");
+    const sessWrap = document.getElementById("mdSessionWrap");
+    const slotEl = document.getElementById("mdSlot");
+
+    const syncKind = () => {
+      const d = readDraft(uf);
+      if (profWrap) profWrap.classList.toggle("hide", d.kind !== "profile");
+      if (sessWrap) sessWrap.classList.toggle("hide", d.kind !== "session");
+      paintGate();
+    };
+    uf.querySelectorAll('input[name="kind"]').forEach(r => r.onchange = syncKind);
+    uf.querySelectorAll("[data-md-tag]").forEach(c => c.onchange = paintGate);
+    if (typeEl) typeEl.onchange = () => {
+      if (durWrap) durWrap.classList.toggle("hide", typeEl.value !== "video");
+      paintGate();
+    };
+    if (slotEl) slotEl.onchange = () => {
+      const sl = slotRow(slotEl.value);
+      if (typeEl){ typeEl.value = sl.format; }
+      if (durWrap) durWrap.classList.toggle("hide", sl.format !== "video");
+      paintGate();
+    };
+    if (cap) cap.oninput = () => paintCount(cap, cnt);
+    paintCount(cap, cnt);
+    paintGate();
+
+    uf.onsubmit = ev => {
+      ev.preventDefault();
+      const err = document.getElementById("mdUpErr");
+      const show = msg => { if (err){ err.textContent = msg; err.classList.remove("hide"); } return false; };
+      const d = Object.fromEntries(new FormData(uf));
+      const draft = readDraft(uf);
+      const caption = String(d.caption || "").trim();
+
+      if (!caption) return show("Write a caption — the family reads it before they look at the photo.");
+      if (caption.length > RULE.captionMax)
+        return show("Captions are limited to " + RULE.captionMax + " characters — yours is " + caption.length + ".");
+      if (draft.kind === "session"){
+        if (!d.sessionId) return show("Pick the session this came from.");
+        if (!draft.athleteIds.length)
+          return show("Tag at least one athlete — session media is always attached to the athletes in it.");
+      }
+      let dur = null;
+      if (draft.mediaType === "video"){
+        dur = Number(d.durationSec);
+        if (!isFinite(dur) || dur < 1) return show("Enter how many seconds the video runs.");
+        dur = Math.round(dur);
+        if (draft.kind === "profile" && d.slot === "intro_video" && (dur < RULE.introMin || dur > RULE.introMax))
+          return show("An intro video has to run " + RULE.introMin + "–" + RULE.introMax + " seconds — this one is " + dur + "s.");
+      }
+      if (err) err.classList.add("hide");
+
+      const sess = draft.kind === "session" ? sessionById(String(d.sessionId)) : null;
+      const item = {
+        id: "md_" + Date.now(),
+        kind: draft.kind,
+        slot: draft.kind === "profile" ? String(d.slot || "action") : null,
+        mediaType: draft.mediaType,
+        durationSec: dur,
+        sessionId: sess ? sess.id : null,
+        programId: sess ? sess.programId : null,
+        athleteIds: draft.athleteIds.slice(),
+        caption: caption,
+        createdAt: iso(NOW()),
+        published: false,
+        shareable: false,
+        sharedWith: [],
+      };
+      /* The gate decides, not the checkbox: a tampered or stale DOM
+         cannot mark a blocked item shareable. */
+      const v = evaluate(item);
+      item.shareable = v.canShare && !!d.shareable;
+
+      state.mediaItems = state.mediaItems.concat([item]);
+      S.modal = null;
+      S.coachTab = "media";
+      render();
+      toast(v.blockKind === "consent"
+        ? "Added — held by consent, visible only to you for now"
+        : item.shareable ? "Added and ready to send" : "Added to your library");
+    };
+  }
+
+  /* ── share form ───────────────────────────────────────────────── */
+  const sf = document.getElementById("mdShareForm");
+  if (sf){
+    const note = document.getElementById("mdShareNote");
+    const cnt2 = document.getElementById("mdShareCnt");
+    if (note) note.oninput = () => paintCount(note, cnt2);
+    paintCount(note, cnt2);
+
+    sf.onsubmit = ev => {
+      ev.preventDefault();
+      const err = document.getElementById("mdShareErr");
+      const show = msg => { if (err){ err.textContent = msg; err.classList.remove("hide"); } return false; };
+      const it = itemById(S.modal && S.modal.itemId);
+      if (!it){ S.modal = null; render(); return; }
+      const d = Object.fromEntries(new FormData(sf));
+      const noteTxt = String(d.note || "").trim();
+      if (noteTxt.length > RULE.captionMax)
+        return show("Notes are limited to " + RULE.captionMax + " characters — yours is " + noteTxt.length + ".");
+
+      /* Re-check at the moment of sending — consent can have changed
+         between opening this dialog and pressing the button. */
+      const v = evaluate(it);
+      if (!v.canShare){
+        S.modal = null;
+        render();
+        toast(v.shareReason);
+        return;
+      }
+      const at = iso(NOW());
+      it.athleteIds.forEach(id => it.sharedWith.push({ athleteId: id, at: at }));
+      it.shareable = true;
+      it.note = noteTxt || null;
+      S.modal = null;
+      render();
+      toast("Sent to " + countOf(it.athleteIds.length, "family thread"));
+    };
+  }
+}
+
+/* ═══════════════════ EXPORT ═══════════════════ */
+window.MOD_MEDIA = {
+  css: CSS,
+  tabs: { media: "Media" },
+  views: { media: mediaView },
+  modals: { upload: uploadModal, consent: consentModal, sharemedia: shareMediaModal },
+  wire: wire,
+  state: state,
+  strength: strength,
+};
+
+/* exposed for the stub-DOM harness; harmless in the browser */
+window.MOD_MEDIA._test = { evaluate: evaluate, consentOf: consentOf, itemById: itemById,
+  ROSTER: ROSTER, SESSIONS: SESSIONS, RULE: RULE, TODAY: TODAY };
+
+})();

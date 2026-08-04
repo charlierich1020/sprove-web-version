@@ -1,0 +1,1111 @@
+"use strict";
+/* ═══════════════════════════════════════════════════════════════════
+   MOD_COACHONBOARD — the seven-step coach onboarding wizard.
+
+   One step on screen at a time, a persistent rail on the left, and a
+   draft that survives every re-render because it lives in S.onboard.
+
+   The rule the whole file is built around: a coach can describe their
+   own business, but a coach can never grade it. Every field that a
+   family would read as a safety signal — verified, approved,
+   background-cleared — is written by this module as unverified /
+   pending / none, no matter what arrives from the form. The submit
+   path has no branch that can produce any other value.
+
+   Host contract used (never redefined here):
+     S, render(), toast(), esc(), money(), isVerified(), PROGRAMS,
+     SEED.providerProfile, sportColor(), sportGlyph(), SPORT_COLOR, ICON.
+
+   Mounts as the view named "onboard": as a route (S.route={name:"onboard"})
+   in the family portal, or as a coach tab (S.coachTab="onboard").
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+
+/* ── the app's pinned demo clock, matching the host's ageOf() ─────── */
+const TODAY = new Date(2026, 7, 3);          // Mon 3 Aug 2026
+const TODAY_ISO = "2026-08-03";
+
+/* ── platform economics: the same 9% the Finances tab already bills ─ */
+const FEE_RATE = 0.09;
+const feeOn = n => Math.round(Number(n) * FEE_RATE);
+const netOf = n => Number(n) - feeOn(n);
+
+/* ── steps ───────────────────────────────────────────────────────── */
+const STEPS = [
+  ["Identity",        "Who you are",              "The legal name here is the name that goes to the screening partner. The business name is what families read on your listings."],
+  ["Sports",          "What you coach",           "Pick every sport you actually coach. Each one becomes a filter families can find you through."],
+  ["Services",        "Services & capacity",      "A service is one thing a family can book. Capacity is the honest ceiling — how many athletes you can coach at once without the session getting worse."],
+  ["Pricing",         "Pricing",                  "You set the price. Sporve takes 9% at checkout; the take-home figure beside each service is what actually reaches your account."],
+  ["Availability",    "Availability",             "The days and the window you can coach. Exact session times come later, from your schedule — this is the outer boundary."],
+  ["Background check","Background check",         "Every person who coaches on Sporve clears their own check. This step collects consent and the identifiers the screening partner needs."],
+  ["Review",          "Review & submit",          "Everything you entered, read back. Fix anything that is wrong before it goes in."],
+];
+const LAST = STEPS.length - 1;
+
+/* ── vocabularies ────────────────────────────────────────────────── */
+const FORMATS = [
+  ["private", "One-on-one", "A single athlete with you for the whole session."],
+  ["group",   "Small group","Several athletes coached together in one block."],
+  ["camp",    "Camp",       "A multi-day block a family books as one unit."],
+  ["team",    "Team",       "A whole roster you coach as a squad."],
+];
+const FORMAT_CAP = { private: 1, group: 8, camp: 20, team: 16 };
+const formatRow = k => FORMATS.find(f => f[0] === k) || FORMATS[0];
+
+/* keys match the host's modelLabel() exactly, so a draft reads the same
+   everywhere in the app once it is published */
+const MODELS = [
+  ["single_session", "Per session", "Charged each time a session is booked."],
+  ["monthly",        "Per month",   "Charged monthly for as long as the family stays enrolled."],
+  ["package",        "Per package", "One charge covering a fixed block of sessions."],
+  ["seasonal",       "Per season",  "One charge covering a whole season."],
+];
+const MODEL_UNIT = { single_session: "per session", monthly: "per month", package: "per package", seasonal: "per season" };
+const modelRow = k => MODELS.find(m => m[0] === k) || MODELS[0];
+
+const WD = [
+  ["mon", "Mon", "Monday"], ["tue", "Tue", "Tuesday"], ["wed", "Wed", "Wednesday"],
+  ["thu", "Thu", "Thursday"], ["fri", "Fri", "Friday"], ["sat", "Sat", "Saturday"],
+  ["sun", "Sun", "Sunday"],
+];
+const wdLong = k => (WD.find(w => w[0] === k) || ["", "", k])[2];
+
+/* ── small helpers ───────────────────────────────────────────────── */
+const HHMM = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+const toMin = t => { const m = HHMM.exec(String(t)); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+const t12 = t => {
+  const n = toMin(t); if (isNaN(n)) return String(t);
+  let h = Math.floor(n / 60); const m = n % 60, ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return h + ":" + String(m).padStart(2, "0") + " " + ap;
+};
+const durLabel = mins => {
+  const n = Number(mins);
+  if (!isFinite(n)) return "—";
+  if (n < 60) return n + " min";
+  const h = Math.floor(n / 60), m = n % 60;
+  return m ? h + " hr " + m + " min" : h + " hr";
+};
+const trim = v => String(v == null ? "" : v).trim();
+const isBlank = v => trim(v) === "";
+const intOf = v => { const n = Number(trim(v)); return isFinite(n) && trim(v) !== "" ? n : NaN; };
+
+/* phone: the shape families dial, plus a real digit count. "(305) 555"
+   passes the shape and fails the count, which is the point. */
+const PHONE_RE = /^\+?[0-9 ()\-]{7,20}$/;
+function phoneDigits(v){ return (trim(v).match(/[0-9]/g) || []).length; }
+function phoneOk(v){
+  const s = trim(v);
+  if (!PHONE_RE.test(s)) return false;
+  const n = phoneDigits(s);
+  return n >= 7 && n <= 15;
+}
+
+/* a real calendar date, and the age it implies against the pinned today */
+function ageFrom(dob){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trim(dob));
+  if (!m) return null;
+  const y = +m[1], mo = +m[2] - 1, dd = +m[3];
+  const b = new Date(y, mo, dd);
+  if (b.getFullYear() !== y || b.getMonth() !== mo || b.getDate() !== dd) return null;
+  let a = TODAY.getFullYear() - b.getFullYear();
+  const md = TODAY.getMonth() - b.getMonth();
+  if (md < 0 || (md === 0 && TODAY.getDate() < b.getDate())) a--;
+  return a;
+}
+function prettyDate(d){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trim(d));
+  if (!m) return trim(d);
+  return new Date(+m[1], +m[2] - 1, +m[3])
+    .toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+/* ═══════════════════ STATE ═══════════════════
+   Declared here, deep-copied onto S by the host's bootModules(). Every
+   read goes through draft(), so a re-render can never lose a keystroke
+   and a missing key can never throw. */
+let SVC_SEQ = 0;
+function newService(){
+  SVC_SEQ += 1;
+  return {
+    id: "svc_" + SVC_SEQ,
+    name: "", format: "private", capacity: FORMAT_CAP.private, minutes: 60,
+    price: "", model: "single_session",
+  };
+}
+const BLANK = {
+  step: 0,
+  legalName: "", businessName: "", phone: "", city: "", region: "", years: "",
+  sports: [],
+  services: [{ id: "svc_1", name: "", format: "private", capacity: 1, minutes: 60, price: "", model: "single_session" }],
+  days: [], startTime: "16:00", endTime: "19:00",
+  consent: false, dob: "", ssn4: "",
+  submittedAt: null, profile: null, drafts: [],
+};
+
+function draft(){
+  if (!S.onboard || typeof S.onboard !== "object") S.onboard = JSON.parse(JSON.stringify(BLANK));
+  const d = S.onboard;
+  if (typeof d.step !== "number" || d.step < 0 || d.step > LAST) d.step = 0;
+  if (!Array.isArray(d.sports)) d.sports = [];
+  if (!Array.isArray(d.days)) d.days = [];
+  if (!Array.isArray(d.drafts)) d.drafts = [];
+  if (!Array.isArray(d.services) || !d.services.length) d.services = [newService()];
+  d.services.forEach((s, i) => {
+    if (!s.id) s.id = "svc_" + (i + 1);
+    const n = Number(String(s.id).replace(/\D/g, ""));
+    if (isFinite(n) && n > SVC_SEQ) SVC_SEQ = n;
+  });
+  return d;
+}
+const svc = id => draft().services.find(s => s.id === id) || null;
+
+/* ═══════════════════ VALIDATION ═══════════════════
+   One function per step. Each returns null, or the first genuine problem
+   with the field that owns it — so the message can sit next to the input
+   that has to change. Nothing here is advisory: if it returns a problem,
+   Continue stays disabled. */
+function checkIdentity(d){
+  if (isBlank(d.legalName))
+    return { field: "legalName", msg: "Enter your full legal name — it has to match the ID the screening partner will check." };
+  if (trim(d.legalName).length < 2)
+    return { field: "legalName", msg: "That legal name is too short to be a name." };
+  if (isBlank(d.businessName))
+    return { field: "businessName", msg: "Enter a business or academy name. Coaching under your own name? Use that." };
+  if (isBlank(d.phone))
+    return { field: "phone", msg: "Enter a phone number families and the Sporve safety team can reach you on." };
+  if (trim(d.phone).length > 20)
+    return { field: "phone", msg: "That is " + trim(d.phone).length + " characters long. A phone number, punctuation included, fits in 20." };
+  if (!PHONE_RE.test(trim(d.phone)))
+    return { field: "phone", msg: "A phone number can only contain digits, spaces, brackets, dashes, and a leading +." };
+  if (phoneDigits(d.phone) < 7)
+    return { field: "phone", msg: "That number has only " + phoneDigits(d.phone) + " digits — a real phone number has at least 7." };
+  if (phoneDigits(d.phone) > 15)
+    return { field: "phone", msg: "That number has " + phoneDigits(d.phone) + " digits — no phone number has more than 15." };
+  if (isBlank(d.city))
+    return { field: "city", msg: "Enter the city you coach in. Families search by where they are." };
+  if (isBlank(d.region))
+    return { field: "region", msg: "Enter the state or region." };
+  if (isBlank(d.years))
+    return { field: "years", msg: "Enter how many years you have been coaching. Zero is an honest answer." };
+  const y = intOf(d.years);
+  if (!isFinite(y) || y < 0)
+    return { field: "years", msg: "Years coaching has to be a number, and it cannot be negative." };
+  if (y > 70)
+    return { field: "years", msg: "Seventy years is the ceiling here — enter the years you have actually coached." };
+  return null;
+}
+function checkSports(d){
+  if (!d.sports.length)
+    return { field: "sports", msg: "Pick at least one sport. Families reach you through the sport filter, so a coach with none is invisible." };
+  return null;
+}
+function checkServices(d){
+  if (!d.services.length)
+    return { field: "services", msg: "Add at least one service. A service is the thing a family actually books." };
+  for (let i = 0; i < d.services.length; i++){
+    const s = d.services[i], n = i + 1;
+    if (isBlank(s.name))
+      return { field: "name-" + s.id, msg: "Service " + n + " needs a name — what a family sees before they book." };
+    if (FORMATS.every(f => f[0] !== s.format))
+      return { field: "format-" + s.id, msg: "Service " + n + " needs a format." };
+    const cap = intOf(s.capacity);
+    if (!isFinite(cap))
+      return { field: "capacity-" + s.id, msg: "Service " + n + " needs a maximum capacity." };
+    if (cap < 1)
+      return { field: "capacity-" + s.id, msg: "Service " + n + " has a capacity of " + cap + ". A service nobody can join is not a service — the minimum is 1." };
+    if (cap > 200)
+      return { field: "capacity-" + s.id, msg: "Service " + n + " is capped at 200 athletes. Above that, split it into separate services." };
+    const mins = intOf(s.minutes);
+    if (!isFinite(mins))
+      return { field: "minutes-" + s.id, msg: "Service " + n + " needs a session length in minutes." };
+    if (mins < 10)
+      return { field: "minutes-" + s.id, msg: "Service " + n + " runs " + mins + " minutes. Ten minutes is the shortest session Sporve will list." };
+    if (mins > 600)
+      return { field: "minutes-" + s.id, msg: "Service " + n + " runs longer than ten hours. Split a multi-day camp into its own service instead." };
+  }
+  return null;
+}
+function checkPricing(d){
+  for (let i = 0; i < d.services.length; i++){
+    const s = d.services[i], n = i + 1;
+    if (isBlank(s.price))
+      return { field: "price-" + s.id, msg: "Service " + n + " needs a price. Enter 0 if it is genuinely free." };
+    const p = Number(trim(s.price));
+    if (!isFinite(p))
+      return { field: "price-" + s.id, msg: "Service " + n + " needs a number for its price." };
+    if (p < 0)
+      return { field: "price-" + s.id, msg: "Service " + n + " is priced below zero. A price cannot be negative." };
+    if (p > 100000)
+      return { field: "price-" + s.id, msg: "Service " + n + " is priced above $100,000. Check that figure." };
+    if (MODELS.every(m => m[0] !== s.model))
+      return { field: "model-" + s.id, msg: "Service " + n + " needs a pricing model." };
+  }
+  return null;
+}
+function checkAvailability(d){
+  if (!d.days.length)
+    return { field: "days", msg: "Pick at least one day you can coach." };
+  const a = toMin(d.startTime), b = toMin(d.endTime);
+  if (isNaN(a)) return { field: "startTime", msg: "Enter a start time." };
+  if (isNaN(b)) return { field: "endTime", msg: "Enter an end time." };
+  if (b === a) return { field: "endTime", msg: "Your window starts and ends at the same minute. It has to be long enough to coach in." };
+  if (b < a) return { field: "endTime", msg: "Your window ends before it starts. Set an end time after " + t12(d.startTime) + "." };
+  const lengths = d.services.map(s => intOf(s.minutes)).filter(n => isFinite(n) && n > 0);
+  const shortest = lengths.length ? Math.min.apply(null, lengths) : 30;
+  if (b - a < shortest)
+    return { field: "endTime", msg: "That window is " + durLabel(b - a) + " long, shorter than your shortest session (" + durLabel(shortest) + "). Nothing would fit in it." };
+  return null;
+}
+function checkBackground(d){
+  if (isBlank(d.dob))
+    return { field: "dob", msg: "Enter your date of birth. The screening partner cannot match a record without it." };
+  const age = ageFrom(d.dob);
+  if (age === null)
+    return { field: "dob", msg: "That is not a real calendar date." };
+  if (age < 0)
+    return { field: "dob", msg: "That date of birth is in the future." };
+  if (age < 18)
+    return { field: "dob", msg: "Coaches on Sporve have to be 18 or older. That date of birth makes you " + age + "." };
+  if (age > 100)
+    return { field: "dob", msg: "That date of birth reads as " + age + " years old. Check it." };
+  if (isBlank(d.ssn4))
+    return { field: "ssn4", msg: "Enter the last four digits of your SSN. It is what separates you from someone with your name." };
+  if (!/^\d{4}$/.test(trim(d.ssn4)))
+    return { field: "ssn4", msg: "That has to be exactly four digits — the last four, not the whole number." };
+  if (!d.consent)
+    return { field: "consent", msg: "Sporve cannot run a background check on you without your consent. Tick the box to authorize it." };
+  return null;
+}
+function checkReview(d){
+  for (let i = 0; i < LAST; i++){
+    const e = checkStep(i, d);
+    if (e) return { field: "step-" + i, msg: STEPS[i][0] + " is not finished: " + e.msg };
+  }
+  return null;
+}
+const CHECKS = [checkIdentity, checkSports, checkServices, checkPricing, checkAvailability, checkBackground, checkReview];
+function checkStep(i, d){
+  const fn = CHECKS[i];
+  return fn ? fn(d || draft()) : null;
+}
+/* the lowest step still holding a problem — the furthest the rail may jump */
+function firstOpen(d){
+  for (let i = 0; i < LAST; i++) if (checkStep(i, d)) return i;
+  return LAST;
+}
+const stepDone = (i, d) => i < LAST && !checkStep(i, d);
+/* a step is reachable once everything before it is clean */
+const reachable = (i, d) => i <= firstOpen(d);
+
+/* ═══════════════════ CSS ═══════════════════ */
+const CSS = `
+.cob-page{padding:26px 0 84px}
+.cob-top{max-width:70ch;margin-bottom:22px}
+.cob-lede{color:var(--muted);font-size:15px;margin-top:8px;line-height:1.6}
+.cob-grid{display:grid;grid-template-columns:264px minmax(0,1fr);gap:38px;align-items:start}
+.cob-rail{position:sticky;top:104px}
+.cob-rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.cob-stepitem{position:relative}
+.cob-steplink{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:11px 12px;
+  border-radius:var(--r-m);transition:background .14s}
+.cob-steplink:hover:not(:disabled){background:var(--raise)}
+.cob-steplink:disabled{cursor:not-allowed;opacity:.55}
+.cob-stepitem.on .cob-steplink{background:var(--slate-tint)}
+.cob-dot{width:24px;height:24px;border-radius:999px;flex:0 0 auto;display:grid;place-items:center;
+  font-size:12px;font-weight:700;border:2px solid var(--rule-strong);color:var(--faint);background:var(--paper)}
+.cob-stepitem.done .cob-dot{background:var(--good);border-color:var(--good);color:var(--paper)}
+.cob-stepitem.on .cob-dot{border-color:var(--slate);color:var(--slate);background:var(--paper)}
+.cob-steptxt{min-width:0}
+.cob-steptxt b{display:block;font-size:14px;letter-spacing:-.012em;color:var(--ink-2);line-height:1.3}
+.cob-stepitem.on .cob-steptxt b{color:var(--slate)}
+.cob-steptxt span{display:block;font-size:11.5px;color:var(--faint);margin-top:2px}
+.cob-railfoot{margin-top:16px;padding:13px 14px;background:var(--raise);border-radius:var(--r-m);
+  font-size:12.5px;color:var(--muted);line-height:1.5}
+.cob-card{border:1px solid var(--rule);border-radius:var(--r-l);padding:26px;background:var(--paper)}
+.cob-head{margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
+.cob-head h2{letter-spacing:-.026em}
+.cob-head p{color:var(--muted);font-size:14px;margin-top:7px;max-width:64ch;line-height:1.58}
+.cob-two{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.cob-three{display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 16px}
+.cob-help{font-size:12.5px;color:var(--faint);margin:-10px 0 16px;line-height:1.5}
+.cob-bad input,.cob-bad select,.cob-bad textarea{border-color:var(--danger)}
+.cob-bad label,.cob-bad legend{color:var(--danger)}
+.cob-consent.cob-bad,fieldset.cob-bad .cob-picks,fieldset.cob-bad .cob-days{
+  border:1px solid var(--danger);border-radius:var(--r-m)}
+.cob-picks{display:flex;flex-wrap:wrap;gap:8px;max-height:326px;overflow:auto;padding:3px}
+.cob-svc{border:1px solid var(--rule);border-radius:var(--r-l);padding:19px;margin-bottom:14px;background:var(--paper)}
+.cob-svchead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}
+.cob-svcno{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.cob-svcsum{font-size:13px;color:var(--muted);margin:-6px 0 2px}
+.cob-fmt{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-bottom:16px}
+.cob-fmtopt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1.5px solid var(--rule);
+  border-radius:var(--r-m);cursor:pointer;transition:border-color .14s,background .14s}
+.cob-fmtopt:hover{border-color:var(--rule-strong);background:var(--raise)}
+.cob-fmtopt.on{border-color:var(--slate);background:var(--slate-tint)}
+.cob-fmtopt input{width:16px;height:16px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--slate)}
+.cob-fmtopt b{font-size:13.5px;letter-spacing:-.012em;display:block}
+.cob-fmtopt span{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:1px}
+.cob-take{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+  background:var(--raise);border-radius:var(--r-m);padding:13px 15px;margin-top:2px}
+.cob-takefig{text-align:right}
+.cob-takefig b{display:block;font-size:20px;font-weight:800;letter-spacing:-.03em}
+.cob-takefig span{display:block;font-size:12px;color:var(--muted)}
+.cob-takenote{font-size:12.5px;color:var(--muted);max-width:40ch;line-height:1.45}
+.cob-days{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.cob-day{padding:9px 16px;border:1px solid var(--rule);border-radius:999px;font-size:13.5px;font-weight:600;
+  color:var(--ink-2);transition:.14s}
+.cob-day:hover{border-color:var(--ink-2)}
+.cob-day.on{border-color:var(--slate);background:var(--slate-tint);color:var(--slate)}
+.cob-consent{display:flex;gap:12px;align-items:flex-start;padding:15px;border:1.5px solid var(--rule);
+  border-radius:var(--r-m);cursor:pointer;transition:border-color .14s,background .14s;margin-bottom:16px}
+.cob-consent:hover{border-color:var(--rule-strong);background:var(--raise)}
+.cob-consent.on{border-color:var(--slate);background:var(--slate-tint)}
+.cob-consent input{width:18px;height:18px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--slate)}
+.cob-consent span{font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.cob-truth{border:1px solid var(--rule-strong);border-radius:var(--r-l);padding:18px 20px;background:var(--raise);margin-bottom:20px}
+.cob-truth h4{margin:0 0 4px;font-size:14px;letter-spacing:-.01em}
+.cob-truth p{font-size:13.5px;color:var(--ink-2);line-height:1.58;margin-top:9px}
+.cob-truth p:first-of-type{margin-top:0}
+.cob-lock{display:flex;gap:11px;align-items:flex-start;background:var(--warn-tint);border-radius:var(--r-m);
+  padding:14px 16px;margin-bottom:18px}
+.cob-lock svg{color:var(--warn);flex:0 0 auto;margin-top:3px}
+.cob-lock p{font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.cob-rb{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px 20px;margin-bottom:14px}
+.cob-rbhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+.cob-rbhead h4{font-size:15px;letter-spacing:-.016em}
+.cob-rb .linerow b{font-weight:650;color:var(--ink)}
+.cob-rb .linerow span:last-child{text-align:right;min-width:0}
+.cob-nav{display:flex;align-items:center;gap:14px;margin-top:24px;padding-top:20px;border-top:1px solid var(--rule);flex-wrap:wrap}
+.cob-nav .err{flex:1;min-width:180px;line-height:1.45}
+.cob-navspacer{flex:1}
+.cob-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+@media(max-width:1020px){
+  .cob-grid{grid-template-columns:1fr;gap:22px}
+  .cob-rail{position:static}
+  .cob-rail ol{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:6px}
+  .cob-stepitem{flex:0 0 auto}
+  .cob-two,.cob-three{grid-template-columns:1fr}
+  .cob-card{padding:20px}
+}
+`;
+
+/* ═══════════════════ VIEW PIECES ═══════════════════ */
+
+function railHTML(d){
+  const open = firstOpen(d);
+  return `<nav class="cob-rail" aria-label="Coach onboarding progress">
+    <ol>
+      ${STEPS.map((st, i) => {
+        const cur = i === d.step, done = stepDone(i, d), can = i <= open;
+        const status = cur ? "Current step" : done ? "Complete" : can ? "Not started" : "Locked";
+        const label = "Step " + (i + 1) + " of " + STEPS.length + ", " + st[0] + " — " +
+          (cur ? "current step" : done ? "complete" : can ? "not started" : "finish the earlier steps first");
+        return `<li class="cob-stepitem ${cur ? "on" : ""} ${done ? "done" : ""}" ${cur ? 'aria-current="step"' : ""}>
+          <button class="cob-steplink" data-cob-step="${i}" ${can ? "" : "disabled"} aria-label="${esc(label)}">
+            <span class="cob-dot ${done ? "" : "num"}" aria-hidden="true">${done ? ICON.check : (i + 1)}</span>
+            <span class="cob-steptxt"><b>${esc(st[0])}</b><span>${esc(status)}</span></span>
+          </button></li>`;
+      }).join("")}
+    </ol>
+    <p class="cob-railfoot"><span class="num">${open}</span> of <span class="num">${LAST}</span> steps complete.
+      Nothing is submitted until the last step, and your answers stay put if you jump back.</p>
+  </nav>`;
+}
+
+function fieldCls(err, name){ return err && err.field === name ? "field cob-bad" : "field"; }
+
+function identityStep(d, err){
+  return `
+  <div class="cob-two">
+    <div class="${fieldCls(err, "legalName")}" data-cob-field="legalName">
+      <label for="cobLegal">Full legal name</label>
+      <input id="cobLegal" data-cob-in="legalName" value="${esc(d.legalName)}" placeholder="As printed on your ID" autocomplete="name">
+    </div>
+    <div class="${fieldCls(err, "businessName")}" data-cob-field="businessName">
+      <label for="cobBiz">Business or academy name</label>
+      <input id="cobBiz" data-cob-in="businessName" value="${esc(d.businessName)}" placeholder="e.g. ${esc(SEED.providerProfile.businessName)}">
+    </div>
+  </div>
+  <p class="cob-help">Families see the business name. Only Sporve and the screening partner see the legal name.</p>
+
+  <div class="${fieldCls(err, "phone")}" data-cob-field="phone">
+    <label for="cobPhone">Phone number</label>
+    <input id="cobPhone" type="tel" class="num" data-cob-in="phone" value="${esc(d.phone)}" placeholder="+1 (305) 555-0142" autocomplete="tel">
+  </div>
+  <p class="cob-help">Digits, spaces, brackets, dashes, and a leading + only —
+    <span class="num" data-cob-phonecount>${phoneDigits(d.phone)}</span> digits so far, and it needs between 7 and 15.</p>
+
+  <div class="cob-two">
+    <div class="${fieldCls(err, "city")}" data-cob-field="city">
+      <label for="cobCity">City</label>
+      <input id="cobCity" data-cob-in="city" value="${esc(d.city)}" placeholder="Miami">
+    </div>
+    <div class="${fieldCls(err, "region")}" data-cob-field="region">
+      <label for="cobRegion">State or region</label>
+      <input id="cobRegion" data-cob-in="region" value="${esc(d.region)}" placeholder="FL">
+    </div>
+  </div>
+  <div class="${fieldCls(err, "years")}" data-cob-field="years" style="max-width:220px">
+    <label for="cobYears">Years coaching</label>
+    <input id="cobYears" type="number" min="0" max="70" step="1" class="num" data-cob-in="years" value="${esc(d.years)}" placeholder="0">
+  </div>
+  <p class="cob-help">Shown on your profile as experience. It is not a credential and it does not affect verification.</p>`;
+}
+
+function sportsStep(d, err){
+  const sports = Object.keys(SPORT_COLOR).sort();
+  return `
+  <fieldset class="${err && err.field === "sports" ? "cob-bad" : ""}" style="border:0;padding:0;margin:0" data-cob-field="sports">
+    <legend class="eyebrow" style="padding:0;margin-bottom:11px">Sports you coach</legend>
+    <div class="cob-picks">
+      ${sports.map(s => {
+        const on = d.sports.indexOf(s) >= 0;
+        return `<button type="button" class="sportpick ${on ? "on" : ""}" data-cob-sport="${esc(s)}"
+          style="--sc:${sportColor(s)}" aria-pressed="${on}"
+          aria-label="${esc((on ? "Remove " : "Add ") + s)}">${sportGlyph(s)} ${esc(s)}</button>`;
+      }).join("")}
+    </div>
+  </fieldset>
+  <p class="num" style="color:var(--faint);font-size:12.5px;margin-top:12px">${d.sports.length} of ${sports.length} selected</p>
+  ${d.sports.length ? `<div class="cob-chips" style="margin-top:10px">
+    ${d.sports.map(s => `<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</span>`).join("")}
+  </div>` : ""}
+  <p class="cob-help" style="margin-top:16px">Pick only what you coach. A sport you list but cannot teach still shows you
+    in that sport's results, and the first family who books finds out.</p>`;
+}
+
+function svcSummary(s){
+  const cap = intOf(s.capacity), mins = intOf(s.minutes);
+  const f = formatRow(s.format);
+  const who = s.format === "private" ? "one athlete"
+    : (isFinite(cap) ? "up to " + cap + " athlete" + (cap === 1 ? "" : "s") : "capacity not set");
+  return f[1] + " · " + who + " · " + (isFinite(mins) ? durLabel(mins) : "length not set");
+}
+
+function servicesStep(d, err){
+  return `
+  ${d.services.map((s, i) => `
+    <div class="cob-svc" data-cob-svc="${esc(s.id)}">
+      <div class="cob-svchead">
+        <div style="min-width:0">
+          <div class="cob-svcno">Service ${i + 1}</div>
+          <div class="cob-svcsum" data-cob-svcsum="${esc(s.id)}" style="margin-top:3px">${esc(svcSummary(s))}</div>
+        </div>
+        ${d.services.length > 1
+          ? `<button class="x" data-cob-delsvc="${esc(s.id)}" aria-label="Remove service ${i + 1}${s.name ? ", " + esc(s.name) : ""}">${ICON.x}</button>`
+          : ""}
+      </div>
+
+      <div class="${fieldCls(err, "name-" + s.id)}" data-cob-field="name-${esc(s.id)}">
+        <label for="cobName-${esc(s.id)}">Service name</label>
+        <input id="cobName-${esc(s.id)}" data-cob-svcin="${esc(s.id)}|name" value="${esc(s.name)}"
+          placeholder="e.g. Guard Development Lab">
+      </div>
+
+      <fieldset style="border:0;padding:0;margin:0" data-cob-field="format-${esc(s.id)}">
+        <legend class="eyebrow" style="padding:0;margin-bottom:9px">Format</legend>
+        <div class="cob-fmt">
+          ${FORMATS.map(([k, label, blurb]) => `
+            <label class="cob-fmtopt ${s.format === k ? "on" : ""}">
+              <input type="radio" name="cobFmt-${esc(s.id)}" value="${k}" ${s.format === k ? "checked" : ""}
+                data-cob-fmt="${esc(s.id)}|${k}">
+              <span style="min-width:0"><b>${esc(label)}</b><span>${esc(blurb)}</span></span>
+            </label>`).join("")}
+        </div>
+      </fieldset>
+
+      <div class="cob-two">
+        <div class="${fieldCls(err, "capacity-" + s.id)}" data-cob-field="capacity-${esc(s.id)}">
+          <label for="cobCap-${esc(s.id)}">Maximum athletes at once</label>
+          <input id="cobCap-${esc(s.id)}" type="number" min="1" max="200" step="1" class="num"
+            data-cob-svcin="${esc(s.id)}|capacity" value="${esc(s.capacity)}">
+        </div>
+        <div class="${fieldCls(err, "minutes-" + s.id)}" data-cob-field="minutes-${esc(s.id)}">
+          <label for="cobMin-${esc(s.id)}">Session length (minutes)</label>
+          <input id="cobMin-${esc(s.id)}" type="number" min="10" max="600" step="5" class="num"
+            data-cob-svcin="${esc(s.id)}|minutes" value="${esc(s.minutes)}">
+        </div>
+      </div>
+      <p class="cob-help">${esc(formatRow(s.format)[2])} Capacity is the number Sporve enforces at checkout —
+        once it is reached the service stops taking bookings and opens a waitlist.</p>
+    </div>`).join("")}
+
+  <button class="btn ghost" data-cob-addsvc="1">+ Add another service</button>
+  <p class="cob-help" style="margin-top:14px">Each service becomes its own listing. Two prices for the same
+    thing belong in two services, not one.</p>`;
+}
+
+function pricingStep(d, err){
+  const priced = d.services.filter(s => !isBlank(s.price) && isFinite(Number(s.price)) && Number(s.price) >= 0);
+  const gross = priced.reduce((t, s) => t + Number(s.price), 0);
+  const fee = priced.reduce((t, s) => t + feeOn(s.price), 0);
+  return `
+  ${d.services.map((s, i) => {
+    const p = isBlank(s.price) ? null : Number(s.price);
+    const ok = p != null && isFinite(p) && p >= 0;
+    return `
+    <div class="cob-svc" data-cob-svc="${esc(s.id)}">
+      <div class="cob-svchead">
+        <div style="min-width:0">
+          <div class="cob-svcno">Service ${i + 1}</div>
+          <b style="font-size:15.5px;letter-spacing:-.02em">${esc(s.name || "Untitled service")}</b>
+          <div class="cob-svcsum" style="margin-top:2px">${esc(svcSummary(s))}</div>
+        </div>
+      </div>
+      <div class="cob-two">
+        <div class="${fieldCls(err, "price-" + s.id)}" data-cob-field="price-${esc(s.id)}">
+          <label for="cobPrice-${esc(s.id)}">Price you charge</label>
+          <input id="cobPrice-${esc(s.id)}" type="number" min="0" max="100000" step="1" class="num"
+            data-cob-svcin="${esc(s.id)}|price" value="${esc(s.price)}" placeholder="0">
+        </div>
+        <div class="${fieldCls(err, "model-" + s.id)}" data-cob-field="model-${esc(s.id)}">
+          <label for="cobModel-${esc(s.id)}">Pricing model</label>
+          <select id="cobModel-${esc(s.id)}" data-cob-model="${esc(s.id)}">
+            ${MODELS.map(([k, label]) => `<option value="${k}" ${s.model === k ? "selected" : ""}>${esc(label)}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="cob-take">
+        <p class="cob-takenote">${esc(modelRow(s.model)[2])}
+          Sporve's fee is <span class="num">9%</span>, taken at checkout — never billed to you separately.</p>
+        <div class="cob-takefig">
+          <b class="num" data-cob-net="${esc(s.id)}">${ok ? money(netOf(p)) : "—"}</b>
+          <span>you keep${ok ? ", after " + money(feeOn(p)) + " fee" : " — enter a price"}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join("")}
+
+  <div class="panel" style="background:var(--raise);border:0;margin-top:4px">
+    <div class="eyebrow">If one of each sold at list price</div>
+    <div class="linerow"><span>Families pay</span><span class="num" data-cob-gross>${money(gross)}</span></div>
+    <div class="linerow"><span>Platform fee <span class="num">(9%)</span></span><span class="num" data-cob-fee>−${money(fee)}</span></div>
+    <div class="linerow total"><span>Reaches your account</span><span class="num" data-cob-nettotal>${money(gross - fee)}</span></div>
+  </div>
+  <p class="cob-help" style="margin-top:14px">Payment processing is settled by Stripe on top of this;
+    these figures are the marketplace fee only.</p>`;
+}
+
+function availabilityStep(d, err){
+  const a = toMin(d.startTime), b = toMin(d.endTime);
+  const span = isFinite(a) && isFinite(b) && b > a ? durLabel(b - a) : null;
+  return `
+  <fieldset class="${err && err.field === "days" ? "cob-bad" : ""}" style="border:0;padding:0;margin:0 0 6px" data-cob-field="days">
+    <legend class="eyebrow" style="padding:0;margin-bottom:11px">Days you can coach</legend>
+    <div class="cob-days">
+      ${WD.map(([k, short, long]) => {
+        const on = d.days.indexOf(k) >= 0;
+        return `<button type="button" class="cob-day ${on ? "on" : ""}" data-cob-day="${k}"
+          aria-pressed="${on}" aria-label="${esc((on ? "Remove " : "Add ") + long)}">${short}</button>`;
+      }).join("")}
+    </div>
+  </fieldset>
+  <p class="cob-help" style="margin-top:10px">
+    <span class="num" data-cob-daycount>${d.days.length}</span> day${d.days.length === 1 ? "" : "s"} selected.</p>
+
+  <div class="cob-two" style="max-width:420px">
+    <div class="${fieldCls(err, "startTime")}" data-cob-field="startTime">
+      <label for="cobStart">Window starts</label>
+      <input id="cobStart" type="time" class="num" data-cob-in="startTime" value="${esc(d.startTime)}">
+    </div>
+    <div class="${fieldCls(err, "endTime")}" data-cob-field="endTime">
+      <label for="cobEnd">Window ends</label>
+      <input id="cobEnd" type="time" class="num" data-cob-in="endTime" value="${esc(d.endTime)}">
+    </div>
+  </div>
+  <div class="cob-take" data-cob-window>
+    <p class="cob-takenote">Families only ever see slots inside this window. You can carve exact
+      sessions out of it from the schedule once you are live.</p>
+    <div class="cob-takefig">
+      <b class="num" data-cob-span>${span ? esc(span) : "—"}</b>
+      <span>${span ? "open each selected day" : "end has to be after start"}</span>
+    </div>
+  </div>`;
+}
+
+function backgroundStep(d, err){
+  const age = ageFrom(d.dob);
+  return `
+  <div class="cob-truth">
+    <h4>${ICON.shield} What this check is, and what it is not</h4>
+    <p><b>It runs on a person, not on a business.</b> The screening partner checks the individual named above —
+      an identity match, then criminal and sex-offender registry records.</p>
+    <p><b>An approved business never vouches for an individual.</b>
+      ${esc(SEED.providerProfile.businessName)} is an approved business on Sporve, and every single coach working
+      under it still clears their own check. Being invited by an approved academy grants nothing.</p>
+    <p><b>You cannot mark yourself as checked.</b> This form collects consent and identifiers.
+      The result is written by the screening partner, and nothing you enter here can set it.</p>
+  </div>
+
+  <div class="cob-lock">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+      stroke-linecap="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    <p>Until the check clears, your listings stay <b>hidden and unbookable</b>. They are saved as drafts,
+      they do not appear in search, in the map, or to the AI Coach, and no family can pay for one.</p>
+  </div>
+
+  <div class="cob-two">
+    <div class="${fieldCls(err, "dob")}" data-cob-field="dob">
+      <label for="cobDob">Date of birth</label>
+      <input id="cobDob" type="date" class="num" max="${TODAY_ISO}" data-cob-in="dob" value="${esc(d.dob)}">
+    </div>
+    <div class="${fieldCls(err, "ssn4")}" data-cob-field="ssn4">
+      <label for="cobSsn">Last 4 digits of SSN</label>
+      <input id="cobSsn" type="text" inputmode="numeric" maxlength="4" class="num" data-cob-in="ssn4"
+        value="${esc(d.ssn4)}" placeholder="0000" autocomplete="off">
+    </div>
+  </div>
+  <p class="cob-help">${age != null && age >= 0
+    ? `That date of birth makes you <span class="num">${age}</span>.`
+    : "Coaches must be 18 or older."}
+    Sporve stores the last four digits only — never a full Social Security number.</p>
+
+  <label class="cob-consent ${d.consent ? "on" : ""} ${err && err.field === "consent" ? "cob-bad" : ""}"
+    data-cob-field="consent">
+    <input type="checkbox" data-cob-consent="1" ${d.consent ? "checked" : ""}>
+    <span>I authorize Sporve's screening partner to run an identity verification and criminal background
+      check on <b>${esc(d.legalName || "me")}</b>, and I confirm the date of birth and SSN digits above are mine.
+      I understand a false statement here ends the application.</span>
+  </label>
+
+  <div class="cob-take">
+    <p class="cob-takenote">Checks usually return in 2–5 business days. You will get a notification either way,
+      and you can build listings while you wait.</p>
+    <div class="cob-takefig">
+      <span class="pill warn">Result: pending</span>
+      <span style="margin-top:6px">set by the screening partner</span>
+    </div>
+  </div>
+  <p style="margin-top:16px"><button class="btn ghost sm" data-modal="verifyid">What exactly gets checked?</button></p>`;
+}
+
+/* ── review ──────────────────────────────────────────────────────── */
+function line(label, value){
+  return `<div class="linerow"><span>${esc(label)}</span><span><b>${value}</b></span></div>`;
+}
+function rbHead(title, step){
+  return `<div class="cob-rbhead"><h4>${esc(title)}</h4>
+    <button class="btn ghost sm" data-cob-step="${step}"
+      aria-label="Edit ${esc(title)} — back to step ${step + 1}">Edit</button></div>`;
+}
+function reviewStep(d, err){
+  const priced = d.services.filter(s => !isBlank(s.price) && isFinite(Number(s.price)));
+  const gross = priced.reduce((t, s) => t + Number(s.price), 0);
+  const fee = priced.reduce((t, s) => t + feeOn(s.price), 0);
+  const bgSteps = [["Consent given", !!d.consent], ["Submitted to partner", false],
+    ["Screening", false], ["Result", false]];
+  return `
+  <div class="cob-rb">
+    ${rbHead("Identity", 0)}
+    ${line("Legal name", esc(d.legalName))}
+    ${line("Business name", esc(d.businessName))}
+    ${line("Phone", `<span class="num">${esc(d.phone)}</span>`)}
+    ${line("Based in", esc(trim(d.city) + ", " + trim(d.region)))}
+    ${line("Years coaching", `<span class="num">${esc(d.years)}</span>`)}
+  </div>
+
+  <div class="cob-rb">
+    ${rbHead("Sports", 1)}
+    <div class="cob-chips" style="margin:8px 0 2px">
+      ${d.sports.map(s => `<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</span>`).join("")}
+    </div>
+  </div>
+
+  <div class="cob-rb">
+    ${rbHead("Services & capacity", 2)}
+    ${d.services.map((s, i) => `
+      ${line("Service " + (i + 1), esc(s.name))}
+      <div class="linerow" style="padding-top:0"><span style="color:var(--faint)">&nbsp;</span>
+        <span class="num" style="color:var(--muted)">${esc(svcSummary(s))}</span></div>`).join("")}
+  </div>
+
+  <div class="cob-rb">
+    ${rbHead("Pricing", 3)}
+    ${d.services.map(s => line(s.name || "Untitled service",
+      `<span class="num">${money(Number(s.price))}</span> <span style="font-weight:500;color:var(--muted)">${esc(MODEL_UNIT[s.model] || s.model)}</span>`)).join("")}
+    <div class="linerow"><span>Platform fee <span class="num">(9%)</span> across one of each</span>
+      <span class="num">−${money(fee)}</span></div>
+    <div class="linerow total"><span>You keep</span><span class="num">${money(gross - fee)}</span></div>
+  </div>
+
+  <div class="cob-rb">
+    ${rbHead("Availability", 4)}
+    ${line("Days", esc(d.days.map(wdLong).join(", ")))}
+    ${line("Window", `<span class="num">${esc(t12(d.startTime))} – ${esc(t12(d.endTime))}</span>`)}
+  </div>
+
+  <div class="cob-rb">
+    ${rbHead("Background check", 5)}
+    ${line("Date of birth", `<span class="num">${esc(prettyDate(d.dob))}</span>`)}
+    ${line("SSN", `<span class="num">••• •• ${esc(trim(d.ssn4))}</span>`)}
+    ${line("Consent", d.consent ? "Given" : "Not given")}
+    ${line("Status", `<span class="pill warn">Pending</span>`)}
+    <div class="track" aria-label="Background check progress">
+      ${bgSteps.map(([l, done], i) => `<div class="step ${done ? "done" : ""}">
+        <span class="dot">${done ? ICON.check : ""}</span><span class="lbl">${esc(l)}</span>
+        ${i < bgSteps.length - 1 ? '<span class="bar"></span>' : ""}</div>`).join("")}
+    </div>
+  </div>
+
+  <div class="cob-lock">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+      stroke-linecap="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    <p>Submitting creates your coach profile and <span class="num">${d.services.length}</span>
+      draft listing${d.services.length === 1 ? "" : "s"}. The profile is created <b>unverified</b>,
+      the check is created <b>pending</b>, and the listings are created <b>drafts</b> — unpublished,
+      unbookable, and invisible to families until the check clears.</p>
+  </div>
+  ${isVerified() ? "" : `<p class="cob-help">You are not signed in, so this application is held in this
+    session only. Sign in before submitting if you want it kept against your account.</p>`}`;
+}
+
+const STEP_VIEW = [identityStep, sportsStep, servicesStep, pricingStep, availabilityStep, backgroundStep, reviewStep];
+
+/* ── the submitted state — the wizard does not offer a second submit ── */
+function submittedHTML(d){
+  const p = d.profile || {};
+  return `<main class="shell cob-page">
+    <div class="cob-top">
+      <p class="eyebrow">Coach onboarding</p>
+      <h1>Application submitted</h1>
+      <p class="cob-lede">${esc(p.businessName || d.businessName)} is on file. Nothing about it is live yet —
+        and nothing here was marked verified by you or by this form.</p>
+    </div>
+    <div class="cob-card" style="max-width:760px">
+      <div class="linerow"><span>Profile status</span><span><b><span class="pill warn">${esc(p.status || "pending")}</span></b></span></div>
+      <div class="linerow"><span>Background check</span><span><b><span class="pill warn">${esc(p.backgroundCheck || "pending")}</span></b></span></div>
+      <div class="linerow"><span>Verification</span><span><b><span class="pill slate">${esc(p.verification || "unverified")}</span></b></span></div>
+      <div class="linerow"><span>Draft listings</span><span><b class="num">${(d.drafts || []).length}</b></span></div>
+      <div class="linerow total"><span>Visible to families</span><span><b>None, until the check clears</b></span></div>
+      <div class="cob-lock" style="margin:20px 0 0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        <p>Your drafts are kept with your application. They are not in the marketplace catalogue,
+          so no search, map pin, or assistant answer can surface them.</p>
+      </div>
+      <div class="cob-nav">
+        <button class="btn" data-cob-dash="1">Go to your dashboard</button>
+        <span class="cob-navspacer"></span>
+        <button class="btn ghost" data-modal="verifyid">What gets checked?</button>
+      </div>
+    </div>
+  </main>`;
+}
+
+/* ═══════════════════ THE VIEW ═══════════════════ */
+function onboardView(){
+  const d = draft();
+  if (d.submittedAt) return submittedHTML(d);
+
+  const i = d.step;
+  const err = checkStep(i, d);
+  const last = i === LAST;
+  const st = STEPS[i];
+
+  return `<main class="shell cob-page">
+    <div class="cob-top">
+      <p class="eyebrow">Coach onboarding · step <span class="num">${i + 1}</span> of <span class="num">${STEPS.length}</span></p>
+      <h1>Get set up to coach on Sporve</h1>
+      <p class="cob-lede">Seven steps. Everything you enter is a claim about your own business —
+        verification is decided elsewhere, and this form cannot grant it.</p>
+    </div>
+
+    <div class="cob-grid">
+      ${railHTML(d)}
+      <div>
+        <section class="cob-card" aria-label="${esc(st[1])}">
+          <div class="cob-head"><h2>${esc(st[1])}</h2><p>${esc(st[2])}</p></div>
+          ${STEP_VIEW[i](d, err)}
+          <div class="cob-nav">
+            <button class="btn ghost" data-cob-back="1" ${i === 0 ? "disabled" : ""}>Back</button>
+            <div class="err ${err ? "" : "hide"}" data-cob-err role="alert">${err ? esc(err.msg) : ""}</div>
+            <button class="btn" data-cob-next="1" ${err ? "disabled" : ""}>${last ? "Submit application" : "Continue"}</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>`;
+}
+
+/* ═══════════════════ MODAL ═══════════════════ */
+const wrap = (title, body) =>
+  `<div class="scrim" data-scrim="1"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="modal-head"><b>${esc(title)}</b><button class="x" data-close="1" aria-label="Close">${ICON.x}</button></div>
+    <div class="modal-body">${body}</div></div></div>`;
+
+function verifyIdModal(){
+  const d = draft();
+  const rows = [
+    ["Identity match", "Your legal name, date of birth, and the last four SSN digits are matched against public identity records. A name alone is not enough to identify a person."],
+    ["Criminal records search", "County, state, and federal records across every jurisdiction tied to your address history."],
+    ["Sex offender registry", "The national registry, plus every state registry."],
+    ["Ongoing monitoring", "The check is re-run periodically. Verification is a state you keep, not a badge you earn once."],
+  ];
+  return wrap("What gets checked", `
+    <p style="color:var(--muted);margin-bottom:18px">Run by Sporve's screening partner on
+      <b style="color:var(--ink)">${esc(d.legalName || "the individual coach")}</b> — the person, not the business.</p>
+    ${rows.map(([h, b]) => `<div class="linerow" style="display:block">
+      <b style="display:block;color:var(--ink)">${esc(h)}</b>
+      <span style="display:block;color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:3px">${esc(b)}</span>
+    </div>`).join("")}
+    <div class="panel" style="background:var(--warn-tint);border:0;margin-top:18px">
+      <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55">
+        Three things this form can never do: mark you verified, approve your business, or publish a listing.
+        Those are written by Sporve after the partner returns a result — which is why every field on the
+        previous step is stored as <span class="num">pending</span> no matter what you type.</p>
+    </div>
+    <div class="panel" style="background:var(--raise);border:0;margin-top:12px">
+      <div class="eyebrow">Cost and timing</div>
+      <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-top:8px">
+        Sporve pays for the check. Results usually return in 2–5 business days; a record that needs a
+        court clerk to confirm it can take longer.</p>
+    </div>
+    <button class="btn wide" data-close="1" style="margin-top:18px">Back to the form</button>`);
+}
+
+/* ═══════════════════ SUBMIT ═══════════════════
+   The single write path. Note what it does NOT read: there is no input on
+   any step that can reach status, verification, or backgroundCheck. They
+   are literals. */
+function submitApplication(){
+  const d = draft();
+  const bad = checkReview(d);
+  if (bad){
+    d.step = Number(String(bad.field).split("-")[1]) || 0;
+    render();
+    toast("Fix " + STEPS[d.step][0].toLowerCase() + " before submitting");
+    return false;
+  }
+
+  const now = new Date().toISOString();
+  const location = trim(d.city) + ", " + trim(d.region);
+
+  /* profile — created unverified and pending, always */
+  d.profile = {
+    id: "provider_" + Date.now(),
+    legalName: trim(d.legalName),
+    businessName: trim(d.businessName),
+    phone: trim(d.phone),
+    location: location,
+    yearsCoaching: intOf(d.years),
+    sports: d.sports.slice(),
+    bio: "",
+    availability: { days: d.days.slice(), start: d.startTime, end: d.endTime },
+    status: "pending",              // never "approved"
+    verification: "unverified",     // never "verified"
+    backgroundCheck: "pending",     // never "clear"
+    backgroundConsentAt: d.consent ? now : null,
+    onboardingCompleted: true,
+    stripeAccountId: null,
+    submittedAt: now,
+  };
+
+  /* services → draft listings. They are deliberately NOT pushed into
+     PROGRAMS or S.listings: everything the family side reads comes from
+     PROGRAMS, so a draft that never lands there cannot be searched,
+     mapped, recommended, or booked. That is the lock, in one decision. */
+  d.drafts = d.services.map((s, i) => ({
+    id: "draft_" + Date.now() + "_" + (i + 1),
+    providerId: d.profile.id,
+    biz: d.profile.businessName,
+    title: trim(s.name),
+    sport: d.sports[0] || null,
+    sports: d.sports.slice(),
+    format: s.format,
+    cap: intOf(s.capacity),
+    enrolled: 0,
+    minutes: intOf(s.minutes),
+    price: Number(trim(s.price)),
+    model: s.model,
+    netPerSale: netOf(Number(trim(s.price))),
+    availability: { days: d.days.slice(), start: d.startTime, end: d.endTime },
+    status: "draft",                // never "published"
+    published: false,
+    visible: false,
+    bookable: false,
+    verified: false,                // never true
+    createdAt: now,
+  }));
+
+  d.submittedAt = now;
+
+  S.portal = "coach";
+  S.coachTab = "dashboard";
+  S.route = { name: "dashboard", arg: null };
+  S.modal = null;
+  if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
+  render();
+  toast("Application submitted — background check pending, listings held as drafts");
+  return true;
+}
+
+/* ═══════════════════ IN-PLACE REPAINT ═══════════════════
+   The host re-renders the whole DOM on every state change, which would
+   take the caret with it. So a keystroke updates state and then repaints
+   only the nodes that depend on it: the error line, the Continue button,
+   the per-service take-home figures, and the field outlines. */
+function sync(){
+  if (typeof document === "undefined") return;
+  const d = draft();
+  if (d.submittedAt) return;
+  const err = checkStep(d.step, d);
+
+  const box = document.querySelector("[data-cob-err]");
+  if (box){
+    box.textContent = err ? err.msg : "";
+    if (err) box.classList.remove("hide"); else box.classList.add("hide");
+  }
+  const next = document.querySelector("[data-cob-next]");
+  if (next) next.disabled = !!err;
+
+  document.querySelectorAll("[data-cob-field]").forEach(el => {
+    el.classList.toggle("cob-bad", !!err && err.field === el.dataset.cobField);
+  });
+
+  const pc = document.querySelector("[data-cob-phonecount]");
+  if (pc) pc.textContent = String(phoneDigits(d.phone));
+
+  const dc = document.querySelector("[data-cob-daycount]");
+  if (dc) dc.textContent = String(d.days.length);
+
+  d.services.forEach(s => {
+    const sum = document.querySelector('[data-cob-svcsum="' + s.id + '"]');
+    if (sum) sum.textContent = svcSummary(s);
+    const net = document.querySelector('[data-cob-net="' + s.id + '"]');
+    if (net){
+      const p = isBlank(s.price) ? null : Number(trim(s.price));
+      const ok = p != null && isFinite(p) && p >= 0;
+      net.textContent = ok ? money(netOf(p)) : "—";
+      const cap = net.parentNode && net.parentNode.querySelector ? net.parentNode.querySelector("span") : null;
+      if (cap) cap.textContent = ok ? "you keep, after " + money(feeOn(p)) + " fee" : "you keep — enter a price";
+    }
+  });
+
+  const priced = d.services.filter(s => !isBlank(s.price) && isFinite(Number(trim(s.price))) && Number(trim(s.price)) >= 0);
+  const gross = priced.reduce((t, s) => t + Number(trim(s.price)), 0);
+  const fee = priced.reduce((t, s) => t + feeOn(trim(s.price)), 0);
+  const g = document.querySelector("[data-cob-gross]"); if (g) g.textContent = money(gross);
+  const f = document.querySelector("[data-cob-fee]"); if (f) f.textContent = "−" + money(fee);
+  const n = document.querySelector("[data-cob-nettotal]"); if (n) n.textContent = money(gross - fee);
+
+  const sp = document.querySelector("[data-cob-span]");
+  if (sp){
+    const a = toMin(d.startTime), b = toMin(d.endTime);
+    sp.textContent = isFinite(a) && isFinite(b) && b > a ? durLabel(b - a) : "—";
+  }
+}
+
+/* ═══════════════════ WIRING ═══════════════════ */
+function goStep(i){
+  const d = draft();
+  const target = Math.max(0, Math.min(LAST, i));
+  if (target > d.step && !reachable(target, d)) return;
+  d.step = target;
+  if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
+  render();
+}
+
+function wire(){
+  if (typeof document === "undefined") return;
+  const q = s => document.querySelectorAll(s);
+  const d = draft();
+
+  /* rail + every "Edit" affordance on the review step */
+  q("[data-cob-step]").forEach(b => b.onclick = () => goStep(Number(b.dataset.cobStep)));
+  q("[data-cob-back]").forEach(b => b.onclick = () => goStep(draft().step - 1));
+  q("[data-cob-next]").forEach(b => b.onclick = () => {
+    const cur = draft();
+    const err = checkStep(cur.step, cur);
+    if (err){ sync(); return; }              // belt and braces: the button is already disabled
+    if (cur.step === LAST){ submitApplication(); return; }
+    goStep(cur.step + 1);
+  });
+  q("[data-cob-dash]").forEach(b => b.onclick = () => {
+    S.portal = "coach"; S.coachTab = "dashboard"; S.route = { name: "dashboard", arg: null };
+    if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
+    render();
+  });
+
+  /* plain draft fields — typed into, so repainted in place, never re-rendered */
+  q("[data-cob-in]").forEach(el => el.oninput = () => {
+    const k = el.dataset.cobIn;
+    draft()[k] = el.value;
+    sync();
+  });
+
+  /* per-service fields, same rule */
+  q("[data-cob-svcin]").forEach(el => el.oninput = () => {
+    const parts = String(el.dataset.cobSvcin).split("|");
+    const s = svc(parts[0]);
+    if (!s) return;
+    s[parts[1]] = el.value;
+    sync();
+  });
+
+  /* format radios: capacity follows the format only while it is still the
+     format's default, so a number the coach typed is never overwritten */
+  q("[data-cob-fmt]").forEach(el => el.onchange = () => {
+    const parts = String(el.dataset.cobFmt).split("|");
+    const s = svc(parts[0]);
+    if (!s) return;
+    const wasDefault = Number(s.capacity) === FORMAT_CAP[s.format];
+    s.format = parts[1];
+    if (wasDefault) s.capacity = FORMAT_CAP[s.format];
+    render();
+  });
+  q("[data-cob-model]").forEach(el => el.onchange = () => {
+    const s = svc(el.dataset.cobModel);
+    if (!s) return;
+    s.model = el.value;
+    render();
+  });
+
+  q("[data-cob-addsvc]").forEach(b => b.onclick = () => {
+    draft().services.push(newService());
+    render();
+    toast("Service added — name it and set its capacity");
+  });
+  q("[data-cob-delsvc]").forEach(b => b.onclick = () => {
+    const cur = draft();
+    if (cur.services.length <= 1) return;          // at least one service, always
+    const gone = svc(b.dataset.cobDelsvc);
+    cur.services = cur.services.filter(x => x.id !== b.dataset.cobDelsvc);
+    render();
+    toast("Removed " + ((gone && trim(gone.name)) || "the service"));
+  });
+
+  q("[data-cob-sport]").forEach(b => b.onclick = () => {
+    const cur = draft(), s = b.dataset.cobSport;
+    cur.sports = cur.sports.indexOf(s) >= 0 ? cur.sports.filter(x => x !== s) : cur.sports.concat([s]);
+    render();
+  });
+  q("[data-cob-day]").forEach(b => b.onclick = () => {
+    const cur = draft(), k = b.dataset.cobDay;
+    const on = cur.days.indexOf(k) >= 0;
+    cur.days = on ? cur.days.filter(x => x !== k)
+      : WD.map(w => w[0]).filter(x => x === k || cur.days.indexOf(x) >= 0);   // keeps Mon→Sun order
+    render();
+  });
+
+  q("[data-cob-consent]").forEach(cb => cb.onchange = () => {
+    draft().consent = !!cb.checked;
+    const label = cb.parentNode;
+    if (label && label.classList) label.classList.toggle("on", !!cb.checked);
+    sync();
+  });
+
+  /* first paint of the step's live figures, in case state arrived pre-filled */
+  if (!d.submittedAt) sync();
+}
+
+/* ═══════════════════ EXPORT ═══════════════════ */
+window.MOD_COACHONBOARD = {
+  css: CSS,
+  views: { onboard: onboardView },
+  modals: { verifyid: verifyIdModal },
+  wire: wire,
+  state: { onboard: BLANK },
+};
+
+})();
