@@ -363,13 +363,21 @@ img{max-width:100%;display:block}
   position:relative;z-index:1;text-align:center;max-width:820px;width:100%;
   padding:96px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;
 }
+/* Scoped to .hero-panel, NOT .hero. These were written for the explore page's
+   dark panel and leaked onto every `class="band hero"` section — which is the
+   family landing AND the coach landing, rendering both headlines white on
+   white. The copy was in the DOM the whole time and invisible to a human. */
 .hero .display{
-  color:var(--on-dark);font-size:var(--t-display);font-weight:700;
+  font-size:var(--t-display);font-weight:700;
   letter-spacing:-.03em;line-height:1.05;max-width:24ch;
 }
+.hero-panel .display{color:var(--on-dark)}
+/* on the white landing the pill needs its border to carry the edge */
+.hero:not(:has(.hero-panel)) .searchpill{border-color:var(--rule-strong);box-shadow:var(--shadow-lift)}
+.hero-panel .hero-lede{color:var(--on-dark-2)}
 .sp-val{min-height:22px}
 .hero-lede{
-  color:var(--on-dark-2);font-size:var(--t-h3);font-weight:400;max-width:600px;line-height:1.5;
+  color:var(--muted);font-size:var(--t-h3);font-weight:400;max-width:600px;line-height:1.5;
 }
 /* §5 — one continuous pill. Definition comes from a soft shadow and a hairline,
    not a heavy border. Each side carries a micro-label so the field still says
@@ -1740,6 +1748,7 @@ function landingHTML(){
     <div class="shell hero-in">
       <h1 class="display">Coaching. Booked.</h1>
       <p class="lede">Book a background-checked coach for your kid — any sport, in minutes.</p>
+      ${searchPillHTML()}
       <div class="chiprow">
         ${heroSports.map(s=>`<button class="hchip" data-sportjump="${esc(s)}">
           <i style="background:${sportColor(s)}"></i>${esc(s)}</button>`).join("")}
@@ -2011,15 +2020,11 @@ function coachLandingHTML(){
    MOD_SEARCH finds its anchor by walking up from the "verified" chip and
    inserts its toolbar as a sibling, then looks for .grid under the same
    parent — so .fchips and .grid must stay direct children of main.shell. */
-function heroHTML(){
-  return `<section class="hero">
-    <div class="hero-panel"${HERO_IMG?` style="--hero-img:url('${HERO_IMG}')"`:""}>
-      <div class="hero-in">
-        ${/* The locked one-liner. The previous headline spoke to an adult
-             athlete about a gym, and Sporve does not sell facilities. */""}
-        <h1 class="display">Book a background-checked coach for your kid.</h1>
-        <p class="hero-lede">Any sport. Real coaches, verified. Booked in minutes.</p>
-        <div class="searchpill">
+/* One pill, two heroes. It previously lived only inside heroHTML(), which is
+   called by exploreHTML() alone — so the landing, the actual first touch, had
+   no search at all. */
+function searchPillHTML(){
+  return `<div class="searchpill">
           <label class="sp-seg" for="q">
             <span class="sp-lbl">What</span>
             <span class="sp-val"><input class="seg" id="q" placeholder="Search sports, coaches, or programs"
@@ -2040,7 +2045,17 @@ function heroHTML(){
                 `<option value="${a}"${String(S.ageQuery)===String(a)?" selected":""}>${a} years old</option>`).join("")}
             </select></span></label>
           <button class="go" id="qgo" aria-label="Search">${ICON.search}</button>
-        </div>
+        </div>`;
+}
+function heroHTML(){
+  return `<section class="hero">
+    <div class="hero-panel"${HERO_IMG?` style="--hero-img:url('${HERO_IMG}')"`:""}>
+      <div class="hero-in">
+        ${/* The locked one-liner. The previous headline spoke to an adult
+             athlete about a gym, and Sporve does not sell facilities. */""}
+        <h1 class="display">Book a background-checked coach for your kid.</h1>
+        <p class="hero-lede">Any sport. Real coaches, verified. Booked in minutes.</p>
+        ${searchPillHTML()}
       </div>
     </div>
   </section>`;
@@ -2758,7 +2773,7 @@ function dashboardHTML(){
     <section class="cardrow">
       <div class="panel">
         <h3>Earnings</h3>
-        ${(()=>{const g=S.bookings.reduce((s,b)=>s+b.price,0),f=Math.round(g*0.09);
+        ${(()=>{const g=S.bookings.filter(b=>S.listings.includes(b.programId)).reduce((s,b)=>s+b.price,0),f=Math.round(g*0.09);
           return `<div class="num" style="font-size:30px;font-weight:800;letter-spacing:-.03em;margin-top:6px">${money(g-f)}</div>
           <div class="num" style="color:var(--muted);font-size:13.5px">${money(g)} gross · ${money(f)} platform fee</div>
           <div class="payflow">
@@ -2874,7 +2889,7 @@ function actionQueue(){
   if(S.conversations.length) out.push({level:"warn",decide:true,
     title:"A family is waiting on a first reply",
     detail:"Response time affects where you rank in family searches.",
-    expires:"replied in 2h avg",actions:[["Reply","inbox","dark"]]});
+    expires:"",actions:[["Reply","inbox","dark"]]});
   const w=(window.MOD_INSIGHTS&&window.MOD_INSIGHTS.availabilityWarnings)
     ? window.MOD_INSIGHTS.availabilityWarnings() : [];
   w.forEach(x=>out.push({level:x.level==="good"?"good":"warn",decide:false,
@@ -2891,7 +2906,7 @@ function coachBody(t){
   const mv=modView(t); if(mv) return mv();
   if(t==="dashboard") return dashboardHTML();
   if(t==="__legacy_dashboard"){
-    const revenue=S.bookings.reduce((s,b)=>s+b.price,0);
+    const revenue=S.bookings.filter(b=>S.listings.includes(b.programId)).reduce((s,b)=>s+b.price,0);
     const enrolled=mine.reduce((s,p)=>s+p.enrolled,0);
     const cap=mine.reduce((s,p)=>s+p.cap,0);
     return `<div class="sec-head" style="margin-top:18px"><div>
@@ -3037,7 +3052,7 @@ function coachBody(t){
          <p style="margin-top:6px">A family can only review after a session is completed — so the first one arrives after your first session.</p></div>`}`;
   }
   if(t==="finances"){
-    const gross=S.bookings.reduce((s,b)=>s+b.price,0);
+    const gross=S.bookings.filter(b=>S.listings.includes(b.programId)).reduce((s,b)=>s+b.price,0);
     const fee=Math.round(gross*0.09), net=gross-fee;
     return `<div class="sec-head" style="margin-top:18px"><h1>Finances</h1></div>
       <div class="stats">
@@ -3887,6 +3902,16 @@ function wire(){
     };
   }
 
+  /* aria-expanded tracks the CSS-driven open state */
+  $(".prodwrap").forEach(w=>{
+    const t=w.querySelector(".tnav"); if(!t) return;
+    const set=v=>t.setAttribute("aria-expanded",String(v));
+    w.addEventListener("mouseenter",()=>set(true));
+    w.addEventListener("mouseleave",()=>set(false));
+    w.addEventListener("focusin",()=>set(true));
+    w.addEventListener("focusout",()=>{if(!w.contains(document.activeElement)) set(false);});
+  });
+
   $("[data-cconv]").forEach(b=>b.onclick=()=>{S.activeConv=b.dataset.cconv;render();});
   const cc=document.getElementById("coachCompose");
   if(cc) cc.onsubmit=e=>{
@@ -4182,6 +4207,14 @@ document.addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
   if(S.modal){S.modal=null;S.pendingIntent=null;render();}
   else if(S.sportOpen){S.sportOpen=false;render();}
+  /* mega-menus are pure CSS :focus-within, so Escape closes them by moving
+     focus off the trigger — and the trigger's aria-expanded is kept honest */
+  else{
+    const open=document.querySelector(".prodwrap:focus-within");
+    if(open){const t=open.querySelector(".tnav");
+      if(t){t.setAttribute("aria-expanded","false");t.blur();}
+      if(document.activeElement&&open.contains(document.activeElement)) document.activeElement.blur();}
+  }
 });
 /* Click anywhere outside the sport chooser closes it. Clicks INSIDE it are
    selections, and must not close — multi-select means several in a row. */
