@@ -1098,6 +1098,72 @@ h2.ctr{margin-bottom:10px}
   .incl{grid-template-columns:1fr}
   .shell{padding:0 16px}
 }
+/* ── PARTS 2+3 · mega-menus ──────────────────────────────────────── */
+.pmgrid4{display:grid;grid-template-columns:1fr 1.15fr 1.15fr 1px 1.1fr;gap:0;padding:30px 24px 26px}
+.cmgrid{display:grid;grid-template-columns:1.5fr 1px 1fr;gap:0;padding:30px 24px 26px}
+.pmgrid4 .pmcol,.cmgrid .pmcol{display:flex;flex-direction:column;gap:2px;padding:0 26px;min-width:0}
+.pmgrid4 .pmcol:first-child,.cmgrid .pmcol:first-child{padding-left:0}
+.pmgrid4 .eyebrow,.cmgrid .eyebrow{margin-bottom:10px}
+.pmrow2{
+  display:flex;align-items:center;height:44px;padding:0 12px;border-radius:var(--r-ctl);
+  text-align:left;font-size:var(--t-body);font-weight:500;color:var(--ink);
+  transition:background .14s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.pmrow2:hover{background:var(--raise)}
+.pmrow2:focus-visible{outline:none;background:var(--raise);box-shadow:0 0 0 2px var(--slate-ring)}
+.pmnew{padding-right:0}
+.pmfeat{
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;
+  padding:16px;border-radius:var(--r-card);background:var(--raise);transition:background .14s;
+}
+.pmfeat:hover{background:var(--raise2)}
+.pmfeat-art{
+  width:100%;aspect-ratio:4/3;border-radius:var(--r-ctl);display:grid;place-items:center;
+  background:linear-gradient(140deg,var(--slate-tint),var(--raise2));color:var(--slate);
+}
+.pmfeat-art svg{width:26px;height:26px}
+.pmfeat b{font-size:var(--t-body)}
+.pmfeat span:last-child{font-size:var(--t-small);color:var(--muted);line-height:1.5}
+.cmrow{
+  display:flex;flex-direction:column;gap:4px;text-align:left;padding:14px 12px;
+  border-radius:var(--r-ctl);transition:background .14s;
+}
+.cmrow:hover{background:var(--raise)}
+.cmrow:focus-visible{outline:none;background:var(--raise);box-shadow:0 0 0 2px var(--slate-ring)}
+.cmrow b{font-size:var(--t-h3);letter-spacing:-.018em}
+.cmrow span{font-size:var(--t-small);color:var(--muted);line-height:1.5}
+.cmtalk h3{margin-top:2px}
+.cmtalk p{font-size:var(--t-small);color:var(--muted);line-height:1.55;margin-top:8px;max-width:34ch}
+@media(max-width:1180px){
+  .pmgrid4{grid-template-columns:1fr 1fr;gap:18px 0}
+  .pmgrid4 .pmdiv{display:none}
+  .cmgrid{grid-template-columns:1fr}
+  .cmgrid .pmdiv{display:none}
+}
+@media(max-width:720px){.pmgrid4{grid-template-columns:1fr}}
+
+/* ── PART 7 · auth sheet ─────────────────────────────────────────── */
+.au-head{text-align:center;padding:2px 0 20px}
+.au-mark{width:44px;height:44px;font-size:22px;margin:0 auto 14px;display:grid!important}
+.au-head h2{font-size:var(--t-h3)}
+.au-head p{color:var(--muted);margin-top:7px;font-size:var(--t-small)}
+.au-form .field{margin-bottom:12px}
+.au-or{display:flex;align-items:center;gap:12px;margin:18px 0}
+.au-or span{flex:1;height:1px;background:var(--rule)}
+.au-or em{color:var(--faint);font-size:var(--t-small);font-style:normal}
+.au-oauth{display:flex;gap:10px;justify-content:center}
+.au-sq{
+  width:56px;height:56px;border:1px solid var(--rule-strong);border-radius:var(--r-ctl);
+  display:grid;place-items:center;background:var(--paper);transition:border-color .15s,background .15s;
+}
+.au-sq:hover{border-color:var(--ink);background:var(--raise)}
+.au-sq:focus-visible{outline:none;box-shadow:0 0 0 3px var(--slate-ring)}
+.au-sq svg{width:20px;height:20px}
+.au-foot{text-align:center;margin-top:20px;font-size:var(--t-small);color:var(--muted)}
+.au-fine{text-align:center;margin-top:10px;font-size:var(--t-small);color:var(--faint)}
+.au-link{font:inherit;font-weight:700;color:var(--slate);text-decoration:underline;text-underline-offset:2px}
+.au-link:hover{color:var(--ink)}
+
 /* ═══════════════════════════════════════════════════════════════════
    §2 / §7 ENFORCEMENT — the type scale and the radius scale, applied last.
    Everything above is the design; this block is the audit made executable.
@@ -1330,6 +1396,7 @@ const S={
   sports:[],                       // multi-select; see the S.sport shim below
   query:"",
   locQuery:"",
+  authIdentifier:"",
   ageQuery:null,
   filters:{maxPrice:null,verifiedOnly:false,model:null},
   athletes:JSON.parse(JSON.stringify(SEED.athletes)),
@@ -1534,97 +1601,129 @@ function topbarHTML(){
 /* Product · Filters · Saved · Sport — the four things a searcher reaches for.
    Product is a route (one button, no dropdown); Filters and Sport open sheets
    over whatever is on screen; Saved is a route. */
+/* PART 1 — nav discipline. Filters and Saved left the global bar: filters
+   belong to the grid they filter, and Saved is a route in the account menu.
+   Four labels a parent recognises, two of which open mega-menus. */
 function primaryNavHTML(){
-  const advCount=(window.MOD_SEARCH&&MOD_SEARCH.activeCount)?MOD_SEARCH.activeCount():0;
-  const n=S.sports.length;
-  const sportLabel=n===0?"Sport":n===1?S.sports[0]:`${n} sports`;
-  const badge=v=>v?`<span class="badge num">${v}</span>`:"";
+  const chev=`<svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>`;
   return `<nav class="tnav-row" aria-label="Primary">
     <span class="prodwrap">
       <button class="tnav ${S.route.name==="product"?"on":""}" data-nav="product"
-              aria-haspopup="true">Product
-        <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg></button>
+              aria-haspopup="true" aria-expanded="false">Product${chev}</button>
       ${productMenuHTML()}
     </span>
-    <button class="tnav ${S.modal&&S.modal.type==="filters"?"on":""}" data-openfilters="1">Filters${badge(advCount)}</button>
-    <button class="tnav ${S.route.name==="saved"?"on":""}" data-nav="saved">Saved${badge(S.favorites.length)}</button>
-    <button class="tnav sportbtn ${S.sportOpen?"on":""}" data-sportmenu="1"
-            aria-expanded="${!!S.sportOpen}" aria-haspopup="true">${esc(sportLabel)}
-      <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg></button>
+    <span class="prodwrap">
+      <button class="tnav ${S.route.name==="coachinfo"?"on":""}" data-nav="coachinfo"
+              aria-haspopup="true" aria-expanded="false">Coaches${chev}</button>
+      ${coachesMenuHTML()}
+    </span>
+    <button class="tnav ${S.route.name==="trust"?"on":""}" data-nav="trust">Trust</button>
+    <button class="tnav ${S.route.name==="pricing"?"on":""}" data-nav="pricing">Pricing</button>
   </nav>`;
 }
 
-/* Hover panel under the single Product button. It previews the feature set;
-   clicking Product itself still opens the full page, which remains the
-   complete inventory. Rows reuse the data-pdest contract from productHTML. */
-function productMenuHTML(){
-  const fam=[["Coach & program search","Filter 20+ sports by age, level, and budget","nav:explore"],
-    ["Per-person background checks","Every coach clears their own check","nav:trust"],
-    ["Map search","See what is genuinely near you","nav:map"],
-    ["Advanced filters","Price, availability, distance, rating — and saved searches","filters"],
-    ["Instant booking","Pick a slot, add your athlete, pay in one flow","nav:explore"],
-    ["Messaging","Ask a coach anything before you commit","nav:messages"],
-    ["Bookings & receipts","Every session and payment in one thread","nav:bookings"],
-    ["AI Coach","Grounded — it only ever cites checked coaches","nav:assistant"]];
-  const co=[["Command centre","Your day, roster, and revenue at a glance","tab:dashboard"],
-    ["Scheduling & availability","Set it once; families book real open slots","tab:slots"],
-    ["Payments & payouts","In-app checkout, automatic payouts","tab:finances"],
-    ["Client roster","Every family, session, and note in one place","tab:roster"],
-    ["Media & consent","Per-athlete consent enforced, not requested","tab:media"],
-    ["Session notes","Write once; the family sees the progress report","tab:notes"],
-    ["Insights","Demand, funnel, and price positioning","tab:insights"],
-    ["Services & locations","What you offer, what it costs, where you coach","tab:listings"]];
-  const row=(t,d,a)=>`<button class="pmrow" data-pdest="${esc(a)}">
-    <span class="pmdot" aria-hidden="true"></span>
-    <span><b>${esc(t)}</b><span>${esc(d)}</span></span></button>`;
-  return `<div class="productmenu" role="menu"><div class="shell pmgrid">
-    <div class="pmcol">
-      <div class="eyebrow">For families</div>
-      ${fam.map(r=>row(r[0],r[1],r[2])).join("")}
-      <button class="pmcta" data-nav="explore">Find a coach →</button>
+/* PART 1 — Pricing. Both sides on one page; no number the app contradicts. */
+function pricingHTML(){
+  const free=["Browse every coach and programme","Message a coach before you book",
+    "Save coaches and compare them","Add your athletes and manage consent"];
+  const coach=["Listing, scheduling, and messaging","In-app checkout and automatic payouts",
+    "Client roster, session notes, and media","Insights on demand and pricing"];
+  const li=a=>a.map(x=>`<li>${esc(x)}</li>`).join("");
+  return `<main class="shell">
+    <div class="co-head"><h1>What Sporve costs</h1>
+      <p>Families pay per booking. Coaches pay only when they get paid.</p></div>
+    <div class="cardrow two" style="padding:8px 0 60px">
+      <div class="panel">
+        <div class="eyebrow">For families</div>
+        <h2 style="margin-top:8px">Free to browse</h2>
+        <p style="color:var(--muted);margin-top:8px;font-size:var(--t-small)">
+          You pay the coach's price for a session. There is no booking fee and no membership.</p>
+        <ul class="pricelist">${li(free)}</ul>
+        <button class="btn ghost" data-nav="explore" style="margin-top:20px">Find a coach</button>
+      </div>
+      <div class="panel">
+        <div class="eyebrow">For coaches</div>
+        <h2 style="margin-top:8px">A tiered platform fee</h2>
+        <p style="color:var(--muted);margin-top:8px;font-size:var(--t-small)">
+          Taken only when a booking is paid, and itemized on every payout — gross,
+          fee, and your net on each one. Joining and listing are free.</p>
+        <ul class="pricelist">${li(coach)}</ul>
+        <button class="btn" data-becomecoach="1" style="margin-top:20px">Become a coach</button>
+      </div>
     </div>
+  </main>`;
+}
+
+/* An honest dead end beats silently rendering the browse grid. */
+function notFoundHTML(name){
+  return `<main class="shell"><div class="empty" style="padding:120px 24px">
+    <h1>That page doesn't exist</h1>
+    <p style="margin-top:10px">We couldn't find <b>${esc(String(name||"the page"))}</b>.</p>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:22px">
+      <button class="btn" data-nav="home">Back to home</button>
+      <button class="btn ghost" data-nav="explore">Browse coaches</button>
+    </div></div></main>`;
+}
+
+/* PART 2 — four-column Product menu. Every row resolves to a real route via
+   the existing data-pdest contract; nothing falls through to Explore. */
+function productMenuHTML(){
+  const about=[["What is Sporve?","nav:product"],
+    ["How background checks work","nav:trust"],
+    ["Examples","nav:companies"]];
+  const fam=[["Search by sport & age","nav:explore"],["Map search","nav:map"],
+    ["Instant booking","nav:explore"],["Messaging","nav:messages"],
+    ["Bookings & receipts","nav:bookings"],["Saved coaches","nav:saved"],
+    ["Athlete progress","nav:timeline"]];
+  const co=[["Scheduling & availability","tab:slots"],["Payments & payouts","tab:finances"],
+    ["Client roster","tab:roster"],["Session notes","tab:notes"],
+    ["Media & consent","tab:media"],["Insights","tab:insights"]];
+  const row=(t,a)=>`<button class="pmrow2" role="menuitem" data-pdest="${esc(a)}">${esc(t)}</button>`;
+  const col=(eyebrow,rows)=>`<div class="pmcol">
+    <div class="eyebrow">${esc(eyebrow)}</div>${rows.map(r=>row(r[0],r[1])).join("")}</div>`;
+  return `<div class="productmenu" role="menu" aria-label="Product"><div class="shell pmgrid4">
+    ${col("About",about)}
+    ${col("For families",fam)}
+    ${col("For coaches",co)}
     <div class="pmdiv" aria-hidden="true"></div>
-    <div class="pmcol">
-      <div class="eyebrow">For coaches</div>
-      ${co.map(r=>row(r[0],r[1],r[2])).join("")}
-      <button class="pmcta" data-nav="product">See everything →</button>
+    <div class="pmcol pmnew">
+      <div class="eyebrow">New</div>
+      <button class="pmfeat" role="menuitem" data-pdest="nav:assistant">
+        <span class="pmfeat-art" aria-hidden="true">${ICON.send}</span>
+        <b>AI Coach</b>
+        <span>Describe your kid's goal in plain words. It only ever suggests
+          background-checked coaches.</span>
+      </button>
     </div>
   </div></div>`;
 }
 
-/* The disc rail folded into a dropdown. Same data-sport contract, so the
-   existing toggle wiring and the S.sport shim are untouched. */
-function sportMenuHTML(){
-  const count=s=>PROGRAMS.filter(p=>p.sport===s).length;
-  const sports=[...new Set(PROGRAMS.map(p=>p.sport))]
-    .sort((a,b)=>count(b)-count(a)||a.localeCompare(b));
-  const row=s=>{const on=S.sports.includes(s);
-    return `<button class="smrow ${on?"on":""}" data-sport="${esc(s)}"
-                    style="--sc:${sportColor(s)}" aria-pressed="${on}">
-      <span class="box">${ICON.check}</span>
-      <span class="em">${sportGlyph(s)}</span>
-      <span>${esc(s)}</span><span class="n num">${count(s)}</span></button>`;};
-  return `<div class="sportmenu" role="group" aria-label="Choose your sports"
-               style="left:${S.sportAnchor||240}px">
-    <div class="sportmenu-grid">${sports.map(row).join("")}</div>
-    <div class="sportmenu-foot">
-      <span style="color:var(--faint);font-size:13px">${
-        S.sports.length?`${S.sports.length} selected`:"Every sport"}</span>
-      <div style="display:flex;gap:8px">
-        ${S.sports.length?`<button class="btn ghost sm" data-sport="">Clear</button>`:""}
-        <button class="btn sm" data-sportdone="1">Done</button>
-      </div>
+/* PART 3 — the Coaches menu. Client import gets permanent top-nav real
+   estate because it is the strategic wedge: a coach arrives with families
+   already on a group text and a Venmo history. */
+function coachesMenuHTML(){
+  const rows=[
+    ["Start coaching on Sporve","From profile to first booking. Your listings go live the moment your background check clears.","becomecoach"],
+    ["Bring your existing clients","Move your current families in from a group text, a spreadsheet, or Venmo history. They book you on Sporve from day one.","import"],
+    ["Works with how you run","Your calendar, your policies, your prices. Sporve handles the admin around them.","coachfeatures"]];
+  return `<div class="productmenu" role="menu" aria-label="Coaches"><div class="shell cmgrid">
+    <div class="pmcol">
+      <div class="eyebrow">Made for the way you coach</div>
+      ${rows.map(([t,d,a])=>`<button class="cmrow" role="menuitem" data-cdest="${esc(a)}">
+        <b>${esc(t)}</b><span>${esc(d)}</span></button>`).join("")}
     </div>
-  </div>`;
+    <div class="pmdiv" aria-hidden="true"></div>
+    <div class="pmcol cmtalk">
+      <div class="eyebrow">Talk to us</div>
+      <h3>See the coach side first</h3>
+      <p>Book a call with the Sporve team — see the coach side end-to-end
+         before you commit to anything.</p>
+      <button class="btn" data-modal="bookcall" style="margin-top:16px">Book a call</button>
+    </div>
+  </div></div>`;
 }
 
-/* The tab rail is gone: Product / Filters / Saved / Sport live in the top bar,
-   and the hero photograph now occupies the strip this used to hold. Kept as a
-   shim returning nothing, so every view that calls it stays untouched.
-   Explore is the brand click; Bookings / Messages / Profile are in the
-   account menu, which now lists them for guests too (see modalHTML). */
 function subnavHTML(){return "";}
 
 /* ═══════════════════ LANDING — FAMILY VIEW (spec Part 3) ═══════════════════
@@ -1957,6 +2056,16 @@ function exploreHTML(){
     ${key==="verified"?ICON.shield:""}${esc(label)}${on?`<span class="xm" aria-hidden="true">${ICON.xs}</span>`:""}</button>`;
   return `${subnavHTML()}${heroHTML()}<main class="shell">
     <div class="fchips" style="padding-top:26px">
+      ${/* Sport and Filters left global nav and landed here, with the grid they
+           filter. The chooser was otherwise unreachable once the nav changed. */""}
+      <button class="fchip sportbtn ${S.sports.length?"on":""}" data-sportmenu="1"
+              aria-expanded="${!!S.sportOpen}" aria-haspopup="true">${
+        esc(S.sports.length===0?"Any sport":S.sports.length===1?S.sports[0]:S.sports.length+" sports")}
+        <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg></button>
+      <button class="fchip" data-openfilters="1">${ICON.sliders} More filters${
+        (window.MOD_SEARCH&&MOD_SEARCH.activeCount&&MOD_SEARCH.activeCount())?
+        `<span class="badge num">${MOD_SEARCH.activeCount()}</span>`:""}</button>
       ${chip("verified","Background-checked only",f.verifiedOnly)}
       ${chip("under50","Under $50",f.maxPrice===50)}
       ${chip("single","Single session",f.model==="single_session")}
@@ -2927,25 +3036,55 @@ function modalHTML(){
     <div class="modal-head"><b>${esc(title)}</b><button class="x" data-close="1" aria-label="Close">${ICON.x}</button></div>
     <div class="modal-body">${body}</div></div></div>`;
 
+  /* PART 7 — single-field entry. Role is inferred from where you came from,
+     never asked: the segmented control that used to sit here was the third
+     place in the app asking the same question. */
+  /* PART 3 — honest scheduler. No fake calendar integration: this records the
+     request and says plainly that a human replies. */
+  if(m.type==="bookcall") return wrap("Book a call",`
+    <p style="color:var(--muted);margin-bottom:18px;font-size:var(--t-small)">
+      See the coach side end-to-end before you commit to anything. Tell us when
+      suits and someone from Sporve will reply by email.</p>
+    <form id="bookcallForm">
+      <div class="field"><label>Your name</label><input name="name" placeholder="Marcus Reyes" required></div>
+      <div class="field"><label>Email address</label><input name="email" type="email" placeholder="you@example.com" required></div>
+      <div class="field"><label>What works for you?</label>
+        <select name="when">
+          <option>Weekday mornings</option><option>Weekday afternoons</option>
+          <option>Weekday evenings</option><option>Weekends</option>
+        </select></div>
+      <div class="field"><label>Anything we should know? (optional)</label>
+        <textarea name="note" rows="3" placeholder="Sports you coach, how many families you run today"></textarea></div>
+      <div id="bookcallErr" class="err hide" style="margin:8px 0"></div>
+      <button class="btn wide" type="submit">Request a call</button>
+      <p style="text-align:center;color:var(--faint);font-size:var(--t-small);margin-top:11px">
+        We'll reply by email — there's no automated scheduling yet.</p>
+    </form>`);
+
   if(m.type==="authsheet") return wrap("Log in or sign up",`
-    <div style="text-align:center;padding:6px 0 22px">
-      <span class="mark" style="width:46px;height:46px;font-size:24px;margin:0 auto 14px">S</span>
-      <h2>Welcome to Sporve</h2>
-      <p style="color:var(--muted);margin-top:7px">Book sessions, message coaches, and save your favorites.</p>
+    <div class="au-head">
+      <span class="mark au-mark">S</span>
+      <h2>Log in or sign up</h2>
+      <p>Book sessions, message coaches, and manage your athletes.</p>
     </div>
-    <div class="roleswitch" style="width:100%;margin-bottom:18px">
-      <button style="flex:1" class="${S.signupRole==="family"?"on":""}" data-srole="family">Athlete &amp; family</button>
-      <button style="flex:1" class="${S.signupRole==="coach"?"on":""}" data-srole="coach">Coach or program</button>
+    <form id="authIdForm" class="au-form">
+      <div class="field" style="margin-bottom:12px">
+        <label for="authId">Phone number or email</label>
+        <input id="authId" name="identifier" autocomplete="username"
+               placeholder="you@example.com" required>
+      </div>
+      <button class="btn wide dark" type="submit">Continue</button>
+    </form>
+    <div class="au-or"><span></span><em>or</em><span></span></div>
+    <div class="au-oauth">
+      <button class="au-sq" data-google="1" aria-label="Continue with Google">${ICON.google}</button>
+      <button class="au-sq" data-soon="Apple sign-in" aria-label="Continue with Apple">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.8c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.8-3.5.8s-1.8-.8-3-.8c-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .8 1.1 1.6 2.3 2.8 2.3 1.1 0 1.6-.7 2.9-.7s1.7.7 2.9.7 2-1.1 2.7-2.2c.9-1.2 1.2-2.4 1.2-2.5 0 0-2.3-.9-2.3-3.6zM14.2 5.9c.6-.8 1-1.8.9-2.9-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.7-.9 2.7 1 .1 2-.5 2.7-1.2z"/></svg>
+      </button>
     </div>
-    <button class="btn ghost wide" data-google="1">${ICON.google} Continue with Google</button>
-    <div style="display:flex;align-items:center;gap:12px;margin:16px 0">
-      <span style="flex:1;height:1px;background:var(--rule)"></span>
-      <span style="color:var(--faint);font-size:12.5px">or</span>
-      <span style="flex:1;height:1px;background:var(--rule)"></span></div>
-    <button class="btn wide" data-onboard="1">Continue with email</button>
-    <button class="btn ghost wide" data-modal="login" style="margin-top:9px">I already have an account</button>
-    <p style="text-align:center;color:var(--faint);font-size:12.5px;margin-top:16px">
-      You can keep browsing without an account.</p>`);
+    <p class="au-foot">Here to coach? <button class="au-link" data-becomecoach="1">Start on the coach page →</button></p>
+    <p class="au-fine">You can keep browsing without an account.
+      <button class="au-link" data-demoacct="1">Use the demo account</button></p>`);
 
   if(m.type==="signup") return wrap("Create your account",`
     <p class="eyebrow" style="margin-bottom:16px">${S.signupRole==="coach"?"Coach account · Final step":"Athlete &amp; family · Step 1 of 2"}</p>
@@ -2954,11 +3093,11 @@ function modalHTML(){
         <div class="field"><label>First name</label><input name="first" placeholder="Alex" required></div>
         <div class="field"><label>Last name</label><input name="last" placeholder="Mercer" required></div>
       </div>
-      <div class="field"><label>Email address</label><input name="email" type="email" placeholder="alex@example.com" required></div>
+      <div class="field"><label>Email address</label><input name="email" type="email" value="${esc((S.authIdentifier||"").includes("@")?S.authIdentifier:"")}" placeholder="alex@example.com" required></div>
       <div class="field"><label>Phone number</label><input name="phone" placeholder="+1 (555) 000-0000"></div>
       <div class="field"><label>Password</label><input name="password" type="password" placeholder="Min. 8 characters" required></div>
       <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin:6px 0 4px">
-        <input type="checkbox" name="privacy" style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate)">
+        <input type="checkbox" name="privacy" required style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate)">
         <span style="font-size:13px;color:var(--muted)">I have read Sporve's <b style="color:var(--slate)">Privacy Policy</b>.</span></label>
       <div id="signupErr" class="err hide" style="margin:8px 0"></div>
       <button class="btn wide" type="submit" style="margin-top:12px">Continue →</button>
@@ -2966,8 +3105,8 @@ function modalHTML(){
 
   if(m.type==="login") return wrap("Log in",`
     <form id="loginForm">
-      <div class="field"><label>Email address</label><input name="email" type="email" value="alex.mercer@gmail.com" required></div>
-      <div class="field"><label>Password</label><input name="password" type="password" value="demo1234" required></div>
+      <div class="field"><label>Email address</label><input name="email" type="email" value="${esc(S.authIdentifier||"")}" autocomplete="username" required></div>
+      <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" placeholder="Min. 8 characters" required></div>
       <div id="loginErr" class="err hide" style="margin:8px 0"></div>
       <button class="btn wide" type="submit">Log in</button>
       <button class="btn ghost wide" type="button" data-onboard="1" style="margin-top:9px">Create an account</button>
@@ -3110,7 +3249,7 @@ function modalHTML(){
         <button class="btn wide" type="submit">Set new password</button>`
       :`<p style="color:var(--muted);margin-bottom:18px">
           Enter your email and we'll send a reset code.</p>
-        <div class="field"><label>Email address</label><input name="email" type="email" placeholder="alex@example.com" required></div>
+        <div class="field"><label>Email address</label><input name="email" type="email" value="${esc((S.authIdentifier||"").includes("@")?S.authIdentifier:"")}" placeholder="alex@example.com" required></div>
         <div id="forgotErr" class="err hide" style="margin:8px 0"></div>
         <button class="btn wide" type="submit">Send reset code</button>`}
       <button class="btn ghost wide" type="button" data-modal="login" style="margin-top:9px">Back to log in</button>
@@ -3145,11 +3284,11 @@ function modalHTML(){
           <div class="field"><label>First name</label><input name="first" placeholder="Alex" required></div>
           <div class="field"><label>Last name</label><input name="last" placeholder="Mercer" required></div>
         </div>
-        <div class="field"><label>Email address</label><input name="email" type="email" placeholder="alex@example.com" required></div>
+        <div class="field"><label>Email address</label><input name="email" type="email" value="${esc((S.authIdentifier||"").includes("@")?S.authIdentifier:"")}" placeholder="alex@example.com" required></div>
         <div class="field"><label>Phone number</label><input name="phone" placeholder="+1 (555) 000-0000"></div>
         <div class="field"><label>Password</label><input name="password" type="password" placeholder="Min. 8 characters" required></div>
         <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin:6px 0 4px">
-          <input type="checkbox" name="privacy" style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate)">
+          <input type="checkbox" name="privacy" required style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate)">
           <span style="font-size:13px;color:var(--muted)">I have read Sporve's <b style="color:var(--slate)">Privacy Policy</b>.</span></label>
         <div id="signupErr" class="err hide" style="margin:8px 0"></div>
         <button class="btn wide" type="submit" style="margin-top:12px">Create account →</button>
@@ -3422,6 +3561,9 @@ function render(){
     else body=coachHTML();
   }
   else if(r.name==="home") body=landingHTML();
+  /* PART 1/3 — the two new nav destinations */
+  else if(r.name==="coachinfo") body=coachLandingHTML();
+  else if(r.name==="pricing") body=pricingHTML();
   else if(r.name==="product") body=productHTML();
   else if(r.name==="detail") body=detailHTML(r.arg);
   else if(r.name==="bookings") body=bookingsHTML();
@@ -3434,7 +3576,10 @@ function render(){
   else if(r.name==="notifications") body=notifSettingsHTML();
   else if(r.name==="info") body=infoHTML(r.arg||"help");
   else if(modView(r.name)) body=modView(r.name)();
-  else body=exploreHTML();
+  else if(r.name==="explore") body=exploreHTML();
+  /* An unknown route used to render Explore, which hid exactly the class of
+     bug where a nav entry points at a surface that does not exist. */
+  else body=notFoundHTML(r.name);
 
   document.getElementById("app").innerHTML=topbarHTML()+body+
     footerHTML();
@@ -3608,6 +3753,41 @@ function wire(){
     else go(key);
   });
   $("[data-onboard]").forEach(b=>b.onclick=()=>{S.onboardStep=0;S.modal={type:"onboard"};render();});
+
+  /* PART 7 — one identifier field, then branch. An address we've seen goes to
+     the password step; anything else creates an account. */
+  const aif=document.getElementById("authIdForm");
+  if(aif) aif.onsubmit=e=>{
+    e.preventDefault();
+    const id=String(new FormData(aif).get("identifier")||"").trim();
+    if(!id) return;
+    S.authIdentifier=id;
+    S.modal={type:id.toLowerCase()===String(SEED.user.email).toLowerCase()?"login":"signup"};
+    render();
+  };
+  /* Stubs are labelled as stubs — we don't fake a provider we haven't wired. */
+  /* PART 3 — Coaches-menu destinations */
+  const bcf=document.getElementById("bookcallForm");
+  if(bcf) bcf.onsubmit=e=>{
+    e.preventDefault();
+    const d=Object.fromEntries(new FormData(bcf));
+    const err=document.getElementById("bookcallErr");
+    if(!/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(d.email)){
+      err.textContent="Please enter a valid email address.";err.classList.remove("hide");return;}
+    (S.callRequests=S.callRequests||[]).unshift({...d,at:TODAY});
+    S.modal=null;render();
+    toast("Request sent — we'll email you back");
+  };
+
+  $("[data-cdest]").forEach(b=>b.onclick=()=>{
+    const d=b.dataset.cdest;
+    if(d==="becomecoach"){S.modal=null;const f=()=>{S.portal="coach";go("dashboard");};
+      isVerified()?f():(S.pendingIntent=f,S.modal={type:"authsheet"},render());return;}
+    if(d==="import"){S.modal={type:"importclients"};render();return;}
+    go("coachinfo");
+  });
+  $("[data-soon]").forEach(b=>b.onclick=()=>toast(b.dataset.soon+" isn't wired up yet"));
+  $("[data-demoacct]").forEach(b=>b.onclick=()=>{completeAuth({...SEED.user});toast("Signed in to the demo account");});
   $("[data-onbnext]").forEach(b=>b.onclick=()=>{S.onboardStep=Math.min(2,S.onboardStep+1);render();});
   $("[data-onbback]").forEach(b=>b.onclick=()=>{
     if(S.onboardStep===0){S.modal={type:"authsheet"};} else S.onboardStep--; render();});
