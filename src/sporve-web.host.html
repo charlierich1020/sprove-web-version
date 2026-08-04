@@ -2950,15 +2950,82 @@ function coachBody(t){
           <td>${r.available?'<span class="pill good">Yes</span>':'<span class="pill warn">No</span>'}</td>
           <td>${r.paid?'<span class="pill good">Paid</span>':'<span class="pill warn">Due</span>'}</td></tr>`).join("")}
         </tbody></table></div></div>`;
+  /* PART 8.6 — a coach could not reply to a family. Ever. This rendered only
+     conversations[0] with no compose box, while the rail advertised unread
+     messages and the dashboard queue routed here. Mirrors the family thread. */
   if(t==="inbox"){
-    const c=S.conversations[0];
+    if(!S.conversations.length) return `<div class="sec-head" style="margin-top:18px"><h1>Inbox</h1></div>
+      <div class="empty"><h3>No messages yet</h3>
+        <p style="margin-top:6px">When a family messages you about a listing, the thread opens here.</p></div>`;
+    const active=S.conversations.find(x=>x.id===S.activeConv)||S.conversations[0];
+    const initials=n=>String(n||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
     return `<div class="sec-head" style="margin-top:18px"><h1>Inbox</h1></div>
-      <div class="panel"><div style="display:flex;gap:12px;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--rule)">
-        <span class="avatar">AM</span><div><b>Alex Mercer</b>
-          <div style="color:var(--muted);font-size:13px">${esc(PROGRAMS.find(p=>p.id===c.programId)?.title||"")}</div></div></div>
-        <div style="display:flex;flex-direction:column;gap:11px;margin-top:16px">
-          ${(S.messages[c.id]||[]).map(m=>`<div class="bub ${m.me?"them":"me"}" style="max-width:78%">${esc(m.text)}</div>`).join("")}
-        </div></div>`;
+      <div class="msg-wrap">
+        <div class="msg-list">
+          ${S.conversations.map(c=>`<button class="msg-item ${c.id===active.id?"on":""}" data-cconv="${esc(c.id)}">
+            <span class="avatar">${esc(initials(c.with))}</span>
+            <span style="min-width:0;text-align:left">
+              <b style="display:block;font-size:var(--t-small)">${esc(c.with)}</b>
+              <span style="display:block;color:var(--muted);font-size:var(--t-small);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.last)}</span>
+            </span>${S.unread&&S.unread[c.id]?`<span class="rbadge">${S.unread[c.id]}</span>`:""}</button>`).join("")}
+        </div>
+        <div class="msg-thread">
+          <div style="display:flex;gap:12px;align-items:center;padding:15px 17px;border-bottom:1px solid var(--rule)">
+            <span class="avatar">${esc(initials(active.with))}</span>
+            <div><b>${esc(active.with)}</b>
+              <div style="color:var(--muted);font-size:var(--t-small)">${esc((PROGRAMS.find(p=>p.id===active.programId)||{}).title||"")}</div></div>
+          </div>
+          <div class="msg-scroll" id="msgscroll">
+            ${(S.messages[active.id]||[]).map(m=>`<div class="bub ${m.me?"them":"me"}">${esc(m.text)}</div>`).join("")}
+          </div>
+          <form class="msg-compose" id="coachCompose">
+            <input name="text" placeholder="Reply to ${esc(active.with)}" autocomplete="off" required>
+            <button class="btn sm" type="submit">Send</button>
+          </form>
+        </div>
+      </div>`;
+  }
+
+  /* PART 5.1 — these two rail entries had no branch at all, so both fell
+     through to the Business profile form. The dashboard's "Recent reviews ->
+     Reply" landed a coach on a settings screen. */
+  if(t==="bookings"){
+    const rows=S.bookings.slice();
+    return `<div class="sec-head" style="margin-top:18px"><h1>Bookings</h1>
+        <span class="num" style="color:var(--faint);font-size:var(--t-small)">${rows.length} total</span></div>
+      ${rows.length?`<div class="queue">${rows.map(b=>{
+        const p=PROGRAMS.find(x=>x.id===b.programId);
+        return `<div class="qrow ${b.status==="confirmed"?"good":""}">
+          <span class="qdot" aria-hidden="true"></span>
+          <span class="qtext"><b>${esc(b.program)}</b>
+            <span>${esc(b.athlete)} · ${esc(fmtDate(b.date))} · ${esc(b.startTime||"")}</span></span>
+          <span class="qexp num">${money(b.price)}</span>
+          <span class="qacts"><span class="pill ${b.status==="confirmed"?"good":"warn"}">${esc(b.status)}</span>
+            ${p?`<button class="btn ghost sm" data-open="${esc(p.id)}">View listing</button>`:""}</span>
+        </div>`;}).join("")}</div>`
+      :`<div class="empty"><h3>No bookings yet</h3>
+         <p style="margin-top:6px">Once a family books one of your services, it appears here with its payment and policy.</p>
+         <button class="btn" data-ctab="listings" style="margin-top:18px">Check your listings</button></div>`}`;
+  }
+
+  if(t==="reviews"){
+    const revd=mine.filter(p=>Number(p.reviews)>0);
+    const total=revd.reduce((n,p)=>n+Number(p.reviews||0),0);
+    const avg=revd.length?(revd.reduce((n,p)=>n+Number(p.rating||0)*Number(p.reviews||0),0)/(total||1)).toFixed(1):"—";
+    return `<div class="sec-head" style="margin-top:18px"><h1>Reviews</h1></div>
+      <div class="stats">
+        ${[["Average rating",avg,"across your listings"],["Total reviews",String(total),"all time"],
+           ["Listings reviewed",String(revd.length)+" of "+mine.length,"have at least one"]]
+          .map(([k,v,d])=>`<div class="stat"><div class="k">${esc(k)}</div><div class="v num">${esc(v)}</div><div class="d">${esc(d)}</div></div>`).join("")}
+      </div>
+      ${revd.length?`<div class="queue" style="margin-top:18px">${revd.map(p=>`
+        <div class="qrow good"><span class="qdot" aria-hidden="true"></span>
+          <span class="qtext"><b>${esc(p.title)}</b>
+            <span>${ICON.star} ${p.rating} · ${p.reviews} review${p.reviews===1?"":"s"}</span></span>
+          <span class="qacts"><button class="btn ghost sm" data-open="${esc(p.id)}">See listing</button></span>
+        </div>`).join("")}</div>`
+      :`<div class="empty" style="margin-top:18px"><h3>No reviews yet</h3>
+         <p style="margin-top:6px">A family can only review after a session is completed — so the first one arrives after your first session.</p></div>`}`;
   }
   if(t==="finances"){
     const gross=S.bookings.reduce((s,b)=>s+b.price,0);
@@ -2979,11 +3046,18 @@ function coachBody(t){
             <td><span class="pill good">${esc(b.paymentStatus)}</span></td></tr>`).join("")}
           </tbody></table></div></div>`;
   }
+  /* PART 8.8 — this form had no name, no id and no handler on any field;
+     Save toasted "Changes saved" and the value reverted on the next render.
+     It is also the fallthrough for every unmatched tab, so it was the most
+     landed-on dead surface in the portal. It persists now. */
   return `<div class="sec-head" style="margin-top:18px"><h1>Business profile</h1></div>
-    <div class="panel" style="max-width:620px">
-      <div class="field"><label>Business name</label><input value="${esc(pp.businessName)}"></div>
-      <div class="field"><label>Bio</label><textarea rows="3">${esc(pp.bio)}</textarea></div>
-      <div class="field"><label>Location</label><input value="${esc(pp.location)}"></div>
+    <form class="panel" id="bizForm" style="max-width:620px">
+      <div class="field"><label for="bizName">Business name</label>
+        <input id="bizName" name="businessName" value="${esc(pp.businessName)}" required></div>
+      <div class="field"><label for="bizBio">Bio</label>
+        <textarea id="bizBio" name="bio" rows="3">${esc(pp.bio)}</textarea></div>
+      <div class="field"><label for="bizLoc">Location</label>
+        <input id="bizLoc" name="location" value="${esc(pp.location)}"></div>
       <div class="field"><label>Sports offered</label>
         <div style="display:flex;gap:7px;flex-wrap:wrap;padding-top:3px">
           ${pp.sports.map(s=>`<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</span>`).join("")}</div></div>
@@ -2991,13 +3065,22 @@ function coachBody(t){
         <div class="eyebrow">Server-controlled</div>
         <p style="font-size:14px;color:var(--ink-2);margin-top:7px">
           Verification status, background-check status, and payout fields are set by Sporve — a business can never mark itself verified.</p>
+        ${/* derived, not asserted — these were hardcoded literals that would
+             read "Verified / cleared / connected" for a brand-new coach, and
+             contradicted gettingStarted() computing from the same fields */""}
         <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:11px">
-          <span class="pill gold">${ICON.shield} Verified</span>
-          <span class="pill good">Background check cleared</span>
-          <span class="pill slate">Payouts connected</span></div>
+          ${pp.status==="approved"
+            ? `<span class="pill gold">${ICON.shield} Verified</span>`
+            : `<span class="pill warn">Verification pending</span>`}
+          ${pp.backgroundCheck==="cleared"||pp.status==="approved"
+            ? `<span class="pill good">Background check cleared</span>`
+            : `<span class="pill warn">Background check in progress</span>`}
+          ${pp.stripeAccountId
+            ? `<span class="pill slate">Payouts connected</span>`
+            : `<span class="pill warn">Payouts not set up</span>`}</div>
       </div>
-      <button class="btn" style="margin-top:18px" data-save="1">Save changes</button>
-    </div>`;
+      <button class="btn" style="margin-top:18px" type="submit" id="bizSave" disabled>Save changes</button>
+    </form>`;
 }
 function trainerRow(m){
   const verified=m.bg==="verified", active=m.active, accepted=m.affiliation!=="pending"&&m.affiliation!=="declined";
@@ -3769,6 +3852,35 @@ function wire(){
     (S.callRequests=S.callRequests||[]).unshift({...d,at:TODAY});
     S.modal=null;render();
     toast("Request sent — we'll email you back");
+  };
+
+  /* coach thread: switch conversation + actually send */
+  /* real persistence + disabled-until-dirty */
+  const bf=document.getElementById("bizForm");
+  if(bf){
+    const save=document.getElementById("bizSave");
+    const snap=JSON.stringify(Object.fromEntries(new FormData(bf)));
+    bf.oninput=()=>{ if(save) save.disabled=JSON.stringify(Object.fromEntries(new FormData(bf)))===snap; };
+    bf.onsubmit=e=>{
+      e.preventDefault();
+      const d=Object.fromEntries(new FormData(bf));
+      SEED.providerProfile.businessName=String(d.businessName||"").trim()||SEED.providerProfile.businessName;
+      SEED.providerProfile.bio=String(d.bio||"");
+      SEED.providerProfile.location=String(d.location||"");
+      render();toast("Business profile saved");
+    };
+  }
+
+  $("[data-cconv]").forEach(b=>b.onclick=()=>{S.activeConv=b.dataset.cconv;render();});
+  const cc=document.getElementById("coachCompose");
+  if(cc) cc.onsubmit=e=>{
+    e.preventDefault();
+    const txt=String(new FormData(cc).get("text")||"").trim(); if(!txt) return;
+    const id=(S.conversations.find(x=>x.id===S.activeConv)||S.conversations[0]).id;
+    (S.messages[id]=S.messages[id]||[]).push({id:"msg_"+(S.messages[id].length+1),me:false,text:txt,at:TODAY});
+    const c=S.conversations.find(x=>x.id===id); if(c) c.last=txt;
+    if(S.unread) S.unread[id]=0;
+    render();
   };
 
   $("[data-cdest]").forEach(b=>b.onclick=()=>{
