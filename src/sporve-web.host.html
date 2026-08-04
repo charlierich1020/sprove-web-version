@@ -3856,14 +3856,14 @@ function wire(){
 
   /* coach thread: switch conversation + actually send */
   /* real persistence + disabled-until-dirty */
-  const bf=document.getElementById("bizForm");
-  if(bf){
+  const bizf=document.getElementById("bizForm");
+  if(bizf){
     const save=document.getElementById("bizSave");
-    const snap=JSON.stringify(Object.fromEntries(new FormData(bf)));
-    bf.oninput=()=>{ if(save) save.disabled=JSON.stringify(Object.fromEntries(new FormData(bf)))===snap; };
-    bf.onsubmit=e=>{
+    const snap=JSON.stringify(Object.fromEntries(new FormData(bizf)));
+    bizf.oninput=()=>{ if(save) save.disabled=JSON.stringify(Object.fromEntries(new FormData(bizf)))===snap; };
+    bizf.onsubmit=e=>{
       e.preventDefault();
-      const d=Object.fromEntries(new FormData(bf));
+      const d=Object.fromEntries(new FormData(bizf));
       SEED.providerProfile.businessName=String(d.businessName||"").trim()||SEED.providerProfile.businessName;
       SEED.providerProfile.bio=String(d.bio||"");
       SEED.providerProfile.location=String(d.location||"");
