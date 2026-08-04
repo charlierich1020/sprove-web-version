@@ -46,43 +46,25 @@ built = host.replace(MARKER, "\n".join(blocks) if blocks else MARKER)
 # Filenames drive weight/style: Sentinel-Bold.woff2, Sentinel-BookItalic.woff2, ...
 FONT_WEIGHTS = {"light": 300, "book": 400, "roman": 400, "regular": 400,
                 "medium": 500, "semibold": 600, "bold": 700, "black": 800}
-# The filename PREFIX now names the family, so both contracted faces inline
-# from the same drop folder:
-#   Bricolage-Bold.woff2   -> font-family:"Bricolage Grotesque", weight 700
-#   Hanken-Regular.woff2   -> font-family:"Hanken Grotesk",      weight 400
-# Anything else keeps working under its own prefix (e.g. Sentinel-Book.woff2).
-FAMILY_BY_PREFIX = {
-    "bricolage": "Bricolage Grotesque",
-    "hanken": "Hanken Grotesk",
-    "sentinel": "Sentinel",
-}
 font_files = sorted(glob.glob(os.path.join(ROOT, "assets", "fonts", "*.woff2")))
-faces, fam_seen = [], set()
+faces = []
 for fp in font_files:
     stem = os.path.basename(fp).rsplit(".", 1)[0]
-    prefix = stem.split("-", 1)[0].lower()
-    family = FAMILY_BY_PREFIX.get(prefix, stem.split("-", 1)[0])
-    tail = stem.split("-", 1)[1].lower() if "-" in stem else "regular"
+    tail = stem.split("-", 1)[1].lower() if "-" in stem else "book"
     italic = "italic" in tail
     weight = next((v for k, v in FONT_WEIGHTS.items() if k in tail.replace("italic", "")), 400)
     import base64 as _b64
     with open(fp, "rb") as f:
         b64 = _b64.b64encode(f.read()).decode("ascii")
     faces.append(
-        '@font-face{font-family:"%s";font-weight:%d;font-style:%s;font-display:swap;'
+        '@font-face{font-family:"Sentinel";font-weight:%d;font-style:%s;font-display:swap;'
         'src:url(data:font/woff2;base64,%s) format("woff2")}'
-        % (family, weight, "italic" if italic else "normal", b64))
-    fam_seen.add(family)
+        % (weight, "italic" if italic else "normal", b64))
 if faces:
     built = built.replace("/*__FONTFACE__*/", "\n".join(faces))
-    print("fonts: %d face(s) inlined across %s" % (len(faces), ", ".join(sorted(fam_seen))))
+    print("fonts: %d Sentinel face(s) inlined" % len(faces))
 else:
-    print("fonts: NONE FOUND at assets/fonts/*.woff2")
-    print("       The type contract names Bricolage Grotesque (display) + Hanken")
-    print("       Grotesk (body). Neither is present, so the page renders on the")
-    print("       system slab/sans fallback and the contract is NOT met.")
-    print("       Drop Bricolage-{Regular,Bold}.woff2 and Hanken-{Regular,Bold}.woff2")
-    print("       into assets/fonts/ and rebuild.")
+    print("fonts: none at assets/fonts/*.woff2 — falling back to Rockwell/slab stack")
 
 HERO_TOKEN = "__HERO_IMG__"
 hero_dir = os.path.join(ROOT, "assets")

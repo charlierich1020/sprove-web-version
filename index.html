@@ -67,31 +67,26 @@
 
   /* type on the dark hero panel — never mid-grey on black */
   --on-dark:#FFFFFF; --on-dark-2:#C7D0DA;
-  /* ── TYPE: Sentinel (Hoefler&Co) ────────────────────────────────────────
-     Sentinel is a LICENSED, PAID face. It is not bundled here and cannot be:
-     redistributing the binaries inside this file would breach Hoefler&Co's
-     licence, and the page runs under a CSP that blocks cloud.typography
-     anyway. Both roles therefore NAME Sentinel first and fall through a
-     deliberately slab-serif stack, so an unlicensed viewer still reads a slab
-     rather than silently collapsing to Arial and hiding the gap.
+  /* ── TYPE: the contracted pairing ───────────────────────────────────────
+     Display  Bricolage Grotesque   — hero H1 and top-level headings only
+     Body     Hanken Grotesk        — everything else
 
-     To ship the real face, drop the licensed webfont files in:
-         assets/fonts/Sentinel-<Weight>.woff2
-     and run `python3 src/build.py`. It emits the @font-face rules and inlines
-     each file as a data URI, so the page stays one self-contained file.
-     Recognised weights: Light 300, Book 400, Medium 500, Semibold 600,
-     Bold 700, Black 800 — plus any -Italic variant of those.
+     NEITHER IS CURRENTLY PRESENT. build.py inlines any .woff2 dropped into
+     assets/fonts/ as a data URI, keyed by filename prefix:
+         assets/fonts/Bricolage-Regular.woff2  Bricolage-Bold.woff2
+         assets/fonts/Hanken-Regular.woff2     Hanken-Bold.woff2
+     Until they land, build.py prints a loud NOT-MET warning and both roles
+     fall through the stacks below. Weights are 400 and 700 only — the CSS
+     previously declared seven, and Rockwell/Arial render five of them
+     identically, so the extra weights were a hierarchy that did not exist.
 
-     Fallbacks, in order: Hoefler's cloud.typography split families, a
-     self-hosted "Sentinel", then Rockwell (a true geometric slab, ships with
-     MS Office), the free Google slabs if present, Charter/Georgia as sturdy
-     serifs, and finally the platform serif. */
-  --display:"Sentinel A","Sentinel B",Sentinel,"Sentinel SSm A","Sentinel SSm B",
-            Rockwell,"Roboto Slab","Zilla Slab","Bitter",Charter,"Iowan Old Style",
-            Georgia,"Times New Roman",serif;
-  /* Reading size stays on the plain grotesque — it ships on every OS, so
-     nothing at body size silently falls back to something unchosen. */
-  --sans:Arial,"Helvetica Neue",Helvetica,"Liberation Sans","Nimbus Sans",sans-serif;
+     The fallbacks are deliberately NOT the same stack for both roles: if the
+     real faces are missing, the page should still show a visible display/body
+     contrast rather than silently collapsing to one family and hiding it. */
+  --display:"Bricolage Grotesque",Rockwell,"Roboto Slab","Zilla Slab",Bitter,
+            Charter,"Iowan Old Style",Georgia,serif;
+  --sans:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,
+         "Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   --shell:1240px;
 }
@@ -325,7 +320,9 @@ img{max-width:100%;display:block}
 }
 .navlink:hover{background:none;color:var(--slate)}
 @media(max-width:1180px){
-  .becomecoach{display:none}
+  /* .becomecoach used to be display:none here, which deleted the entire coach
+     acquisition CTA on phones and split-window laptops and left the toggle as
+     the only way in. It stays at every breakpoint now. */
   .tnav-row{gap:18px;margin-left:8px}
   .tnav-row .tnav{font-size:15.5px}
 }
@@ -393,7 +390,11 @@ img{max-width:100%;display:block}
   border-radius:var(--r-pill);transition:background .15s;
 }
 .sp-seg:focus-within{background:var(--raise)}
-.sp-where{flex:0 0 34%}
+.sp-where{flex:0 0 26%}
+.sp-age{flex:0 0 22%}
+.sp-age select{appearance:none;-webkit-appearance:none;cursor:pointer;
+  background:none;border:0;color:var(--ink);width:100%;min-width:0}
+.sp-age select:focus{outline:none}
 .sp-lbl{
   font-size:var(--t-micro);font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--faint);line-height:1;
@@ -1235,19 +1236,32 @@ const BUSINESSES=[...new Set(PROGRAMS.map(p=>p.biz))].map(b=>{
     rating:(list.reduce((s,p)=>s+p.rating,0)/list.length).toFixed(1)};
 });
 
+/* The app's "now" — the same anchor mod-payments and mod-search already use.
+   Every seeded slot is generated FORWARD from here. They used to be hardcoded
+   to 2026-05-xx against this same clock, which quietly broke four things at
+   once: every cancellation refunded 0% ("session already started"), every
+   booking became review-eligible the instant it was paid for, the family
+   Schedule read as history, and no card could show a next opening. */
+const TODAY="2026-08-03";
+function dayAfter(n){
+  const d=new Date(TODAY+"T12:00:00Z");
+  d.setUTCDate(d.getUTCDate()+n);
+  return d.toISOString().slice(0,10);
+}
+
 const SESSIONS=[
-  {id:"sess_1",programId:"prog_1",title:"Soccer Skill Session 1",date:"2026-05-04",startTime:"05:00 PM",endTime:"06:30 PM",tz:"EST",address:"123 Coral Way, Miami, FL"},
-  {id:"sess_2",programId:"prog_1",title:"Soccer Skill Session 2",date:"2026-05-06",startTime:"05:00 PM",endTime:"06:30 PM",tz:"EST",address:"123 Coral Way, Miami, FL"},
-  {id:"sess_3",programId:"prog_2",title:"Weekly Tennis Practice",date:"2026-05-05",startTime:"04:00 PM",endTime:"05:30 PM",tz:"EST",address:"450 Tennis Center Dr, Miami, FL"},
+  {id:"sess_1",programId:"prog_1",title:"Soccer Skill Session 1",date:dayAfter(4),startTime:"05:00 PM",endTime:"06:30 PM",tz:"EST",address:"123 Coral Way, Miami, FL"},
+  {id:"sess_2",programId:"prog_1",title:"Soccer Skill Session 2",date:dayAfter(6),startTime:"05:00 PM",endTime:"06:30 PM",tz:"EST",address:"123 Coral Way, Miami, FL"},
+  {id:"sess_3",programId:"prog_2",title:"Weekly Tennis Practice",date:dayAfter(5),startTime:"04:00 PM",endTime:"05:30 PM",tz:"EST",address:"450 Tennis Center Dr, Miami, FL"},
 ];
 /* generic slots for every other listing so booking works everywhere */
 function slotsFor(pid){
   const seeded=SESSIONS.filter(s=>s.programId===pid);
   if(seeded.length) return seeded;
   const n=parseInt(pid.split("_")[1],10);
-  return [4,6,11].map((d,i)=>({
+  return [3,7,12].map((d,i)=>({
     id:`${pid}_s${i+1}`,programId:pid,title:"Training Session",
-    date:`2026-05-${String(d+(n%3)).padStart(2,"0")}`,
+    date:dayAfter(d+(n%4)),
     startTime:["04:00 PM","05:00 PM","10:00 AM"][i],
     endTime:["05:30 PM","06:30 PM","11:30 AM"][i],
     tz:"EST",address:PROGRAMS.find(p=>p.id===pid).address}));
@@ -1268,8 +1282,11 @@ const SEED={
     parentConsent:true,consentAt:"2026-05-01T10:00:00.000Z",consentVersion:"v1"}],
   bookings:[{id:"book_1",athlete:"Julian Mercer",programId:"prog_1",
     program:"Elite Soccer Academy - U12 Training",sessionId:"sess_1",
-    session:"Soccer Skill Session 1",date:"2026-05-04",startTime:"05:00 PM",
-    tier:"Standard",price:45,status:"confirmed",paymentStatus:"paid",createdAt:"2026-05-01"}],
+    session:"Soccer Skill Session 1",date:dayAfter(4),startTime:"05:00 PM",
+    tier:"Standard",price:45,status:"confirmed",paymentStatus:"paid",createdAt:TODAY,
+    /* the policy in force when this was bought — without it the cancel sheet
+       leads with its "not snapshotted" fallback, which is the exception path */
+    cancellationPolicy:"moderate",policySnapshotAt:TODAY}],
   conversations:[{id:"conv_1",with:"Apex Performance Club",programId:"prog_1",
     last:"Hello, thank you for booking! See you on Monday.",at:"2026-05-01T10:05:00.000Z"}],
   messages:{conv_1:[
@@ -1298,7 +1315,9 @@ const SEED={
 const S={
   /* Home IS the browse grid — the original landing. The marketing scroll that
      briefly lived here is gone; only the nav additions above it were kept. */
-  route:{name:"explore",arg:null},
+  /* Boots on the marketing landing, not the browse grid. landingHTML() and
+     coachLandingHTML() were fully written but never reachable from render(). */
+  route:{name:"home",arg:null},
   sportOpen:false,                 // the topbar sport chooser
   sportAnchor:null,                // px offset of the Sport button, for the panel
   showcaseSide:"families",
@@ -1310,6 +1329,8 @@ const S={
   favorites:[],
   sports:[],                       // multi-select; see the S.sport shim below
   query:"",
+  locQuery:"",
+  ageQuery:null,
   filters:{maxPrice:null,verifiedOnly:false,model:null},
   athletes:JSON.parse(JSON.stringify(SEED.athletes)),
   bookings:JSON.parse(JSON.stringify(SEED.bookings)),
@@ -1399,6 +1420,19 @@ function visiblePrograms(){
     const q=S.query.toLowerCase();
     list=list.filter(p=>(p.title+" "+p.biz+" "+p.sport+" "+p.desc).toLowerCase().includes(q));
   }
+  /* The Where field used to be pure decoration — its only appearance in the
+     codebase was its own markup. A parent could type "Orlando, FL" and get
+     all 30 Miami listings back. On a local-services marketplace that is worse
+     than having no field, so it now actually filters. */
+  if(S.locQuery&&S.locQuery.trim()){
+    const l=S.locQuery.trim().toLowerCase();
+    list=list.filter(p=>String(p.address||"").toLowerCase().includes(l));
+  }
+  /* the age segment — a listing only shows if it actually takes that athlete */
+  if(S.ageQuery!=null&&S.ageQuery!==""){
+    const a=Number(S.ageQuery);
+    list=list.filter(p=>a>=p.minAge&&a<=p.maxAge);
+  }
   if(S.filters.verifiedOnly) list=list.filter(p=>p.verified);
   if(S.filters.maxPrice!=null) list=list.filter(p=>p.price<=S.filters.maxPrice);
   if(S.filters.model) list=list.filter(p=>p.model===S.filters.model);
@@ -1481,13 +1515,14 @@ function topbarHTML(){
       <span class="mark">S</span><span class="wordmark">sporve</span></button>
     ${S.portal==="family"?primaryNavHTML():""}
     <nav class="topnav" aria-label="Main">
-      <div class="roleswitch" role="tablist" aria-label="View">
-        <button role="tab" aria-selected="${S.portal==="family"}" class="${S.portal==="family"?"on":""}" data-portal="family">Family</button>
-        <button role="tab" aria-selected="${S.portal==="coach"}" class="${S.portal==="coach"?"on":""}" data-portal="coach">Coach</button>
-      </div>
+      ${/* No global role toggle. Airbnb, Uber and Zillow all separate the two
+            audiences by funnel, not by a segmented control in the chrome — and
+            here the toggle was also the unauthenticated door into a real
+            coach's dashboard. One text link, visible at every breakpoint;
+            signed-in coaches switch from the account menu. */""}
       ${S.portal==="family"
         ? `<button class="navlink becomecoach" data-becomecoach="1">Become a coach</button>`
-        : `<button class="navlink becomecoach" data-portal="coach" data-coachdash="1">Coach dashboard</button>`}
+        : `<button class="navlink becomecoach" data-portal="family">Back to families</button>`}
       <button class="acct" data-acct="1" aria-label="Account menu">
         <span class="burger" aria-hidden="true"><span></span><span></span><span></span></span>
         <span class="avatar">${u?esc(u.firstName[0]+u.lastName[0]):`<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>`}</span>
@@ -1640,7 +1675,7 @@ function landingHTML(){
       <div class="frames">${seg==="families"?famFrames():coachFrames()}</div>
       <p class="risk ctr">${seg==="families"
         ? "No booking fee to browse. You only pay when you book a session."
-        : "Free to join and list. Sporve takes 9% only when you get paid."}</p>
+        : "Free to join and list. Sporve's platform fee is taken only when you get paid, and itemized on every payout."}</p>
       ${seg==="coaches"?`<div class="ctr" style="margin-top:18px">
         <button class="btn" data-becomecoach="1">Become a coach</button></div>`:""}
     </div>
@@ -1759,7 +1794,7 @@ function coachLandingHTML(){
   const faq=[
     ["How does the background check work?","Every individual clears their own check — not the business. Your listings stay unbookable and hidden from search until yours clears, and an org being approved never vouches for a trainer on its roster."],
     ["When do I get paid?","Payouts run automatically after a completed session. Each one itemizes gross, the platform fee, and your net."],
-    ["What does Sporve take?","Nine percent of each booking, taken only when you get paid. Joining, listing, and messaging are free."],
+    ["What does Sporve take?","A tiered platform fee, taken only when you get paid and itemized on every payout — gross, fee, and your net on each booking. Joining, listing, and messaging are free."],
     ["What happens when someone cancels?","The cancellation policy copied onto the booking at purchase governs the refund — not whatever your listing says later. You pick flexible, moderate, or strict per service."],
     ["Who owns the client relationship?","You do. Families you bring keep booking you, and your roster and notes are yours."],
     ["Can I leave and take my data?","Yes. Request an export at any time. Deletion is reviewed as a case so financial and safety records required by law are retained, and everything else is removed."]];
@@ -1836,8 +1871,8 @@ function coachLandingHTML(){
     <div class="shell pricingblock">
       <h2 class="ctr">What it costs</h2>
       <div class="pricecard">
-        <div class="bignum num">9%</div>
-        <p><b>of each booking, taken only when you get paid.</b></p>
+        <div class="bignum">Tiered</div>
+        <p><b>platform fee, taken only when you get paid.</b></p>
         <ul class="pricelist">
           <li>Joining, listing, and messaging are free</li>
           <li>No monthly fee and no per-listing fee</li>
@@ -1880,8 +1915,10 @@ function heroHTML(){
   return `<section class="hero">
     <div class="hero-panel"${HERO_IMG?` style="--hero-img:url('${HERO_IMG}')"`:""}>
       <div class="hero-in">
-        <h1 class="display">Find Your Next Challenge.</h1>
-        <p class="hero-lede">Discover elite coaching and premium facilities tailored to your goals.</p>
+        ${/* The locked one-liner. The previous headline spoke to an adult
+             athlete about a gym, and Sporve does not sell facilities. */""}
+        <h1 class="display">Book a background-checked coach for your kid.</h1>
+        <p class="hero-lede">Any sport. Real coaches, verified. Booked in minutes.</p>
         <div class="searchpill">
           <label class="sp-seg" for="q">
             <span class="sp-lbl">What</span>
@@ -1890,8 +1927,18 @@ function heroHTML(){
           <span class="divider"></span>
           <label class="sp-seg sp-where" for="qloc">
             <span class="sp-lbl">Where</span>
-            <span class="sp-val">${ICON.pin}<input class="seg" id="qloc" placeholder="Miami, FL"
+            <span class="sp-val">${ICON.pin}<input class="seg" id="qloc" placeholder="City or ZIP"
                    value="${esc(S.locQuery||"")}" aria-label="Location"></span></label>
+          <span class="divider"></span>
+          ${/* The differentiator. Airbnb asks "when"; a parent's constraint is
+               "how old is my kid" — it says this product is about the child. */""}
+          <label class="sp-seg sp-age" for="qage">
+            <span class="sp-lbl">Child's age</span>
+            <span class="sp-val"><select class="seg" id="qage" aria-label="Child's age">
+              <option value="">Any age</option>
+              ${Array.from({length:13},(_,i)=>i+6).map(a=>
+                `<option value="${a}"${String(S.ageQuery)===String(a)?" selected":""}>${a} years old</option>`).join("")}
+            </select></span></label>
           <button class="go" id="qgo" aria-label="Search">${ICON.search}</button>
         </div>
       </div>
@@ -1987,7 +2034,7 @@ function productHTML(){
 
     <div class="prodsec">
       <h2>For coaches and programs</h2>
-      <p class="sub">Free to join and list. Sporve takes 9% only when you get paid.</p>
+      <p class="sub">Free to join and list. The platform fee is taken only when you get paid, and itemized on every payout.</p>
     </div>
     <div class="prodgrid">${co.map(r=>card(r[0],r[1],r[2],r[3])).join("")}</div>
 
@@ -2337,8 +2384,19 @@ function assistantHTML(){
 /* deterministic, grounded matcher — mirrors provider_matcher.dart's hard gates */
 function answerFor(q){
   const t=q.toLowerCase();
-  const age=(t.match(/(\d{1,2})[\s-]*(?:year|yr|yo)/)||t.match(/\b(\d{1,2})\b/)||[])[1];
   const budget=(t.match(/(?:under|below|less than|max)\s*\$?(\d{2,4})/)||[])[1];
+  /* Age is read from a string with the money taken OUT first, and a bare
+     number no longer counts as an age. "Beginner swimming near Miami under
+     $60" used to parse 60 as the athlete's age — the bare-number fallback
+     grabbed the first digits it saw, because "$" is a non-word boundary — and
+     then recommended an adults-only 16–60 masters programme to a parent. */
+  const tAge=t.replace(/\$\s?\d+(?:\.\d+)?/g,"")
+              .replace(/(?:under|below|less than|max)\s*\$?\d+/g,"")
+              .replace(/\b\d+\s*(?:dollars|bucks|usd)\b/g,"");
+  const age=(tAge.match(/(\d{1,2})\s*(?:-|\s)?\s*(?:year|yr|yo|y\/o)/)
+           ||tAge.match(/(?:age|aged)\s*(\d{1,2})/)
+           ||tAge.match(/\b(\d{1,2})\s*(?:year|yrs?)\s*old/)
+           ||[])[1];
   const sport=Object.keys(SPORT_COLOR).find(s=>t.includes(s.toLowerCase()));
   const beginner=/beginner|new to|first time|shy|never played|starting/.test(t);
   const advanced=/advanced|elite|competitive|travel team|tournament|make the/.test(t);
@@ -2494,10 +2552,14 @@ function dashboardHTML(){
         <div class="k">Right now</div>
         <div class="livecount"><span class="dot" aria-hidden="true"></span>
           <span class="num">${live?"3":"0"}</span></div>
-        <div class="d">parents viewed your profile today</div>
+        <div class="d">${live?"parents viewed your profile today":"nobody is viewing your profile yet"}</div>
       </div>
     </section>
-    <p class="lastdays num">Last 30 days</p>
+    ${/* Honesty doctrine: these figures are seeded, not measured. They only
+         ever appear alongside a label that says so — a coach must never be
+         shown a number Sporve did not actually count. */""}
+    <p class="lastdays num">All channels · Last 30 days${live
+      ? ` <span class="pill gold" style="margin-left:8px">Demo data</span>`:""}</p>
 
     <h1 class="greet">${partOfDay}, ${esc(first)}.
       <span>${live
@@ -2802,8 +2864,8 @@ function coachBody(t){
     const fee=Math.round(gross*0.09), net=gross-fee;
     return `<div class="sec-head" style="margin-top:18px"><h1>Finances</h1></div>
       <div class="stats">
-        ${[["Gross",money(gross),"all bookings"],["Platform fee",money(fee),"9%"],
-           ["Net payout",money(net),"to your account"],["Payouts","Connected",pp.stripeAccountId]]
+        ${[["Gross",money(gross),"all bookings"],["Platform fee",money(fee),"itemized per booking"],
+           ["Net payout",money(net),"to your account"],["Payouts",pp.stripeAccountId?"Connected":"Not set up",pp.stripeAccountId?"Payouts enabled":"Finish setup to get paid"]]
           .map(([k,v,d])=>`<div class="stat"><div class="k">${k}</div><div class="v num">${v}</div><div class="d num">${esc(d)}</div></div>`).join("")}
       </div>
       <div class="panel" style="margin-top:18px"><h3>Transactions</h3>
@@ -3169,6 +3231,12 @@ Marcus Chen, marcus@example.com"></textarea></div>
            ["saved","Saved"],["timeline","Athlete progress"],["goals","Goals & plan"],
            ["notifications","Notifications"],["trust","Trust & safety"]]
           .map(([k,l])=>`<button class="rail-lite" data-nav="${k}" style="text-align:left;padding:11px 12px;border-radius:var(--r-m);font-weight:600">${l}</button>`).join("")}
+        <div style="height:1px;background:var(--rule);margin:8px 0"></div>
+        ${/* the toggle left global chrome; a signed-in coach switches here,
+             which is where Airbnb puts it too */""}
+        <button class="rail-lite" data-portal="${S.portal==="coach"?"family":"coach"}"
+                style="text-align:left;padding:11px 12px;border-radius:var(--r-m);font-weight:600">
+          ${S.portal==="coach"?"Switch to families":"Switch to coaching"}</button>
         <button data-logout="1" style="text-align:left;padding:11px 12px;border-radius:var(--r-m);font-weight:600;color:var(--danger)">Sign out</button>
       </div>`
       :`<button class="btn wide" data-modal="signup">Sign up</button>
@@ -3315,7 +3383,7 @@ function footerHTML(){
       <div class="footgrid">
         <div class="footbrand">
           <span class="wordmark">sporve</span>
-          <p>Connecting families with background-checked coaches and world-class facilities.
+          <p>Connecting families with background-checked coaches across 20+ sports.
             Every sport. One app.</p>
         </div>
         ${cols.map(([h,links])=>`<div class="footcol">
@@ -3341,7 +3409,19 @@ function render(){
   /* The Family/Coach toggle swaps the ENTIRE page below the nav (spec Part 2,
      slot 4). On the landing route that means two different marketing scrolls;
      inside the app it means the family app vs the coach dashboard. */
-  if(r.name==="home"||S.portal==="coach") body=S.portal==="coach"?coachHTML():exploreHTML();
+  /* Coach portal. Three fixes live here:
+     1. A guest gets the coach PITCH, never a real coach's live dashboard.
+        coachHTML() had no auth check, so one toggle click exposed Apex's
+        earnings, roster and parent messages to anyone.
+     2. `info` routes survive the portal, so "? Support" is no longer dead.
+     3. Everything else in the portal still renders the dashboard, which is
+        what the coach rail expects. */
+  if(S.portal==="coach"){
+    if(!isVerified()) body=coachLandingHTML();
+    else if(r.name==="info") body=infoHTML(r.arg||"help");
+    else body=coachHTML();
+  }
+  else if(r.name==="home") body=landingHTML();
   else if(r.name==="product") body=productHTML();
   else if(r.name==="detail") body=detailHTML(r.arg);
   else if(r.name==="bookings") body=bookingsHTML();
@@ -3397,7 +3477,10 @@ function wire(){
     window.scrollTo(0,0);render();});
   $("[data-ctab]").forEach(b=>b.onclick=()=>{S.coachTab=b.dataset.ctab;window.scrollTo(0,0);render();});
   $("[data-conv]").forEach(b=>b.onclick=()=>{S.activeConv=b.dataset.conv;render();});
-  $("[data-close],[data-scrim]").forEach(b=>b.onclick=e=>{if(e.target===b){S.modal=null;render();}});
+  /* Dropping the sheet drops the deferred action with it. Otherwise a stale
+     "book this" intent survives and ambushes the user after an unrelated
+     sign-in much later. */
+  $("[data-close],[data-scrim]").forEach(b=>b.onclick=e=>{if(e.target===b){S.modal=null;S.pendingIntent=null;render();}});
   $("[data-modal]").forEach(b=>b.onclick=()=>{S.modal={type:b.dataset.modal};render();});
   $("[data-srole]").forEach(b=>b.onclick=()=>{S.signupRole=b.dataset.srole;render();});
   $("[data-signin]").forEach(b=>b.onclick=()=>{S.modal={type:"authsheet"};render();});
@@ -3406,7 +3489,11 @@ function wire(){
   $("[data-newlisting]").forEach(b=>b.onclick=()=>{S.modal={type:"newlisting"};render();});
   $("[data-addtrainer]").forEach(b=>b.onclick=()=>{S.modal={type:"addtrainer"};render();});
   $("[data-save]").forEach(b=>b.onclick=()=>toast("Changes saved"));
-  $("[data-logout]").forEach(b=>b.onclick=()=>{S.auth={status:"guest",user:null};S.modal=null;go("explore");toast("Signed out");});
+  /* Reset the portal too. Without it, render() kept short-circuiting to the
+     coach dashboard and a signed-out user still looked signed in. */
+  $("[data-logout]").forEach(b=>b.onclick=()=>{
+    S.auth={status:"guest",user:null};S.portal="family";S.modal=null;S.pendingIntent=null;
+    go("home");toast("Signed out");});
 
   $("[data-filter]").forEach(b=>b.onclick=()=>{
     const f=b.dataset.filter;
@@ -3545,6 +3632,13 @@ function wire(){
     q.oninput=e=>{S.query=e.target.value;};
     q.onkeydown=e=>{if(e.key==="Enter"){S.route={name:"explore",arg:null};render();}};
   }
+  const ql=document.getElementById("qloc");
+  if(ql){
+    ql.oninput=e=>{S.locQuery=e.target.value;};
+    ql.onkeydown=e=>{if(e.key==="Enter"){S.route={name:"explore",arg:null};render();}};
+  }
+  const qa=document.getElementById("qage");
+  if(qa) qa.onchange=e=>{S.ageQuery=e.target.value||null;S.route={name:"explore",arg:null};render();};
   const qgo=document.getElementById("qgo");
   if(qgo) qgo.onclick=()=>{S.route={name:"explore",arg:null};render();};
 
@@ -3786,7 +3880,7 @@ document.addEventListener("error",e=>{
 
 document.addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
-  if(S.modal){S.modal=null;render();}
+  if(S.modal){S.modal=null;S.pendingIntent=null;render();}
   else if(S.sportOpen){S.sportOpen=false;render();}
 });
 /* Click anywhere outside the sport chooser closes it. Clicks INSIDE it are
@@ -8796,7 +8890,11 @@ window.MOD_SEARCH={
 const TODAY = new Date(2026, 7, 3);          // Mon 3 Aug 2026
 const TODAY_ISO = "2026-08-03";
 
-/* ── platform economics: the same 9% the Finances tab already bills ─ */
+/* ── platform economics ────────────────────────────────────────────
+   PLACEHOLDER RATE. The Flutter app computes a TIERED fee server-side from
+   program price; this flat rate is a stand-in for the arithmetic only. No
+   user-facing string states a percentage — see PART 8.7. Replace with the
+   real tier table when it is exported here, then render the table. */
 const FEE_RATE = 0.09;
 const feeOn = n => Math.round(Number(n) * FEE_RATE);
 const netOf = n => Number(n) - feeOn(n);
@@ -8806,7 +8904,7 @@ const STEPS = [
   ["Identity",        "Who you are",              "The legal name here is the name that goes to the screening partner. The business name is what families read on your listings."],
   ["Sports",          "What you coach",           "Pick every sport you actually coach. Each one becomes a filter families can find you through."],
   ["Services",        "Services & capacity",      "A service is one thing a family can book. Capacity is the honest ceiling — how many athletes you can coach at once without the session getting worse."],
-  ["Pricing",         "Pricing",                  "You set the price. Sporve takes 9% at checkout; the take-home figure beside each service is what actually reaches your account."],
+  ["Pricing",         "Pricing",                  "You set the price. Sporve's platform fee comes out at checkout; the take-home figure beside each service is what actually reaches your account."],
   ["Availability",    "Availability",             "The days and the window you can coach. Exact session times come later, from your schedule — this is the outer boundary."],
   ["Background check","Background check",         "Every person who coaches on Sporve clears their own check. This step collects consent and the identifiers the screening partner needs."],
   ["Review",          "Review & submit",          "Everything you entered, read back. Fix anything that is wrong before it goes in."],
@@ -9339,7 +9437,7 @@ function pricingStep(d, err){
       </div>
       <div class="cob-take">
         <p class="cob-takenote">${esc(modelRow(s.model)[2])}
-          Sporve's fee is <span class="num">9%</span>, taken at checkout — never billed to you separately.</p>
+          Sporve's fee is taken at checkout and itemized on every payout — never billed to you separately.</p>
         <div class="cob-takefig">
           <b class="num" data-cob-net="${esc(s.id)}">${ok ? money(netOf(p)) : "—"}</b>
           <span>you keep${ok ? ", after " + money(feeOn(p)) + " fee" : " — enter a price"}</span>
@@ -9351,7 +9449,7 @@ function pricingStep(d, err){
   <div class="panel" style="background:var(--raise);border:0;margin-top:4px">
     <div class="eyebrow">If one of each sold at list price</div>
     <div class="linerow"><span>Families pay</span><span class="num" data-cob-gross>${money(gross)}</span></div>
-    <div class="linerow"><span>Platform fee <span class="num">(9%)</span></span><span class="num" data-cob-fee>−${money(fee)}</span></div>
+    <div class="linerow"><span>Platform fee</span><span class="num" data-cob-fee>−${money(fee)}</span></div>
     <div class="linerow total"><span>Reaches your account</span><span class="num" data-cob-nettotal>${money(gross - fee)}</span></div>
   </div>
   <p class="cob-help" style="margin-top:14px">Payment processing is settled by Stripe on top of this;
@@ -9495,7 +9593,7 @@ function reviewStep(d, err){
     ${rbHead("Pricing", 3)}
     ${d.services.map(s => line(s.name || "Untitled service",
       `<span class="num">${money(Number(s.price))}</span> <span style="font-weight:500;color:var(--muted)">${esc(MODEL_UNIT[s.model] || s.model)}</span>`)).join("")}
-    <div class="linerow"><span>Platform fee <span class="num">(9%)</span> across one of each</span>
+    <div class="linerow"><span>Platform fee across one of each</span>
       <span class="num">−${money(fee)}</span></div>
     <div class="linerow total"><span>You keep</span><span class="num">${money(gross - fee)}</span></div>
   </div>

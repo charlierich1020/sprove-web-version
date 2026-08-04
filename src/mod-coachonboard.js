@@ -25,7 +25,11 @@
 const TODAY = new Date(2026, 7, 3);          // Mon 3 Aug 2026
 const TODAY_ISO = "2026-08-03";
 
-/* ── platform economics: the same 9% the Finances tab already bills ─ */
+/* ── platform economics ────────────────────────────────────────────
+   PLACEHOLDER RATE. The Flutter app computes a TIERED fee server-side from
+   program price; this flat rate is a stand-in for the arithmetic only. No
+   user-facing string states a percentage — see PART 8.7. Replace with the
+   real tier table when it is exported here, then render the table. */
 const FEE_RATE = 0.09;
 const feeOn = n => Math.round(Number(n) * FEE_RATE);
 const netOf = n => Number(n) - feeOn(n);
@@ -35,7 +39,7 @@ const STEPS = [
   ["Identity",        "Who you are",              "The legal name here is the name that goes to the screening partner. The business name is what families read on your listings."],
   ["Sports",          "What you coach",           "Pick every sport you actually coach. Each one becomes a filter families can find you through."],
   ["Services",        "Services & capacity",      "A service is one thing a family can book. Capacity is the honest ceiling — how many athletes you can coach at once without the session getting worse."],
-  ["Pricing",         "Pricing",                  "You set the price. Sporve takes 9% at checkout; the take-home figure beside each service is what actually reaches your account."],
+  ["Pricing",         "Pricing",                  "You set the price. Sporve's platform fee comes out at checkout; the take-home figure beside each service is what actually reaches your account."],
   ["Availability",    "Availability",             "The days and the window you can coach. Exact session times come later, from your schedule — this is the outer boundary."],
   ["Background check","Background check",         "Every person who coaches on Sporve clears their own check. This step collects consent and the identifiers the screening partner needs."],
   ["Review",          "Review & submit",          "Everything you entered, read back. Fix anything that is wrong before it goes in."],
@@ -568,7 +572,7 @@ function pricingStep(d, err){
       </div>
       <div class="cob-take">
         <p class="cob-takenote">${esc(modelRow(s.model)[2])}
-          Sporve's fee is <span class="num">9%</span>, taken at checkout — never billed to you separately.</p>
+          Sporve's fee is taken at checkout and itemized on every payout — never billed to you separately.</p>
         <div class="cob-takefig">
           <b class="num" data-cob-net="${esc(s.id)}">${ok ? money(netOf(p)) : "—"}</b>
           <span>you keep${ok ? ", after " + money(feeOn(p)) + " fee" : " — enter a price"}</span>
@@ -580,7 +584,7 @@ function pricingStep(d, err){
   <div class="panel" style="background:var(--raise);border:0;margin-top:4px">
     <div class="eyebrow">If one of each sold at list price</div>
     <div class="linerow"><span>Families pay</span><span class="num" data-cob-gross>${money(gross)}</span></div>
-    <div class="linerow"><span>Platform fee <span class="num">(9%)</span></span><span class="num" data-cob-fee>−${money(fee)}</span></div>
+    <div class="linerow"><span>Platform fee</span><span class="num" data-cob-fee>−${money(fee)}</span></div>
     <div class="linerow total"><span>Reaches your account</span><span class="num" data-cob-nettotal>${money(gross - fee)}</span></div>
   </div>
   <p class="cob-help" style="margin-top:14px">Payment processing is settled by Stripe on top of this;
@@ -724,7 +728,7 @@ function reviewStep(d, err){
     ${rbHead("Pricing", 3)}
     ${d.services.map(s => line(s.name || "Untitled service",
       `<span class="num">${money(Number(s.price))}</span> <span style="font-weight:500;color:var(--muted)">${esc(MODEL_UNIT[s.model] || s.model)}</span>`)).join("")}
-    <div class="linerow"><span>Platform fee <span class="num">(9%)</span> across one of each</span>
+    <div class="linerow"><span>Platform fee across one of each</span>
       <span class="num">−${money(fee)}</span></div>
     <div class="linerow total"><span>You keep</span><span class="num">${money(gross - fee)}</span></div>
   </div>

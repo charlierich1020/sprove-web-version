@@ -59,26 +59,31 @@
 
   /* type on the dark hero panel — never mid-grey on black */
   --on-dark:#FFFFFF; --on-dark-2:#C7D0DA;
-  /* ── TYPE: the contracted pairing ───────────────────────────────────────
-     Display  Bricolage Grotesque   — hero H1 and top-level headings only
-     Body     Hanken Grotesk        — everything else
+  /* ── TYPE: Sentinel (Hoefler&Co) ────────────────────────────────────────
+     Sentinel is a LICENSED, PAID face. It is not bundled here and cannot be:
+     redistributing the binaries inside this file would breach Hoefler&Co's
+     licence, and the page runs under a CSP that blocks cloud.typography
+     anyway. Both roles therefore NAME Sentinel first and fall through a
+     deliberately slab-serif stack, so an unlicensed viewer still reads a slab
+     rather than silently collapsing to Arial and hiding the gap.
 
-     NEITHER IS CURRENTLY PRESENT. build.py inlines any .woff2 dropped into
-     assets/fonts/ as a data URI, keyed by filename prefix:
-         assets/fonts/Bricolage-Regular.woff2  Bricolage-Bold.woff2
-         assets/fonts/Hanken-Regular.woff2     Hanken-Bold.woff2
-     Until they land, build.py prints a loud NOT-MET warning and both roles
-     fall through the stacks below. Weights are 400 and 700 only — the CSS
-     previously declared seven, and Rockwell/Arial render five of them
-     identically, so the extra weights were a hierarchy that did not exist.
+     To ship the real face, drop the licensed webfont files in:
+         assets/fonts/Sentinel-<Weight>.woff2
+     and run `python3 src/build.py`. It emits the @font-face rules and inlines
+     each file as a data URI, so the page stays one self-contained file.
+     Recognised weights: Light 300, Book 400, Medium 500, Semibold 600,
+     Bold 700, Black 800 — plus any -Italic variant of those.
 
-     The fallbacks are deliberately NOT the same stack for both roles: if the
-     real faces are missing, the page should still show a visible display/body
-     contrast rather than silently collapsing to one family and hiding it. */
-  --display:"Bricolage Grotesque",Rockwell,"Roboto Slab","Zilla Slab",Bitter,
-            Charter,"Iowan Old Style",Georgia,serif;
-  --sans:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,
-         "Helvetica Neue",Arial,sans-serif;
+     Fallbacks, in order: Hoefler's cloud.typography split families, a
+     self-hosted "Sentinel", then Rockwell (a true geometric slab, ships with
+     MS Office), the free Google slabs if present, Charter/Georgia as sturdy
+     serifs, and finally the platform serif. */
+  --display:"Sentinel A","Sentinel B",Sentinel,"Sentinel SSm A","Sentinel SSm B",
+            Rockwell,"Roboto Slab","Zilla Slab","Bitter",Charter,"Iowan Old Style",
+            Georgia,"Times New Roman",serif;
+  /* Reading size stays on the plain grotesque — it ships on every OS, so
+     nothing at body size silently falls back to something unchosen. */
+  --sans:Arial,"Helvetica Neue",Helvetica,"Liberation Sans","Nimbus Sans",sans-serif;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   --shell:1240px;
 }
@@ -382,11 +387,7 @@ img{max-width:100%;display:block}
   border-radius:var(--r-pill);transition:background .15s;
 }
 .sp-seg:focus-within{background:var(--raise)}
-.sp-where{flex:0 0 26%}
-.sp-age{flex:0 0 22%}
-.sp-age select{appearance:none;-webkit-appearance:none;cursor:pointer;
-  background:none;border:0;color:var(--ink);width:100%;min-width:0}
-.sp-age select:focus{outline:none}
+.sp-where{flex:0 0 34%}
 .sp-lbl{
   font-size:var(--t-micro);font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--faint);line-height:1;
@@ -1322,7 +1323,6 @@ const S={
   sports:[],                       // multi-select; see the S.sport shim below
   query:"",
   locQuery:"",
-  ageQuery:null,
   filters:{maxPrice:null,verifiedOnly:false,model:null},
   athletes:JSON.parse(JSON.stringify(SEED.athletes)),
   bookings:JSON.parse(JSON.stringify(SEED.bookings)),
@@ -1419,11 +1419,6 @@ function visiblePrograms(){
   if(S.locQuery&&S.locQuery.trim()){
     const l=S.locQuery.trim().toLowerCase();
     list=list.filter(p=>String(p.address||"").toLowerCase().includes(l));
-  }
-  /* the age segment — a listing only shows if it actually takes that athlete */
-  if(S.ageQuery!=null&&S.ageQuery!==""){
-    const a=Number(S.ageQuery);
-    list=list.filter(p=>a>=p.minAge&&a<=p.maxAge);
   }
   if(S.filters.verifiedOnly) list=list.filter(p=>p.verified);
   if(S.filters.maxPrice!=null) list=list.filter(p=>p.price<=S.filters.maxPrice);
@@ -1667,7 +1662,7 @@ function landingHTML(){
       <div class="frames">${seg==="families"?famFrames():coachFrames()}</div>
       <p class="risk ctr">${seg==="families"
         ? "No booking fee to browse. You only pay when you book a session."
-        : "Free to join and list. Sporve's platform fee is taken only when you get paid, and itemized on every payout."}</p>
+        : "Free to join and list. Sporve takes 9% only when you get paid."}</p>
       ${seg==="coaches"?`<div class="ctr" style="margin-top:18px">
         <button class="btn" data-becomecoach="1">Become a coach</button></div>`:""}
     </div>
@@ -1786,7 +1781,7 @@ function coachLandingHTML(){
   const faq=[
     ["How does the background check work?","Every individual clears their own check — not the business. Your listings stay unbookable and hidden from search until yours clears, and an org being approved never vouches for a trainer on its roster."],
     ["When do I get paid?","Payouts run automatically after a completed session. Each one itemizes gross, the platform fee, and your net."],
-    ["What does Sporve take?","A tiered platform fee, taken only when you get paid and itemized on every payout — gross, fee, and your net on each booking. Joining, listing, and messaging are free."],
+    ["What does Sporve take?","Nine percent of each booking, taken only when you get paid. Joining, listing, and messaging are free."],
     ["What happens when someone cancels?","The cancellation policy copied onto the booking at purchase governs the refund — not whatever your listing says later. You pick flexible, moderate, or strict per service."],
     ["Who owns the client relationship?","You do. Families you bring keep booking you, and your roster and notes are yours."],
     ["Can I leave and take my data?","Yes. Request an export at any time. Deletion is reviewed as a case so financial and safety records required by law are retained, and everything else is removed."]];
@@ -1863,8 +1858,8 @@ function coachLandingHTML(){
     <div class="shell pricingblock">
       <h2 class="ctr">What it costs</h2>
       <div class="pricecard">
-        <div class="bignum">Tiered</div>
-        <p><b>platform fee, taken only when you get paid.</b></p>
+        <div class="bignum num">9%</div>
+        <p><b>of each booking, taken only when you get paid.</b></p>
         <ul class="pricelist">
           <li>Joining, listing, and messaging are free</li>
           <li>No monthly fee and no per-listing fee</li>
@@ -1907,10 +1902,8 @@ function heroHTML(){
   return `<section class="hero">
     <div class="hero-panel"${HERO_IMG?` style="--hero-img:url('${HERO_IMG}')"`:""}>
       <div class="hero-in">
-        ${/* The locked one-liner. The previous headline spoke to an adult
-             athlete about a gym, and Sporve does not sell facilities. */""}
-        <h1 class="display">Book a background-checked coach for your kid.</h1>
-        <p class="hero-lede">Any sport. Real coaches, verified. Booked in minutes.</p>
+        <h1 class="display">Find Your Next Challenge.</h1>
+        <p class="hero-lede">Discover elite coaching and premium facilities tailored to your goals.</p>
         <div class="searchpill">
           <label class="sp-seg" for="q">
             <span class="sp-lbl">What</span>
@@ -1919,18 +1912,8 @@ function heroHTML(){
           <span class="divider"></span>
           <label class="sp-seg sp-where" for="qloc">
             <span class="sp-lbl">Where</span>
-            <span class="sp-val">${ICON.pin}<input class="seg" id="qloc" placeholder="City or ZIP"
+            <span class="sp-val">${ICON.pin}<input class="seg" id="qloc" placeholder="Miami, FL"
                    value="${esc(S.locQuery||"")}" aria-label="Location"></span></label>
-          <span class="divider"></span>
-          ${/* The differentiator. Airbnb asks "when"; a parent's constraint is
-               "how old is my kid" — it says this product is about the child. */""}
-          <label class="sp-seg sp-age" for="qage">
-            <span class="sp-lbl">Child's age</span>
-            <span class="sp-val"><select class="seg" id="qage" aria-label="Child's age">
-              <option value="">Any age</option>
-              ${Array.from({length:13},(_,i)=>i+6).map(a=>
-                `<option value="${a}"${String(S.ageQuery)===String(a)?" selected":""}>${a} years old</option>`).join("")}
-            </select></span></label>
           <button class="go" id="qgo" aria-label="Search">${ICON.search}</button>
         </div>
       </div>
@@ -2026,7 +2009,7 @@ function productHTML(){
 
     <div class="prodsec">
       <h2>For coaches and programs</h2>
-      <p class="sub">Free to join and list. The platform fee is taken only when you get paid, and itemized on every payout.</p>
+      <p class="sub">Free to join and list. Sporve takes 9% only when you get paid.</p>
     </div>
     <div class="prodgrid">${co.map(r=>card(r[0],r[1],r[2],r[3])).join("")}</div>
 
@@ -2544,14 +2527,10 @@ function dashboardHTML(){
         <div class="k">Right now</div>
         <div class="livecount"><span class="dot" aria-hidden="true"></span>
           <span class="num">${live?"3":"0"}</span></div>
-        <div class="d">${live?"parents viewed your profile today":"nobody is viewing your profile yet"}</div>
+        <div class="d">parents viewed your profile today</div>
       </div>
     </section>
-    ${/* Honesty doctrine: these figures are seeded, not measured. They only
-         ever appear alongside a label that says so — a coach must never be
-         shown a number Sporve did not actually count. */""}
-    <p class="lastdays num">All channels · Last 30 days${live
-      ? ` <span class="pill gold" style="margin-left:8px">Demo data</span>`:""}</p>
+    <p class="lastdays num">Last 30 days</p>
 
     <h1 class="greet">${partOfDay}, ${esc(first)}.
       <span>${live
@@ -2856,8 +2835,8 @@ function coachBody(t){
     const fee=Math.round(gross*0.09), net=gross-fee;
     return `<div class="sec-head" style="margin-top:18px"><h1>Finances</h1></div>
       <div class="stats">
-        ${[["Gross",money(gross),"all bookings"],["Platform fee",money(fee),"itemized per booking"],
-           ["Net payout",money(net),"to your account"],["Payouts",pp.stripeAccountId?"Connected":"Not set up",pp.stripeAccountId?"Payouts enabled":"Finish setup to get paid"]]
+        ${[["Gross",money(gross),"all bookings"],["Platform fee",money(fee),"9%"],
+           ["Net payout",money(net),"to your account"],["Payouts","Connected",pp.stripeAccountId]]
           .map(([k,v,d])=>`<div class="stat"><div class="k">${k}</div><div class="v num">${v}</div><div class="d num">${esc(d)}</div></div>`).join("")}
       </div>
       <div class="panel" style="margin-top:18px"><h3>Transactions</h3>
@@ -3375,7 +3354,7 @@ function footerHTML(){
       <div class="footgrid">
         <div class="footbrand">
           <span class="wordmark">sporve</span>
-          <p>Connecting families with background-checked coaches across 20+ sports.
+          <p>Connecting families with background-checked coaches and world-class facilities.
             Every sport. One app.</p>
         </div>
         ${cols.map(([h,links])=>`<div class="footcol">
@@ -3629,8 +3608,6 @@ function wire(){
     ql.oninput=e=>{S.locQuery=e.target.value;};
     ql.onkeydown=e=>{if(e.key==="Enter"){S.route={name:"explore",arg:null};render();}};
   }
-  const qa=document.getElementById("qage");
-  if(qa) qa.onchange=e=>{S.ageQuery=e.target.value||null;S.route={name:"explore",arg:null};render();};
   const qgo=document.getElementById("qgo");
   if(qgo) qgo.onclick=()=>{S.route={name:"explore",arg:null};render();};
 
