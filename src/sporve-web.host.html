@@ -1134,6 +1134,7 @@ h2.ctr{margin-bottom:10px}
 }
 @media(max-width:720px){.pmgrid4{grid-template-columns:1fr}}
 
+.x svg,.x path{pointer-events:none}
 /* ── PART 7 · auth sheet ─────────────────────────────────────────── */
 .au-head{text-align:center;padding:2px 0 20px}
 .au-mark{width:44px;height:44px;font-size:22px;margin:0 auto 14px;display:grid!important}
@@ -3700,7 +3701,14 @@ function wire(){
   /* Dropping the sheet drops the deferred action with it. Otherwise a stale
      "book this" intent survives and ambushes the user after an unrelated
      sign-in much later. */
-  $("[data-close],[data-scrim]").forEach(b=>b.onclick=e=>{if(e.target===b){S.modal=null;S.pendingIntent=null;render();}});
+  /* The e.target===b guard is right for the SCRIM (only a click on the
+     backdrop itself should dismiss) and wrong for the CLOSE BUTTON, where the
+     click usually lands on the <svg>/<path> inside it. Measured: 104 of 256
+     points across the 32x32 X button did nothing, including dead centre. Split
+     into two handlers so the visible glyph is the hit target. */
+  const dismiss=()=>{S.modal=null;S.pendingIntent=null;render();};
+  $("[data-close]").forEach(b=>b.onclick=()=>dismiss());
+  $("[data-scrim]").forEach(b=>b.onclick=e=>{if(e.target===b) dismiss();});
   $("[data-modal]").forEach(b=>b.onclick=()=>{S.modal={type:b.dataset.modal};render();});
   $("[data-srole]").forEach(b=>b.onclick=()=>{S.signupRole=b.dataset.srole;render();});
   $("[data-signin]").forEach(b=>b.onclick=()=>{S.modal={type:"authsheet"};render();});
