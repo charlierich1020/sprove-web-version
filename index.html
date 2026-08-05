@@ -450,19 +450,23 @@ img{max-width:100%;display:block}
    and below .hero-in. It only exists when a photograph does. */
 .hero-media::after{
   content:"";position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(9,11,16,.42) 0%,rgba(9,11,16,.62) 55%,rgba(9,11,16,.80) 100%);
+  background:linear-gradient(180deg,rgba(9,11,16,.58) 0%,rgba(9,11,16,.74) 55%,rgba(9,11,16,.90) 100%);
 }
 .hero-slide{
   position:absolute;inset:0;background-position:center;background-size:cover;
   background-repeat:no-repeat;will-change:transform;
   animation:heroSlide var(--hero-cycle,7.6s) cubic-bezier(.65,0,.35,1) infinite;
 }
+/* Horizontal wipe plus a slow scale settle: the frame arrives at 1.04 and
+   eases down to 1.0 while it holds, so the still period is never actually
+   still. 0% and 100% carry the same scale or the loop would jump. */
 @keyframes heroSlide{
-  0%,39.474%{transform:translateX(0)}        /* on screen, holding */
-  50%       {transform:translateX(100%)}     /* slid off to the right */
-  50.001%   {transform:translateX(-100%)}    /* invisible re-park, no easing */
-  89.474%   {transform:translateX(-100%)}    /* waiting off to the left */
-  100%      {transform:translateX(0)}        /* slid back on, rightward */
+  0%        {transform:translateX(0) scale(1.04)}      /* on screen, zooming */
+  39.474%   {transform:translateX(0) scale(1)}         /* settled, hold ends */
+  50%       {transform:translateX(100%) scale(1)}      /* slid off to the right */
+  50.001%   {transform:translateX(-100%) scale(1.04)}  /* invisible re-park */
+  89.474%   {transform:translateX(-100%) scale(1.04)}  /* waiting off to the left */
+  100%      {transform:translateX(0) scale(1.04)}      /* slid back on, rightward */
 }
 @media (prefers-reduced-motion:reduce){
   .hero-slide{animation:none}
@@ -1355,6 +1359,48 @@ h2.ctr{margin-bottom:10px}
    text, --accent (#C2410C) for the one accent, --rule for hairlines.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ── CONTRAST LAYER ──────────────────────────────────────────────────
+   The page ran white -> raised-grey -> white with a single black band at the
+   very end. That is a narrow range, and it is why the scroll reads flat. This
+   adds full-black sections so the page alternates paper / raise / ink instead
+   of paper / raise. No new hue: the black is the same --ink the trust band
+   already used, so the palette is unchanged.
+
+   The one addition is --accent-on-dark. #C2410C is a deep burnt orange tuned
+   for a white ground; measured against black it is 4.06:1 — over the 3:1 bar
+   for large text but under the 4.5:1 one for body, so it cannot carry a link
+   or a label. #F08A62 is the SAME hue lifted in luminance to 8.52:1 and is
+   used only inside .band.dark. A legibility variant, not a new colour. */
+:root{--accent-on-dark:#F08A62}
+
+.band.dark{background:var(--ink);border-bottom-color:#1C222B}
+.band.dark h1,.band.dark h2,.band.dark h3,.band.dark h4{color:var(--paper)}
+.band.dark p,.band.dark .sub{color:#AEB8C4}
+.band.dark .eyebrow{color:#8B97A5}
+.band.dark .acc{border-top-color:#242B35}
+.band.dark .accitem{border-bottom-color:#242B35}
+.band.dark .accq{color:var(--paper)}
+.band.dark .accq:hover,.band.dark .accitem.on .accq{color:var(--accent-on-dark)}
+.band.dark .acca{color:#AEB8C4}
+.band.dark .btn.ghost{border-color:#39424E;color:var(--paper)}
+.band.dark .btn.ghost:hover{border-color:#5A6675;background:rgba(255,255,255,.05)}
+/* The validation checklist sits directly on the black, not inside a card. */
+.band.dark .lcheck{color:#DDE3EA}
+.band.dark .lcheck i{background:rgba(240,138,98,.16);color:var(--accent-on-dark)}
+/* The live-catalogue card stays white on the black ground — that inversion is
+   the point of the section, and it is what makes the figures read as a panel
+   lifted off the page rather than more text on it. */
+.band.dark .lcard{border-color:#232A34;box-shadow:0 24px 60px -24px rgba(0,0,0,.9)}
+
+/* ── Photographs run darker.
+   Two stages, because one is not enough: the scrim deepens (it sits above the
+   photo and below the copy) AND the photo itself is filtered down. Filtering
+   alone leaves bright specular highlights — pool splash, stadium lights —
+   punching through white text; the scrim alone washes the whole frame grey. */
+.hero-slide{filter:brightness(.56) contrast(1.06) saturate(.9)}
+.card .shot img,.card.feature .fov img{filter:brightness(.88) contrast(1.03)}
+.card:hover .shot img{filter:brightness(.97) contrast(1.02)}
+
 /* Available to a screen reader, absent for everyone else. Used where an icon
    carries meaning on its own (the shield on a background-checked listing). */
 .vis-hide{
@@ -1847,7 +1893,7 @@ function cardHTML(p){
   return `<div class="card">
     <div class="shot">
       <img src="${p.img}" alt="${esc(p.title)}" loading="lazy">
-      <span class="sporttag"><i style="background:${sportColor(p.sport)}"></i>${esc(p.sport)}</span>
+      <span class="sporttag"><span aria-hidden="true">${sportGlyph(p.sport)}</span>${esc(p.sport)}</span>
       <button class="heart ${fav?"on":""}" data-fav="${p.id}" aria-label="${fav?"Remove from saved":"Save"} ${esc(p.title)}">${ICON.heart(fav)}</button>
       <button data-open="${p.id}" style="position:absolute;inset:0;width:100%;height:100%" aria-label="View ${esc(p.title)}"></button>
     </div>
@@ -2083,7 +2129,7 @@ function heroCarouselHTML(){
   const card=p=>`<div class="amq-card">
     <div class="amq-top">
       <span class="amq-tag" style="background:${sportColor(p.sport)}14;color:${sportColor(p.sport)}">
-        <i style="background:${sportColor(p.sport)}"></i>${esc(p.sport)}</span>
+        <span aria-hidden="true">${sportGlyph(p.sport)}</span>${esc(p.sport)}</span>
       ${p.verified?`<span class="verifline" title="Background-checked"
         ><span class="vis-hide">Background-checked</span>${ICON.shield}</span>`:""}
     </div>
@@ -2139,10 +2185,10 @@ function landingHTML(){
     </div>
   </section>
 
-  <section class="band">
+  <section class="band dark">
     <div class="shell lgrid">
       <div data-rev>
-        <div class="eyebrow" style="color:var(--accent)">What's on Sporve today</div>
+        <div class="eyebrow" style="color:var(--accent-on-dark)">What's on Sporve today</div>
         <h2 style="margin-top:12px">Every listing here is a real one.</h2>
         <p class="sub" style="margin-top:14px">
           No placeholder inventory and no seeded numbers. The catalogue below is the
@@ -2254,29 +2300,6 @@ function landingHTML(){
     </div>
   </section>
 
-  <section class="band">
-    <div class="shell" style="max-width:860px">
-      <h2 class="ctr" data-rev>Questions, answered</h2>
-      <div class="acc" data-rev style="margin-top:34px">
-        ${[["Is every coach really background-checked?",
-            "Yes, and per person rather than per business. An approved business cannot vouch for an individual on Sporve — each coach clears their own check, and an unverified coach never appears in search, in results, or in anything the assistant suggests."],
-           ["What does it cost a family?",
-            "You pay the coach's price for the session. There is no booking fee and no membership. Browsing, messaging a coach, saving coaches and managing your athletes are all free."],
-           ["Can I message a coach before I book?",
-            "Yes. Ask about equipment, group size, or experience before you spend anything. Messages, bookings and receipts stay in one thread per coach."],
-           ["Can one account cover more than one child?",
-            "Yes. One profile per family, however many kids you have and however many sports they play. Each child's profile requires recorded parental consent before it can exist."],
-           ["How do reviews work?",
-            "A review can only be written after a session that actually completed. That is enforced in code, not by moderation, so the rating you see is from families who turned up."]]
-          .map(([q,a],i)=>`<div class="accitem" data-acc>
-            <button class="accq" aria-expanded="false">
-              <span>${esc(q)}</span><span class="accplus" aria-hidden="true"></span></button>
-            <div class="accwrap"><div class="accinner"><p class="acca">${esc(a)}</p></div></div>
-          </div>`).join("")}
-      </div>
-    </div>
-  </section>
-
   <section class="band trustband">
     <div class="shell">
       <div class="trustrow">
@@ -2296,6 +2319,39 @@ function landingHTML(){
       <div class="ctarow">
         <button class="btn" data-nav="explore">Find a coach</button>
         <button class="btn ghost" data-becomecoach="1">Become a coach</button>
+      </div>
+    </div>
+  </section>
+
+  ${faqSectionHTML()}`;
+}
+
+/* The FAQ closes the page, on full black. Kept as its own function rather than
+   inlined so the same block can be dropped at the foot of another route
+   without the answers drifting out of sync between two copies. */
+function faqSectionHTML(){
+  const faqs=[
+    ["Is every coach really background-checked?",
+     "Yes, and per person rather than per business. An approved business cannot vouch for an individual on Sporve — each coach clears their own check, and an unverified coach never appears in search, in results, or in anything the assistant suggests."],
+    ["What does it cost a family?",
+     "You pay the coach's price for the session. There is no booking fee and no membership. Browsing, messaging a coach, saving coaches and managing your athletes are all free."],
+    ["Can I message a coach before I book?",
+     "Yes. Ask about equipment, group size, or experience before you spend anything. Messages, bookings and receipts stay in one thread per coach."],
+    ["Can one account cover more than one child?",
+     "Yes. One profile per family, however many kids you have and however many sports they play. Each child's profile requires recorded parental consent before it can exist."],
+    ["How do reviews work?",
+     "A review can only be written after a session that actually completed. That is enforced in code, not by moderation, so the rating you see is from families who turned up."],
+  ];
+  return `<section class="band dark">
+    <div class="shell" style="max-width:860px">
+      <div class="eyebrow ctr" data-rev>Before you book</div>
+      <h2 class="ctr" data-rev style="margin-top:10px">Questions, answered</h2>
+      <div class="acc" data-rev style="margin-top:34px">
+        ${faqs.map(([q,a])=>`<div class="accitem" data-acc>
+          <button class="accq" aria-expanded="false">
+            <span>${esc(q)}</span><span class="accplus" aria-hidden="true"></span></button>
+          <div class="accwrap"><div class="accinner"><p class="acca">${esc(a)}</p></div></div>
+        </div>`).join("")}
       </div>
     </div>
   </section>`;
