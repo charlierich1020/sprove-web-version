@@ -339,28 +339,28 @@ function strength(){
 /* ═══════════════════ CSS ═══════════════════ */
 const CSS = `
 .md-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:18px 0 6px;flex-wrap:wrap}
-.md-lede{color:var(--muted);font-size:14px;max-width:66ch;margin-top:5px;line-height:1.5}
+.md-lede{color:var(--muted);font-size:var(--text-base);max-width:66ch;margin-top:5px;line-height:1.5}
 .md-actions{display:flex;gap:8px;flex-wrap:wrap}
-.md-note{background:var(--raise);border-radius:var(--r-m);padding:13px 15px;font-size:13.5px;
+.md-note{background:var(--raise);border-radius:var(--r-m);padding:13px 15px;font-size:var(--text-sm);
   color:var(--ink-2);line-height:1.5}
 .md-note.warn{background:var(--warn-tint)}
 .md-note b{color:var(--ink)}
 .md-meter{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px;margin-top:16px;background:var(--paper)}
 .md-meterhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.md-pct{font-size:26px;font-weight:800;letter-spacing:-.03em}
+.md-pct{font-size:var(--text-xl);font-weight:700;letter-spacing:-.03em}
 .md-bar{height:8px;border-radius:999px;background:var(--raise2);overflow:hidden;margin:12px 0 10px}
 .md-bar i{display:block;height:100%;border-radius:999px;background:var(--slate)}
-.md-next{font-size:14px;color:var(--ink-2);line-height:1.5}
+.md-next{font-size:var(--text-base);color:var(--ink-2);line-height:1.5}
 .md-secline{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:32px 0 14px}
-.md-secline p{color:var(--muted);font-size:13.5px;max-width:62ch;margin-top:4px;line-height:1.5}
+.md-secline p{color:var(--muted);font-size:var(--text-sm);max-width:62ch;margin-top:4px;line-height:1.5}
 
 .md-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
 .md-slot{border:1px solid var(--rule);border-radius:var(--r-l);padding:16px;background:var(--paper);
   display:flex;flex-direction:column;gap:11px}
 .md-slothead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.md-slot h4{margin:0;font-size:15px;letter-spacing:-.018em;font-weight:700}
-.md-why{font-size:12.5px;color:var(--muted);line-height:1.45}
-.md-hint{font-size:12.5px;line-height:1.45;color:var(--faint)}
+.md-slot h4{margin:0;font-size:var(--text-base);letter-spacing:-.018em;font-weight:700}
+.md-why{font-size:var(--text-sm);color:var(--muted);line-height:1.45}
+.md-hint{font-size:var(--text-sm);line-height:1.45;color:var(--faint)}
 .md-hint.todo{color:var(--warn)}
 
 .md-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}
@@ -370,35 +370,35 @@ const CSS = `
   background:linear-gradient(148deg,color-mix(in srgb,var(--tc) 34%,var(--paper)),
                                     color-mix(in srgb,var(--tc) 9%,var(--paper)));
   border-bottom:1px solid var(--rule)}
-.md-ini{font-size:19px;font-weight:800;letter-spacing:-.03em;color:var(--tc)}
+.md-ini{font-size:var(--text-lg);font-weight:700;letter-spacing:-.03em;color:var(--tc)}
 .md-play{width:34px;height:34px;border-radius:999px;background:var(--paper);display:grid;place-items:center;
   color:var(--ink);box-shadow:0 0 0 1px var(--rule)}
 .md-dur{position:absolute;right:7px;bottom:7px;background:var(--ink);color:var(--paper);
-  font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px}
+  font-size:var(--text-xs);font-weight:700;padding:2px 7px;border-radius:999px}
 .md-flag{position:absolute;left:7px;top:7px;background:var(--paper);border:1px solid var(--rule);
-  font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:2px 7px;border-radius:999px;color:var(--ink-2)}
+  font-size:var(--text-xs);font-weight:700;letter-spacing:.02em;padding:2px 7px;border-radius:999px;color:var(--ink-2)}
 .md-body{padding:11px 12px 13px;display:flex;flex-direction:column;gap:8px;flex:1}
-.md-cap{font-size:13.5px;color:var(--ink-2);line-height:1.45;margin:0}
+.md-cap{font-size:var(--text-sm);color:var(--ink-2);line-height:1.45;margin:0}
 .md-tags{display:flex;gap:5px;flex-wrap:wrap}
-.md-verdict{font-size:12.5px;line-height:1.45;color:var(--muted)}
+.md-verdict{font-size:var(--text-sm);line-height:1.45;color:var(--muted)}
 .md-verdict.block{color:var(--warn)}
 .md-verdict.ok{color:var(--good)}
-.md-sent{font-size:12px;color:var(--faint)}
+.md-sent{font-size:var(--text-sm);color:var(--faint)}
 .md-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:auto;padding-top:4px}
 .md-del{width:28px;height:28px}
 .md-del:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent)}
 .md-add{width:100%;aspect-ratio:4/3;border:1.5px dashed var(--rule-strong);border-radius:var(--r-m);
-  display:grid;place-items:center;font-size:13px;font-weight:650;color:var(--muted);
+  display:grid;place-items:center;font-size:var(--text-sm);font-weight:700;color:var(--muted);
   background:var(--paper);transition:border-color .14s,color .14s,background .14s}
 .md-add:hover{border-color:var(--slate);color:var(--slate);background:var(--slate-tint)}
 
 .md-seg{display:inline-flex;background:var(--raise2);border-radius:999px;padding:3px;gap:2px}
-.md-seg button{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:650;color:var(--muted);transition:.14s}
+.md-seg button{padding:7px 14px;border-radius:999px;font-size:var(--text-sm);font-weight:700;color:var(--muted);transition:.14s}
 .md-seg button.on{background:var(--paper);color:var(--ink)}
 .md-group{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px;margin-top:14px;background:var(--paper)}
 .md-grouphead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}
-.md-grouphead b{font-size:15.5px;letter-spacing:-.02em}
-.md-groupmeta{font-size:13px;color:var(--muted);margin-top:3px}
+.md-grouphead b{font-size:var(--text-base);letter-spacing:-.02em}
+.md-groupmeta{font-size:var(--text-sm);color:var(--muted);margin-top:3px}
 .md-who{display:flex;align-items:center;gap:11px;min-width:0}
 
 .md-opts{display:flex;flex-direction:column;gap:10px;margin:0 0 18px}
@@ -406,27 +406,27 @@ const CSS = `
   border-radius:var(--r-m);cursor:pointer;transition:border-color .14s,background .14s}
 .md-opt:hover{border-color:var(--rule-strong);background:var(--raise)}
 .md-opt input{width:17px;height:17px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--slate)}
-.md-opt b{font-size:15px;letter-spacing:-.015em}
-.md-opt span span{display:block;font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+.md-opt b{font-size:var(--text-base);letter-spacing:-.015em}
+.md-opt span span{display:block;font-size:var(--text-sm);color:var(--muted);line-height:1.45;margin-top:2px}
 .md-checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
 .md-check{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--rule);
   border-radius:var(--r-m);cursor:pointer;transition:border-color .14s,background .14s}
 .md-check:hover{border-color:var(--rule-strong);background:var(--raise)}
 .md-check input{width:16px;height:16px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--slate)}
-.md-check b{display:block;font-size:13.5px;letter-spacing:-.01em}
+.md-check b{display:block;font-size:var(--text-sm);letter-spacing:-.01em}
 .md-gate{border:1px solid var(--rule);border-radius:var(--r-m);padding:13px 15px;background:var(--raise);
-  margin:16px 0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+  margin:16px 0;font-size:var(--text-sm);line-height:1.5;color:var(--ink-2)}
 .md-gate.block{background:var(--warn-tint);border-color:transparent}
 .md-gatehead{margin-bottom:6px}
-.md-cnt{font-size:12px;color:var(--faint);align-self:flex-end}
+.md-cnt{font-size:var(--text-sm);color:var(--faint);align-self:flex-end}
 .md-cnt.over{color:var(--danger);font-weight:700}
 .md-strip{display:flex;gap:9px;align-items:flex-start;padding:13px 15px;border-radius:var(--r-m);
-  background:var(--raise);font-size:13.5px;color:var(--ink-2);line-height:1.5;margin-top:14px}
+  background:var(--raise);font-size:var(--text-sm);color:var(--ink-2);line-height:1.5;margin-top:14px}
 .md-legend{display:flex;flex-direction:column;gap:9px;margin-top:14px}
-.md-legend div{font-size:13px;color:var(--muted);line-height:1.45}
+.md-legend div{font-size:var(--text-sm);color:var(--muted);line-height:1.45}
 .md-legend b{color:var(--ink);font-weight:700}
 .md-empty{border:1px dashed var(--rule-strong);border-radius:var(--r-l);padding:26px;text-align:center;
-  color:var(--muted);font-size:13.5px}
+  color:var(--muted);font-size:var(--text-sm)}
 .md-seg button:focus-visible,.md-add:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
 @media(max-width:760px){
   .md-checks{grid-template-columns:1fr}
@@ -800,17 +800,17 @@ function consentModal(){
         const req = consentRequests[a.id] || null;
         return `<tr>
           <td><b>${esc(a.name)}</b>
-            <div class="num" style="color:var(--muted);font-size:12.5px">Age ${a.age == null ? "—" : a.age} · ${esc(a.parent)}</div></td>
+            <div class="num" style="color:var(--muted);font-size:var(--text-sm)">Age ${a.age == null ? "—" : a.age} · ${esc(a.parent)}</div></td>
           <td>${p ? esc(p.title) : `<span style="color:var(--muted)">—</span>`}</td>
           <td class="num">${taggedCount(a.id)}</td>
           <td><span class="pill ${consentPill(k)}">${esc(consentLabel(k))}</span>
             ${a.consentAt
-              ? `<div class="num" style="color:var(--muted);font-size:12.5px;margin-top:3px">set ${esc(fmtDate(a.consentAt.slice(0, 10)))}</div>`
-              : `<div style="color:var(--muted);font-size:12.5px;margin-top:3px">never set</div>`}</td>
+              ? `<div class="num" style="color:var(--muted);font-size:var(--text-sm);margin-top:3px">set ${esc(fmtDate(a.consentAt.slice(0, 10)))}</div>`
+              : `<div style="color:var(--muted);font-size:var(--text-sm);margin-top:3px">never set</div>`}</td>
           <td>${k === "public_profile"
-            ? `<span style="color:var(--muted);font-size:13px">Nothing to ask for</span>`
+            ? `<span style="color:var(--muted);font-size:var(--text-sm)">Nothing to ask for</span>`
             : `<button class="btn ghost sm" data-md-request="${esc(a.id)}">${req ? "Ask again" : "Request consent"}</button>
-               ${req ? `<div class="num" style="color:var(--muted);font-size:12.5px;margin-top:4px">asked ${esc(fmtDate(req.slice(0, 10)))}</div>` : ""}`}</td>
+               ${req ? `<div class="num" style="color:var(--muted);font-size:var(--text-sm);margin-top:4px">asked ${esc(fmtDate(req.slice(0, 10)))}</div>` : ""}`}</td>
         </tr>`;
       }).join("")}</tbody></table></div>
 
@@ -845,7 +845,7 @@ function shareMediaModal(){
         <b>This ${esc(noun)} can't be sent.</b> ${esc(v.shareReason)}</div>
       ${v.athleteIds.length ? `<p class="eyebrow" style="margin-bottom:8px">Tagged</p>
         <div class="md-tags" style="margin-bottom:18px">${v.athleteIds.map(athletePill).join("")}</div>` : ""}
-      <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">
+      <p style="color:var(--muted);font-size:var(--text-sm);margin-bottom:18px">
         Sending is blocked in code, not just in this dialog — the same check runs again on the send itself.</p>
       <button class="btn wide" data-modal="consent">Open the consent roster</button>`);
   }

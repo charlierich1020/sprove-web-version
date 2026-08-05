@@ -50,9 +50,28 @@
   --accent:#C2410C; --accent-ink:#9A3412; --accent-tint:#FDF0E9;
   --accent-ring:rgba(194,65,12,.30);
 
-  /* ── TYPE SCALE: six steps, no seventh. Every text element maps to one. */
-  --t-display:clamp(38px,4.2vw,56px);
-  --t-h2:30px; --t-h3:19px; --t-body:16px; --t-small:14px; --t-micro:11.5px;
+  /* ── TYPE SCALE: eight steps, no ninth. Carried verbatim from the marketing
+     landing (sporve-landing/tokens.css) so the two web surfaces share one
+     scale. Every text element on this page maps to one of these. */
+  --text-xs:10.5px;                    /* eyebrows, stat labels, nav, chips   */
+  --text-sm:12px;                      /* meta lines, captions, buttons       */
+  --text-base:14.5px;                  /* body paragraphs                     */
+  --text-md:15.5px;                    /* lead paragraph only (hero support)  */
+  --text-lg:clamp(17px,1.3vw,19px);    /* card titles, coach name             */
+  --text-xl:clamp(21px,1.9vw,27px);    /* stat numerals, sub-headers          */
+  --text-2xl:clamp(24px,2.2vw,32px);   /* section headers (h2)                */
+  --text-hero:clamp(32px,3.6vw,54px);  /* h1 only                             */
+  /* The ONE class of exception: a `font-size` that sizes a GLYPH inside a
+     fixed-dimension box -- an avatar initial in a 32px circle, an emoji, a
+     chevron. Those are icon dimensions expressed in font-size units, not type,
+     and a fluid clamp would burst the box. They stay in px on purpose. Search
+     for a font-size sitting next to an explicit width+height to find them.
+
+     The six legacy --t-* names stay as aliases onto the eight steps so the ten
+     feature modules keep resolving, exactly as --r-s/--r-m/--r-l alias onto the
+     three radii above. New rules should use the --text-* names. */
+  --t-display:var(--text-hero); --t-h2:var(--text-2xl); --t-h3:var(--text-lg);
+  --t-body:var(--text-base); --t-small:var(--text-sm); --t-micro:var(--text-xs);
 
   /* ── CONTROL HEIGHTS: two only. */
   --h-ctl:48px; --h-compact:36px;
@@ -60,24 +79,32 @@
   /* type on the dark hero panel — never mid-grey on black */
   --on-dark:#FFFFFF; --on-dark-2:#C7D0DA;
   /* ── TYPE: the contracted pairing ───────────────────────────────────────
-     Display  Bricolage Grotesque   — hero H1 and top-level headings only
-     Body     Hanken Grotesk        — everything else
+     Display  Syne 600/700/800    — headlines, numerals, the hero H1
+     Body     Plus Jakarta Sans   — everything else: body, labels, buttons,
+                                    inputs. This is the body default.
+     A geometric, slightly quirky display face against a clean humanist sans:
+     expressive headers, highly legible body. Same pairing as the marketing
+     landing, so the two web surfaces are one typographic system.
 
-     NEITHER IS CURRENTLY PRESENT. build.py inlines any .woff2 dropped into
-     assets/fonts/ as a data URI, keyed by filename prefix:
-         assets/fonts/Bricolage-Regular.woff2  Bricolage-Bold.woff2
-         assets/fonts/Hanken-Regular.woff2     Hanken-Bold.woff2
-     Until they land, build.py prints a loud NOT-MET warning and both roles
-     fall through the stacks below. Weights are 400 and 700 only — the CSS
-     previously declared seven, and Rockwell/Arial render five of them
-     identically, so the extra weights were a hierarchy that did not exist.
+     BOTH ARE PRESENT and inlined. build.py base64s every .woff2 in
+     assets/fonts/ straight into the <style> block, keyed by filename prefix:
+         assets/fonts/Syne-Variable.woff2     -> Syne,              600–800
+         assets/fonts/Jakarta-Variable.woff2  -> Plus Jakarta Sans, 400–700
+     They are inlined rather than <link>ed to Google because the built page has
+     to survive a CSP that blocks every external request — the same constraint
+     that drives the hero image inline. A stylesheet link would silently fall
+     back and the page would LOOK like the contract was met when it wasn't.
+
+     One variable file per family, not one per weight: every weight URL in a
+     Google css2 response for these two families returns a byte-identical file.
+     Static faces would have been 208KB of duplicate binary; this is 60KB.
 
      The fallbacks are deliberately NOT the same stack for both roles: if the
-     real faces are missing, the page should still show a visible display/body
+     faces ever go missing, the page should still show a visible display/body
      contrast rather than silently collapsing to one family and hiding it. */
-  --display:"Bricolage Grotesque",Rockwell,"Roboto Slab","Zilla Slab",Bitter,
-            Charter,"Iowan Old Style",Georgia,serif;
-  --sans:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,
+  --display:"Syne",ui-rounded,"Avenir Next",Futura,"Century Gothic",
+            "Trebuchet MS",sans-serif;
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,
          "Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   --shell:1240px;
@@ -98,7 +125,7 @@
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0;background:var(--paper);color:var(--ink);
-  font-family:var(--sans);font-size:15px;line-height:1.55;
+  font-family:var(--sans);font-size:var(--text-base);line-height:1.55;
   -webkit-font-smoothing:antialiased;
 }
 /* A cool wash behind the browse grid so white cards read as surfaces rather
@@ -109,19 +136,60 @@ body{
     linear-gradient(180deg,var(--paper) 0%,var(--paper) 12%,rgba(238,241,251,.72) 100%);
 }
 /* ── TYPE CONTRACT ───────────────────────────────────────────────────
-   The display face appears in exactly ONE place: the hero H1. Everything
-   else on the page — nav, headings, body, cards, buttons, chips, footer —
-   runs in the body face. Previously the slab also took h1, h2, .wordmark
-   and .bignum, which is what made the page read as a poster. */
-.hero .display{font-family:var(--display)}
-body,h1,h2,h3,h4,.wordmark,.bignum,.navlink,.btn,.roleswitch button,.seg2 button,
+   Display (Syne) takes EVERY heading level and every numeral. Body face (Plus
+   Jakarta Sans) takes body copy, labels, buttons, chips, inputs and nav.
+
+   This matches the marketing landing exactly, where `.t-display` is
+   `Syne 700 / uppercase / -.015em / line-height 1.04` and is carried by every
+   h1 and h2 on the page, plus smaller elements for provider names. The rule
+   below IS that class, applied to the heading elements so markup does not have
+   to opt in one tag at a time.
+
+   Headings are UPPERCASE. That is the contract, not a flourish -- Syne's
+   geometric caps are the whole reason the face was chosen, and the landing
+   reads as a different product without them. The one carve-out is tracking:
+   -.015em is correct for mixed case but closes up caps at hero sizes, so the
+   display steps take a slightly positive .005em, exactly as the landing's h1
+   does. An earlier pass here removed display from headings entirely; that was
+   right about the symptom (a poster read) and wrong about the cause, which was
+   --display resolving to ROCKWELL, a slab, because the contracted face was
+   never actually loaded. */
+/* Numerals are display-face too: Syne carries 600-800, so a big number set in
+   800 renders as an actual extra-bold rather than clamping. Plus Jakarta Sans
+   tops out at 700, which is why every `font-weight:800` on body-face text was
+   dropped to 700 in this pass -- it was already clamping there and only looked
+   like a hierarchy. `.num` is NOT display-face; it only sets tabular-nums. */
+.hero .display,h1,h2,h3,h4,.wordmark,.bignum,.t-num,.stat .v,
+.fstats span:first-child,.metric .v,.livecount,.card .biz{font-family:var(--display)}
+body,.navlink,.btn,.roleswitch button,.seg2 button,
 .faqq,.stile b,.feat b,.step3 b,.tritem,.tnav,.fchip,.advfilters,.prodcard b,
 .card .ttl,input,select,textarea,button{font-family:var(--sans)}
-h1,h2,h3,h4{margin:0;text-wrap:balance;letter-spacing:-.022em;font-weight:700;line-height:1.2}
-h1{font-size:var(--t-h2);font-weight:700;letter-spacing:-.028em}
-h2{font-size:var(--t-h2);letter-spacing:-.026em}
-h3{font-size:var(--t-h3);letter-spacing:-.018em}
-h4{font-size:var(--t-body)}
+/* This is `.t-display`, applied to the heading elements. */
+h1,h2,h3,h4{margin:0;text-wrap:balance;font-weight:700;line-height:1.04;
+  text-transform:uppercase;letter-spacing:-.015em}
+h1{font-size:var(--text-2xl)}
+h2{font-size:var(--text-2xl)}
+h3{font-size:var(--text-lg)}
+/* Caps need air where mixed case needs tightening. Everything at the two
+   display steps opens up to the landing h1's tracking instead. */
+.hero .display,.display,.exhero h1,.chero-in .display,.card.feature .fov h3,
+.greet,h1,h2{letter-spacing:.005em}
+h4{font-size:var(--text-base)}
+
+/* ── ROLE CLASSES ────────────────────────────────────────────────────
+   The five type roles, named the same as on the marketing landing so markup
+   moves between the two surfaces unchanged. Prefer these over ad-hoc
+   font-size/weight/tracking triplets. */
+.t-display{font-family:var(--display);font-weight:700;letter-spacing:-.015em;
+  text-transform:uppercase;line-height:1.04}
+.t-num{font-family:var(--display);font-weight:800;letter-spacing:-.02em;line-height:1}
+.t-body{font-family:var(--sans);font-weight:400;letter-spacing:0;font-size:var(--text-base)}
+.t-label{font-family:var(--sans);font-weight:600;text-transform:uppercase;
+  letter-spacing:.14em;font-size:var(--text-xs)}
+.t-chip{font-family:var(--sans);font-weight:600;text-transform:uppercase;
+  letter-spacing:.18em;font-size:var(--text-xs)}
+.t-btn{font-family:var(--sans);font-weight:600;text-transform:uppercase;
+  letter-spacing:.1em;font-size:var(--text-sm)}
 p{margin:0}
 a{color:inherit}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
@@ -132,7 +200,7 @@ img{max-width:100%;display:block}
 .searchpill .go:focus-visible,.heart:focus-visible{border-radius:var(--r-pill)}
 .num{font-variant-numeric:tabular-nums}
 .eyebrow{
-  font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+  font-size:var(--text-xs);font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
 }
 .shell{max-width:var(--shell);margin:0 auto;padding:0 24px}
 .hide{display:none !important}
@@ -147,9 +215,10 @@ img{max-width:100%;display:block}
 .brand{display:flex;align-items:center;gap:9px;flex:0 0 auto}
 .mark{
   width:30px;height:30px;border-radius:8px;background:var(--ink);color:var(--paper);
-  display:grid;place-items:center;font-weight:800;font-size:17px;letter-spacing:-.04em;
+  display:grid;place-items:center;font-weight:700;font-size:var(--text-lg);letter-spacing:-.04em;
 }
-.wordmark{font-size:20px;font-weight:800;letter-spacing:-.045em;color:var(--slate)}
+.wordmark{font-size:var(--text-lg);font-weight:800;letter-spacing:.02em;color:var(--slate);
+  text-transform:uppercase}
 /* Lockup in the bar and the footer: uppercase, no badge — the badge survives
    where it stands alone (auth sheet, avatar fallbacks). The wordmark is the
    one piece of text that is NOT black: it carries the slate brand colour. */
@@ -164,7 +233,7 @@ img{max-width:100%;display:block}
 }
 .searchpill:hover{box-shadow:var(--shadow-lift)}
 .searchpill .seg{
-  padding:0 16px;border:0;background:none;font-size:14px;color:var(--ink);min-width:0;flex:1;
+  padding:0 16px;border:0;background:none;font-size:var(--text-base);color:var(--ink);min-width:0;flex:1;
 }
 .searchpill .seg::placeholder{color:var(--faint)}
 .searchpill .divider{width:1px;height:22px;background:var(--rule)}
@@ -185,7 +254,7 @@ img{max-width:100%;display:block}
 .tnav-row .tnav.on{background:none;color:var(--ink)}
 .tnav-row .badge{
   display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;
-  border-radius:999px;background:var(--slate);color:#fff;font-size:10.5px;font-weight:700;
+  border-radius:999px;background:var(--slate);color:#fff;font-size:var(--text-xs);font-weight:700;
 }
 .sportbtn.on .chev{transform:rotate(180deg)}
 .chev{transition:transform .18s}
@@ -225,10 +294,10 @@ img{max-width:100%;display:block}
   width:7px;height:7px;border-radius:2px;background:var(--slate);
   flex:0 0 auto;margin-top:7px;
 }
-.pmrow b{display:block;font-size:14.5px;letter-spacing:-.015em;color:var(--ink)}
-.pmrow span span{display:block;font-size:13px;color:var(--muted);line-height:1.45}
+.pmrow b{display:block;font-size:var(--text-base);letter-spacing:-.015em;color:var(--ink)}
+.pmrow span span{display:block;font-size:var(--text-sm);color:var(--muted);line-height:1.45}
 .pmcta{
-  align-self:flex-start;margin-top:10px;padding:9px 11px;font-size:14px;
+  align-self:flex-start;margin-top:10px;padding:9px 11px;font-size:var(--text-base);
   font-weight:700;color:var(--slate);border-radius:var(--r-m);
 }
 .pmcta:hover{background:var(--slate-tint)}
@@ -244,7 +313,7 @@ img{max-width:100%;display:block}
 .sportmenu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}
 .smrow{
   display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--r-m);
-  text-align:left;font-size:14.5px;font-weight:600;color:var(--ink-2);transition:background .13s;
+  text-align:left;font-size:var(--text-base);font-weight:600;color:var(--ink-2);transition:background .13s;
 }
 .smrow:hover{background:var(--raise)}
 .smrow .box{
@@ -257,7 +326,7 @@ img{max-width:100%;display:block}
 .smrow .em{font-size:17px;line-height:1;filter:grayscale(1) opacity(.8)}
 .smrow.on{color:var(--ink)}
 .smrow.on .em{filter:none}
-.smrow .n{margin-left:auto;color:var(--faint);font-size:12.5px;font-weight:600}
+.smrow .n{margin-left:auto;color:var(--faint);font-size:var(--text-sm);font-weight:600}
 .sportmenu-foot{
   display:flex;justify-content:space-between;align-items:center;gap:12px;
   margin-top:10px;padding-top:11px;border-top:1px solid var(--rule);
@@ -266,7 +335,7 @@ img{max-width:100%;display:block}
 
 .topnav{display:flex;align-items:center;gap:4px;margin-left:auto;flex:0 0 auto}
 .tnav{
-  padding:9px 13px;border-radius:999px;font-size:14px;font-weight:600;color:var(--ink-2);
+  padding:9px 13px;border-radius:999px;font-size:var(--text-base);font-weight:600;color:var(--ink-2);
   transition:background .15s,color .15s;white-space:nowrap;
 }
 .tnav:hover{background:var(--raise)}
@@ -285,7 +354,7 @@ img{max-width:100%;display:block}
 .acct .avatar{width:32px;height:32px;font-size:12.5px}
 .avatar{
   width:32px;height:32px;border-radius:var(--r-pill);background:var(--slate);color:#fff;
-  display:grid;place-items:center;font-size:12.5px;font-weight:600;overflow:hidden;flex:0 0 auto;
+  display:grid;place-items:center;font-size:var(--text-sm);font-weight:600;overflow:hidden;flex:0 0 auto;
 }
 .avatar img{width:100%;height:100%;object-fit:cover}
 /* §3 — one component, not two adjacent buttons: shared container, hairline
@@ -316,7 +385,7 @@ img{max-width:100%;display:block}
      acquisition CTA on phones and split-window laptops and left the toggle as
      the only way in. It stays at every breakpoint now. */
   .tnav-row{gap:18px;margin-left:8px}
-  .tnav-row .tnav{font-size:15.5px}
+  .tnav-row .tnav{font-size:var(--text-base)}
 }
 @media(max-width:820px){
   .tnav-row{overflow-x:auto;scrollbar-width:none}
@@ -340,16 +409,45 @@ img{max-width:100%;display:block}
   width:min(100% - 48px, calc(var(--shell) - 48px));margin:0 auto;
   border-radius:var(--r-card);
   display:grid;place-items:center;
-  background:
-    var(--hero-img,none) center/cover no-repeat,
-    /* near-black with a slate tint under ~4% lightness variance — material,
-       not a void, and no visible banding */
-    radial-gradient(120% 88% at 50% 0%,#141922 0%,#0E1116 58%,var(--ink) 100%);
+  /* near-black with a slate tint under ~4% lightness variance — material,
+     not a void, and no visible banding. Stays as the base layer so a panel
+     with no photographs still puts white type on something dark. */
+  background:radial-gradient(120% 88% at 50% 0%,#141922 0%,#0E1116 58%,var(--ink) 100%);
 }
-/* the scrim only exists when a photograph is actually behind it */
-.hero-panel[style*="--hero-img"]::before{
+/* ── hero slideshow ────────────────────────────────────────────────
+   One .hero-slide per photograph, all stacked on the panel. Each runs the
+   same keyframe on its own delay: hold in place, slide OUT to the right,
+   jump (while off-screen, so it is never seen) to the left park, wait its
+   turn, slide back IN from the left. Every visible move is rightward, and
+   the outgoing photo leaves exactly as the incoming one arrives.
+
+   Cadence: 3s hold + .8s slide = 3.8s per photograph. The keyframe stops
+   below are that cadence expressed against a TWO-photo cycle (7.6s):
+   3.0/7.6 = 39.474%, 3.8/7.6 = 50%, 6.8/7.6 = 89.474%. Add a third
+   photograph to assets/ and these percentages have to be recomputed
+   against the new cycle length — see heroMediaHTML(). */
+.hero-media{position:absolute;inset:0;overflow:hidden}
+/* ::after is painted after the slides, so the scrim rides above the photo
+   and below .hero-in. It only exists when a photograph does. */
+.hero-media::after{
   content:"";position:absolute;inset:0;
   background:linear-gradient(180deg,rgba(9,11,16,.42) 0%,rgba(9,11,16,.62) 55%,rgba(9,11,16,.80) 100%);
+}
+.hero-slide{
+  position:absolute;inset:0;background-position:center;background-size:cover;
+  background-repeat:no-repeat;will-change:transform;
+  animation:heroSlide var(--hero-cycle,7.6s) cubic-bezier(.65,0,.35,1) infinite;
+}
+@keyframes heroSlide{
+  0%,39.474%{transform:translateX(0)}        /* on screen, holding */
+  50%       {transform:translateX(100%)}     /* slid off to the right */
+  50.001%   {transform:translateX(-100%)}    /* invisible re-park, no easing */
+  89.474%   {transform:translateX(-100%)}    /* waiting off to the left */
+  100%      {transform:translateX(0)}        /* slid back on, rightward */
+}
+@media (prefers-reduced-motion:reduce){
+  .hero-slide{animation:none}
+  .hero-slide + .hero-slide{display:none}    /* first photograph, held still */
 }
 .hero-in{
   position:relative;z-index:1;text-align:center;max-width:820px;width:100%;
@@ -366,10 +464,14 @@ img{max-width:100%;display:block}
 .hero-panel .display{color:var(--on-dark)}
 /* on the white landing the pill needs its border to carry the edge */
 .hero:not(:has(.hero-panel)) .searchpill{border-color:var(--rule-strong);box-shadow:var(--shadow-lift)}
-.hero-panel .hero-lede{color:var(--on-dark-2)}
+/* --on-dark-2 (#C7D0DA) is tuned for a flat dark panel. Over a photograph its
+   highlights eat it, so the lede holds near-white here. */
+.hero-panel .hero-lede{color:rgba(255,255,255,.93)}
 .sp-val{min-height:22px}
 .hero-lede{
-  color:var(--muted);font-size:var(--t-h3);font-weight:400;max-width:600px;line-height:1.5;
+  /* The lead paragraph under the h1 -- the role --text-md exists for. It was on
+     the h3 step, which made the hero support line compete with the headline. */
+  color:var(--muted);font-size:var(--text-md);font-weight:400;max-width:600px;line-height:1.5;
 }
 /* §5 — one continuous pill. Definition comes from a soft shadow and a hairline,
    not a heavy border. Each side carries a micro-label so the field still says
@@ -449,11 +551,11 @@ img{max-width:100%;display:block}
   display:flex;justify-content:space-between;align-items:flex-end;gap:30px;
   padding:48px 0 4px;flex-wrap:wrap;
 }
-.exhero h1{font-size:clamp(30px,4.2vw,50px);letter-spacing:-.042em;font-weight:800;line-height:1.04}
-.exlede{color:var(--muted);font-size:16px;max-width:560px;margin-top:14px;line-height:1.5}
+.exhero h1{font-size:var(--text-hero);letter-spacing:-.015em;font-weight:700;line-height:1.04}
+.exlede{color:var(--muted);font-size:var(--text-md);max-width:560px;margin-top:14px;line-height:1.5}
 .advfilters{
   display:inline-flex;align-items:center;gap:9px;padding:12px 20px;border-radius:999px;
-  background:var(--paper);border:1px solid var(--rule-strong);font-weight:650;font-size:14.5px;
+  background:var(--paper);border:1px solid var(--rule-strong);font-weight:700;font-size:var(--text-base);
   box-shadow:var(--shadow);transition:.15s;flex:0 0 auto;
 }
 .advfilters:hover{border-color:var(--ink);transform:translateY(-1px)}
@@ -468,14 +570,14 @@ img{max-width:100%;display:block}
 .prodcard:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:var(--shadow-lift)}
 .prodcard .ic{
   width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
-  background:var(--slate-tint);font-size:20px;margin-bottom:7px;color:var(--slate);
+  background:var(--slate-tint);font-size:var(--text-lg);margin-bottom:7px;color:var(--slate);
 }
 .prodcard .ic svg{width:20px;height:20px}
-.prodcard b{font-size:16.5px;letter-spacing:-.022em}
-.prodcard span{color:var(--muted);font-size:14px;line-height:1.5}
+.prodcard b{font-size:var(--text-base);letter-spacing:-.022em}
+.prodcard span{color:var(--muted);font-size:var(--text-base);line-height:1.5}
 .prodsec{padding:34px 0 8px}
-.prodsec h2{font-size:24px;letter-spacing:-.03em}
-.prodsec .sub{color:var(--muted);font-size:15.5px;margin-top:8px;max-width:620px}
+.prodsec h2{font-size:var(--text-xl);letter-spacing:-.03em}
+.prodsec .sub{color:var(--muted);font-size:var(--text-md);margin-top:8px;max-width:620px}
 
 /* ── cards ───────────────────────────────────────────────────────── */
 .grid{
@@ -506,25 +608,25 @@ img{max-width:100%;display:block}
   display:flex;align-items:flex-end;justify-content:space-between;gap:18px;color:#fff;
   background:linear-gradient(to top,rgba(8,10,14,.88),rgba(8,10,14,.34) 58%,transparent);
 }
-.card.feature .fov h3{font-size:clamp(22px,2.4vw,30px);font-weight:800;letter-spacing:-.032em;color:#fff}
-.card.feature .fov .biz2{color:rgba(255,255,255,.8);font-size:14.5px;margin-top:5px}
+.card.feature .fov h3{font-size:var(--text-2xl);font-weight:700;letter-spacing:-.015em;color:#fff}
+.card.feature .fov .biz2{color:rgba(255,255,255,.8);font-size:var(--text-base);margin-top:5px}
 .featbadge{
   display:inline-flex;align-items:center;padding:5px 11px;border-radius:6px;margin-bottom:12px;
   background:rgba(255,255,255,.16);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.26);
-  font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fff;
+  font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fff;
 }
 .featrate{
   display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:999px;
-  background:rgba(255,255,255,.95);color:var(--ink);font-size:14px;font-weight:700;flex:0 0 auto;
+  background:rgba(255,255,255,.95);color:var(--ink);font-size:var(--text-base);font-weight:700;flex:0 0 auto;
 }
 .featfoot{
   display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   padding:17px 20px 19px;
 }
-.featloc{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14.5px}
+.featloc{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:var(--text-base)}
 .featprice{
   padding:9px 17px;border-radius:999px;background:var(--slate-tint);color:var(--ink);
-  font-size:14px;font-weight:700;flex:0 0 auto;
+  font-size:var(--text-base);font-weight:700;flex:0 0 auto;
 }
 @media(max-width:640px){.card.feature{grid-column:span 1}.card.feature .shot{aspect-ratio:20/19}}
 .card .shot img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.2,.7,.3,1)}
@@ -539,18 +641,21 @@ img{max-width:100%;display:block}
 .sporttag{
   position:absolute;top:11px;left:11px;z-index:2;display:flex;align-items:center;gap:5px;
   padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);
-  font-size:11px;font-weight:700;letter-spacing:-.01em;color:var(--ink);
+  font-size:var(--text-xs);font-weight:700;letter-spacing:-.01em;color:var(--ink);
 }
 .sporttag i{width:7px;height:7px;border-radius:2px;display:block}
 .card .row1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
-.card .biz{font-weight:600;font-size:14.5px;letter-spacing:-.015em}
-.card .rate{display:flex;align-items:center;gap:3px;font-size:13.5px;flex:0 0 auto}
-.card .ttl{color:var(--muted);font-size:14px;line-height:1.4}
-.card .meta{color:var(--faint);font-size:13.5px}
-.card .price{font-size:14.5px;margin-top:1px}
+/* The provider name -- the landing's "coach name" role: t-display at the card
+   step, uppercase, tracked open a touch because it sits at a small cap size. */
+.card .biz{font-weight:700;font-size:var(--text-base);letter-spacing:.02em;
+  text-transform:uppercase;line-height:1.12}
+.card .rate{display:flex;align-items:center;gap:3px;font-size:var(--text-sm);flex:0 0 auto}
+.card .ttl{color:var(--muted);font-size:var(--text-base);line-height:1.4}
+.card .meta{color:var(--faint);font-size:var(--text-sm)}
+.card .price{font-size:var(--text-base);margin-top:1px}
 .card .price b{font-weight:700}
-.verifline{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--gold-ink)}
-.pendline{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--warn)}
+.verifline{display:flex;align-items:center;gap:5px;font-size:var(--text-sm);font-weight:600;color:var(--gold-ink)}
+.pendline{display:flex;align-items:center;gap:5px;font-size:var(--text-sm);font-weight:600;color:var(--warn)}
 
 /* ── generic ui ──────────────────────────────────────────────────── */
 /* §3 — three variants, two heights, nothing else.
@@ -579,20 +684,20 @@ img{max-width:100%;display:block}
 .btn.wide{width:100%}
 .pill{
   display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;
-  font-size:11.5px;font-weight:700;letter-spacing:-.005em;
+  font-size:var(--text-xs);font-weight:700;letter-spacing:-.005em;
 }
 .pill.gold{background:var(--gold-tint);color:var(--gold-ink)}
 .pill.good{background:var(--good-tint);color:var(--good)}
 .pill.warn{background:var(--warn-tint);color:var(--warn)}
 .pill.slate{background:var(--slate-tint);color:var(--slate)}
 .field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
-.field label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field label{font-size:var(--text-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .field input,.field select,.field textarea{
   padding:13px 14px;border:1px solid var(--rule-strong);border-radius:var(--r-m);
-  background:var(--paper);color:var(--ink);font:inherit;font-size:15px;width:100%;
+  background:var(--paper);color:var(--ink);font:inherit;font-size:var(--text-base);width:100%;
 }
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--slate);box-shadow:0 0 0 3px var(--slate-ring)}
-.err{color:var(--danger);font-size:13px;font-weight:600}
+.err{color:var(--danger);font-size:var(--text-sm);font-weight:600}
 .panel{border:1px solid var(--rule);border-radius:var(--r-l);padding:22px;background:var(--paper)}
 .empty{padding:72px 24px;text-align:center;color:var(--muted)}
 .empty .big{font-size:42px;margin-bottom:12px;filter:grayscale(1) opacity(.4)}
@@ -608,8 +713,8 @@ img{max-width:100%;display:block}
   position:sticky;top:170px;border:1px solid var(--rule-strong);border-radius:var(--r-l);
   padding:24px;box-shadow:var(--shadow-lift);background:var(--paper);
 }
-.linerow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:14.5px;color:var(--ink-2)}
-.linerow.total{border-top:1px solid var(--rule);margin-top:8px;padding-top:15px;font-weight:750;color:var(--ink);font-size:16px}
+.linerow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:var(--text-base);color:var(--ink-2)}
+.linerow.total{border-top:1px solid var(--rule);margin-top:8px;padding-top:15px;font-weight:700;color:var(--ink);font-size:var(--text-base)}
 .slot{
   display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;
   padding:13px 15px;border:1px solid var(--rule);border-radius:var(--r-m);text-align:left;transition:.15s;
@@ -617,7 +722,7 @@ img{max-width:100%;display:block}
 .slot:hover{border-color:var(--ink-2);background:var(--raise)}
 .slot.on{border-color:var(--slate);background:var(--slate-tint);box-shadow:0 0 0 1px var(--slate)}
 .incl{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0;margin:0;list-style:none}
-.incl li{display:flex;gap:9px;align-items:flex-start;font-size:14.5px;color:var(--ink-2)}
+.incl li{display:flex;gap:9px;align-items:flex-start;font-size:var(--text-base);color:var(--ink-2)}
 
 /* ── modal / sheet ───────────────────────────────────────────────── */
 .scrim{
@@ -650,7 +755,7 @@ img{max-width:100%;display:block}
 .msg-item.on{background:var(--paper);box-shadow:inset 3px 0 0 var(--slate)}
 .msg-thread{display:flex;flex-direction:column;min-width:0}
 .msg-scroll{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:11px}
-.bub{max-width:70%;padding:11px 15px;border-radius:16px;font-size:14.5px;line-height:1.5}
+.bub{max-width:70%;padding:11px 15px;border-radius:16px;font-size:var(--text-base);line-height:1.5}
 .bub.them{background:var(--raise2);border-bottom-left-radius:5px;align-self:flex-start}
 .bub.me{background:var(--slate);color:#fff;border-bottom-right-radius:5px;align-self:flex-end}
 .msg-compose{display:flex;gap:10px;padding:15px;border-top:1px solid var(--rule);background:var(--paper)}
@@ -662,25 +767,25 @@ img{max-width:100%;display:block}
 .rail{position:sticky;top:104px;display:flex;flex-direction:column;gap:2px}
 .rail button{
   display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:var(--r-m);
-  font-size:14px;font-weight:600;color:var(--muted);text-align:left;width:100%;transition:.14s;
+  font-size:var(--text-base);font-weight:600;color:var(--muted);text-align:left;width:100%;transition:.14s;
 }
 .rail button:hover{background:var(--raise);color:var(--ink)}
 .rail button.on{background:var(--ink);color:var(--paper)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:14px;margin-bottom:12px}
 .stat{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px}
-.stat .k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.stat .v{font-size:27px;font-weight:800;letter-spacing:-.03em;margin-top:5px}
-.stat .d{font-size:12.5px;color:var(--muted);margin-top:2px}
+.stat .k{font-size:var(--text-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.stat .v{font-size:var(--text-xl);font-weight:800;letter-spacing:-.03em;margin-top:5px}
+.stat .d{font-size:var(--text-sm);color:var(--muted);margin-top:2px}
 .track{display:flex;align-items:center;gap:0;margin-top:13px}
 .track .step{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
 .track .dot{width:17px;height:17px;border-radius:999px;border:2px solid var(--rule-strong);flex:0 0 auto;display:grid;place-items:center;font-size:9px;color:#fff}
 .track .step.done .dot{background:var(--good);border-color:var(--good)}
-.track .lbl{font-size:11.5px;font-weight:600;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track .lbl{font-size:var(--text-xs);font-weight:600;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .track .step.done .lbl{color:var(--ink-2)}
 .track .bar{height:2px;background:var(--rule-strong);flex:1;min-width:8px;margin:0 7px}
 .track .step.done .bar{background:var(--good)}
-table.tbl{width:100%;border-collapse:collapse;font-size:14px}
-table.tbl th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:0 12px 10px;font-weight:700}
+table.tbl{width:100%;border-collapse:collapse;font-size:var(--text-base)}
+table.tbl th{text-align:left;font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:0 12px 10px;font-weight:700}
 table.tbl td{padding:13px 12px;border-top:1px solid var(--rule);vertical-align:middle}
 .tblwrap{overflow-x:auto}
 
@@ -699,7 +804,7 @@ table.tbl td{padding:13px 12px;border-top:1px solid var(--rule);vertical-align:m
 .pin{
   position:absolute;transform:translate(-50%,-50%);z-index:2;
   background:var(--paper);border:1.5px solid var(--rule-strong);border-radius:999px;
-  padding:5px 11px;font-size:12.5px;font-weight:750;box-shadow:var(--shadow);
+  padding:5px 11px;font-size:var(--text-sm);font-weight:700;box-shadow:var(--shadow);
   transition:transform .16s cubic-bezier(.2,.7,.3,1),box-shadow .16s;white-space:nowrap;
 }
 .pin::after{
@@ -712,7 +817,7 @@ table.tbl td{padding:13px 12px;border-top:1px solid var(--rule);vertical-align:m
 .mapnote{
   position:absolute;left:14px;bottom:14px;z-index:6;background:var(--paper);
   border:1px solid var(--rule);border-radius:999px;padding:7px 14px;
-  font-size:12px;color:var(--muted);box-shadow:var(--shadow);
+  font-size:var(--text-sm);color:var(--muted);box-shadow:var(--shadow);
 }
 .mapside{position:sticky;top:170px}
 
@@ -730,7 +835,7 @@ table.tbl td{padding:13px 12px;border-top:1px solid var(--rule);vertical-align:m
 .pickcard:hover{border-color:var(--ink-2);box-shadow:var(--shadow);transform:translateY(-1px)}
 .pickcard img{width:62px;height:62px;border-radius:var(--r-s);object-fit:cover;flex:0 0 auto}
 .pickcard .pi{display:flex;flex-direction:column;gap:3px;min-width:0}
-.pickcard b{font-size:14.5px;letter-spacing:-.015em}
+.pickcard b{font-size:var(--text-base);letter-spacing:-.015em}
 .dotdot{
   width:6px;height:6px;border-radius:999px;background:var(--muted);display:inline-block;
   animation:pulse 1.25s infinite cubic-bezier(.4,0,.2,1);
@@ -744,10 +849,10 @@ table.tbl td{padding:13px 12px;border-top:1px solid var(--rule);vertical-align:m
 }
 .onbcard:hover{border-color:var(--ink-2);background:var(--raise)}
 .onbcard.on{border-color:var(--slate);background:var(--slate-tint);box-shadow:0 0 0 1px var(--slate)}
-.onbcard b{font-size:16px;letter-spacing:-.02em}
-.onbcard span{font-size:13.5px;color:var(--muted);line-height:1.45}
+.onbcard b{font-size:var(--text-base);letter-spacing:-.02em}
+.onbcard span{font-size:var(--text-sm);color:var(--muted);line-height:1.45}
 .sportpick{
-  padding:8px 13px;border:1px solid var(--rule);border-radius:999px;font-size:13.5px;
+  padding:8px 13px;border:1px solid var(--rule);border-radius:999px;font-size:var(--text-sm);
   font-weight:600;transition:.14s;
 }
 .sportpick:hover{border-color:var(--ink-2)}
@@ -759,14 +864,16 @@ table.tbl td{padding:13px 12px;border-top:1px solid var(--rule);vertical-align:m
 .band.hero{padding:86px 0 78px}
 .hero-in{text-align:center;display:flex;flex-direction:column;align-items:center;gap:18px}
 .display{
-  font-size:clamp(40px,6.4vw,76px);font-weight:800;letter-spacing:-.045em;
+  font-size:var(--text-hero);font-weight:700;letter-spacing:-.015em;
   line-height:1.02;color:var(--ink);
 }
-.lede{font-size:clamp(16px,1.7vw,20px);color:var(--ink-2);max-width:34ch;margin:0 auto;line-height:1.5}
+/* The hero support line. This is the ONE thing --text-md exists for, per the
+   scale's role table -- so it is a flat 15.5px, not a fluid 16-20px. */
+.lede{font-size:var(--text-md);color:var(--ink-2);max-width:34ch;margin:0 auto;line-height:1.5}
 .chiprow{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:8px}
 .hchip{
   display:inline-flex;align-items:center;gap:8px;padding:10px 17px;border-radius:999px;
-  border:1px solid var(--rule-strong);font-size:14.5px;font-weight:650;
+  border:1px solid var(--rule-strong);font-size:var(--text-base);font-weight:700;
   background:var(--paper);transition:.15s;color:var(--ink);
 }
 .hchip i{width:8px;height:8px;border-radius:2px;display:block}
@@ -777,7 +884,7 @@ table.tbl td{padding:13px 12px;border-top:1px solid var(--rule);vertical-align:m
 .bandhead:hover span{color:var(--ink)}
 h2.ctr,.ctr{text-align:center}
 h2.ctr{margin-bottom:10px}
-.sub{color:var(--muted);font-size:16px;line-height:1.55;max-width:60ch}
+.sub{color:var(--muted);font-size:var(--text-base);line-height:1.55;max-width:60ch}
 .sub.ctr{margin:0 auto 12px}
 .sportgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 .stile{
@@ -786,12 +893,12 @@ h2.ctr{margin-bottom:10px}
 }
 .stile:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:var(--shadow)}
 .sglyph{width:42px;height:42px;border-radius:var(--r-m);display:grid;place-items:center;font-size:21px}
-.stile b{font-size:15.5px;letter-spacing:-.015em}
-.stile span.num{font-size:13px;color:var(--muted)}
+.stile b{font-size:var(--text-base);letter-spacing:-.015em}
+.stile span.num{font-size:var(--text-sm);color:var(--muted)}
 .segwrap{display:flex;justify-content:center;margin:24px 0 30px}
 .seg2{display:flex;background:var(--raise2);border-radius:999px;padding:4px;gap:3px}
 .band.alt .seg2{background:var(--paper)}
-.seg2 button{padding:9px 20px;border-radius:999px;font-size:14px;font-weight:650;color:var(--muted);transition:.15s}
+.seg2 button{padding:9px 20px;border-radius:999px;font-size:var(--text-base);font-weight:700;color:var(--muted);transition:.15s}
 .seg2 button.on{background:var(--ink);color:var(--paper)}
 .frames{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .frame{
@@ -803,94 +910,94 @@ h2.ctr{margin-bottom:10px}
 .fbar i{width:8px;height:8px;border-radius:999px;background:var(--rule-strong);display:block}
 .fbody{padding:15px;display:flex;flex-direction:column;gap:9px;flex:1}
 .fsearch{
-  font-size:12.5px;font-weight:650;color:var(--muted);padding:8px 11px;
+  font-size:var(--text-sm);font-weight:700;color:var(--muted);padding:8px 11px;
   border:1px solid var(--rule);border-radius:999px;
 }
 .frow{display:flex;gap:10px;align-items:center}
 .fthumb{width:34px;height:34px;border-radius:var(--r-s);flex:0 0 auto;display:block}
-.frow b{display:block;font-size:13px;letter-spacing:-.01em}
-.frow .num{font-size:12px;color:var(--muted)}
+.frow b{display:block;font-size:var(--text-sm);letter-spacing:-.01em}
+.frow .num{font-size:var(--text-sm);color:var(--muted)}
 .fhero{height:70px;border-radius:var(--r-s)}
 .fpill{
-  align-self:flex-start;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;
+  align-self:flex-start;padding:4px 10px;border-radius:999px;font-size:var(--text-xs);font-weight:700;
 }
 .fpill.gold{background:var(--gold-tint);color:var(--gold-ink)}
 .fpill.good{background:var(--good-tint);color:var(--good)}
 .fcheck{
   width:42px;height:42px;border-radius:999px;background:var(--good-tint);color:var(--good);
-  display:grid;place-items:center;font-size:20px;margin:6px auto 2px;
+  display:grid;place-items:center;font-size:var(--text-lg);margin:6px auto 2px;
 }
-.fbub{padding:8px 12px;border-radius:13px;font-size:12.5px;max-width:88%}
+.fbub{padding:8px 12px;border-radius:13px;font-size:var(--text-sm);max-width:88%}
 .fbub.them{background:var(--raise2);align-self:flex-start;border-bottom-left-radius:4px}
 .fbub.me{background:var(--slate);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
 .fskel{height:11px;border-radius:999px;background:var(--raise2)}
 .fskel.s{width:62%}
 .fstats{display:flex;gap:16px;margin:4px 0 8px}
 .fstats div{display:flex;flex-direction:column}
-.fstats span:first-child{font-size:19px;font-weight:800;letter-spacing:-.03em}
-.fstats span:last-child{font-size:11px;color:var(--muted)}
+.fstats span:first-child{font-size:var(--text-lg);font-weight:800;letter-spacing:-.03em}
+.fstats span:last-child{font-size:var(--text-xs);color:var(--muted)}
 .fcap{
-  padding:11px 15px;border-top:1px solid var(--rule);font-size:12.5px;
+  padding:11px 15px;border-top:1px solid var(--rule);font-size:var(--text-sm);
   color:var(--muted);background:var(--raise);
 }
-.risk{color:var(--muted);font-size:14px;margin-top:20px}
+.risk{color:var(--muted);font-size:var(--text-base);margin-top:20px}
 .featgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px}
 .feat{padding:22px;border:1px solid var(--rule);border-radius:var(--r-l);background:var(--paper)}
-.feat b{display:block;font-size:16px;letter-spacing:-.02em;margin-bottom:7px}
-.feat p{color:var(--muted);font-size:14.5px;line-height:1.55}
+.feat b{display:block;font-size:var(--text-base);letter-spacing:-.02em;margin-bottom:7px}
+.feat p{color:var(--muted);font-size:var(--text-base);line-height:1.55}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:30px}
 .step3{display:flex;flex-direction:column;gap:7px}
 .stepnum{
   width:32px;height:32px;border-radius:999px;background:var(--ink);color:var(--paper);
-  display:grid;place-items:center;font-size:14px;font-weight:750;
+  display:grid;place-items:center;font-size:var(--text-base);font-weight:700;
 }
-.step3 b{font-size:17px;letter-spacing:-.02em}
-.step3 p{color:var(--muted);font-size:14.5px;line-height:1.55}
+.step3 b{font-size:var(--text-lg);letter-spacing:-.02em}
+.step3 p{color:var(--muted);font-size:var(--text-base);line-height:1.55}
 .trustband{background:var(--ink)}
 .trustband h2,.trustband .sub{color:var(--paper)}
 .trustband .sub{color:#B9C2CC}
 .trustrow{display:flex;flex-wrap:wrap;gap:14px 34px;justify-content:center}
 .tritem{
   display:inline-flex;align-items:center;gap:8px;color:var(--paper);
-  font-size:15.5px;font-weight:650;letter-spacing:-.015em;
+  font-size:var(--text-base);font-weight:700;letter-spacing:-.015em;
 }
 .tritem svg{color:var(--gold)}
 .finalcta{border-bottom:0}
 .ctarow{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;margin-top:20px}
 /* coach landing */
 .chero-in{display:grid;grid-template-columns:55fr 45fr;gap:48px;align-items:center}
-.chero-in .display{font-size:clamp(34px,4.4vw,54px);text-align:left}
+.chero-in .display{font-size:var(--text-hero);text-align:left}
 .chero-in .lede{text-align:left;max-width:46ch}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center}
 .split.rev .splitcopy{order:2}
 .splitcopy h2{margin-bottom:11px}
-.tlink{color:var(--slate);font-weight:700;font-size:14.5px;margin-top:14px}
+.tlink{color:var(--slate);font-weight:700;font-size:var(--text-base);margin-top:14px}
 .tlink:hover{text-decoration:underline}
 .foundernote{max-width:64ch;margin:0 auto;text-align:center}
-.foundernote p{color:var(--ink-2);font-size:16.5px;line-height:1.65;margin-top:14px}
-.foundernote .sig{color:var(--muted);font-size:14.5px;margin-top:16px}
+.foundernote p{color:var(--ink-2);font-size:var(--text-base);line-height:1.65;margin-top:14px}
+.foundernote .sig{color:var(--muted);font-size:var(--text-base);margin-top:16px}
 .pricingblock{max-width:620px;margin:0 auto}
 .pricecard{
   border:1px solid var(--rule-strong);border-radius:var(--r-l);padding:32px;
   text-align:center;background:var(--paper);box-shadow:var(--shadow);margin-top:22px;
 }
-.bignum{font-size:62px;font-weight:800;letter-spacing:-.05em;line-height:1;color:var(--slate)}
-.pricecard p{margin-top:10px;font-size:16.5px}
+.bignum{font-size:var(--text-hero);font-weight:800;letter-spacing:-.05em;line-height:1;color:var(--slate)}
+.pricecard p{margin-top:10px;font-size:var(--text-base)}
 .pricelist{list-style:none;padding:0;margin:22px 0 0;display:flex;flex-direction:column;gap:10px;text-align:left}
 .pricelist li{
-  display:flex;gap:10px;align-items:flex-start;color:var(--ink-2);font-size:14.5px;
+  display:flex;gap:10px;align-items:flex-start;color:var(--ink-2);font-size:var(--text-base);
 }
-.pricelist li::before{content:"✓";color:var(--good);font-weight:800;flex:0 0 auto}
+.pricelist li::before{content:"✓";color:var(--good);font-weight:700;flex:0 0 auto}
 .faqwrap{max-width:760px;margin:0 auto}
 .faq{margin-top:24px;border-top:1px solid var(--rule-strong)}
 .faqitem{border-bottom:1px solid var(--rule-strong)}
 .faqq{
   display:flex;justify-content:space-between;align-items:center;gap:18px;width:100%;
-  padding:19px 2px;text-align:left;font-size:16.5px;font-weight:650;letter-spacing:-.018em;
+  padding:19px 2px;text-align:left;font-size:var(--text-base);font-weight:700;letter-spacing:-.018em;
 }
 .faqq:hover{color:var(--slate)}
 .faqi{font-size:21px;color:var(--muted);flex:0 0 auto;line-height:1}
-.faqa{padding:0 2px 21px;color:var(--muted);font-size:15px;line-height:1.62;max-width:66ch}
+.faqa{padding:0 2px 21px;color:var(--muted);font-size:var(--text-base);line-height:1.62;max-width:66ch}
 @media(max-width:980px){
   .sportgrid{grid-template-columns:repeat(2,1fr)}
   .frames,.featgrid,.steps{grid-template-columns:1fr}
@@ -905,12 +1012,12 @@ h2.ctr{margin-bottom:10px}
 .coachtop-in{display:flex;justify-content:flex-end;gap:4px;padding:9px 24px}
 .viewas{color:var(--slate)}
 .railhead{display:flex!important;gap:11px;align-items:center;padding:11px 12px!important;text-align:left}
-.railhead b{display:block;font-size:14px;letter-spacing:-.015em;color:var(--ink)}
-.railhead span span{display:block;font-size:12px;color:var(--muted)}
+.railhead b{display:block;font-size:var(--text-base);letter-spacing:-.015em;color:var(--ink)}
+.railhead span span{display:block;font-size:var(--text-sm);color:var(--muted)}
 .raildiv{height:1px;background:var(--rule);margin:9px 0}
 .rbadge{
   margin-left:auto;display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 6px;
-  border-radius:999px;background:var(--slate);color:#fff;font-size:11px;font-weight:700;
+  border-radius:999px;background:var(--slate);color:#fff;font-size:var(--text-xs);font-weight:700;
 }
 .railgs{flex-direction:column;align-items:flex-start!important;gap:6px}
 .gsbar{display:block;width:100%;height:5px;border-radius:999px;background:var(--raise2);overflow:hidden}
@@ -919,26 +1026,26 @@ h2.ctr{margin-bottom:10px}
 .dashwrap{display:flex;flex-direction:column;gap:34px;padding:22px 0 70px}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr) 190px;gap:14px}
 .metric{border:1px solid var(--rule);border-radius:var(--r-l);padding:16px 18px;background:var(--paper)}
-.metric .k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.metric .v{font-size:27px;font-weight:800;letter-spacing:-.03em;margin:5px 0 8px;font-family:var(--display)}
-.metric .d{font-size:12px;color:var(--muted);line-height:1.35;margin-top:4px}
+.metric .k{font-size:var(--text-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.metric .v{font-size:var(--text-xl);font-weight:800;letter-spacing:-.03em;margin:5px 0 8px;font-family:var(--display)}
+.metric .d{font-size:var(--text-sm);color:var(--muted);line-height:1.35;margin-top:4px}
 .spark{width:100%;height:28px;display:block}
 .sparkdash{color:var(--rule-strong);font-size:20px}
 .livebox{background:var(--raise)}
-.livecount{display:flex;align-items:center;gap:8px;font-size:27px;font-weight:800;letter-spacing:-.03em;font-family:var(--display)}
+.livecount{display:flex;align-items:center;gap:8px;font-size:var(--text-xl);font-weight:800;letter-spacing:-.03em;font-family:var(--display)}
 .livecount .dot{
   width:9px;height:9px;border-radius:999px;background:var(--good);flex:0 0 auto;
   animation:livepulse 2.2s infinite cubic-bezier(.4,0,.2,1);
 }
 @keyframes livepulse{0%,70%,100%{opacity:.35}35%{opacity:1}}
-.lastdays{color:var(--faint);font-size:12.5px;margin-top:-24px}
-.greet{font-size:clamp(24px,2.8vw,32px);font-weight:800;letter-spacing:-.032em;line-height:1.2}
-.greet span{display:block;color:var(--muted);font-weight:600;font-size:17px;margin-top:6px;letter-spacing:-.018em}
+.lastdays{color:var(--faint);font-size:var(--text-sm);margin-top:-24px}
+.greet{font-size:var(--text-2xl);font-weight:700;letter-spacing:-.015em;line-height:1.2}
+.greet span{display:block;color:var(--muted);font-weight:600;font-size:var(--text-lg);margin-top:6px;letter-spacing:-.018em}
 .cmdbar{display:flex;flex-direction:column;gap:12px}
 .cmdchips{display:flex;gap:8px;flex-wrap:wrap}
 .cmdchip{
   padding:8px 14px;border:1px solid var(--rule-strong);border-radius:999px;
-  font-size:13.5px;font-weight:650;background:var(--paper);transition:.15s;
+  font-size:var(--text-sm);font-weight:700;background:var(--paper);transition:.15s;
 }
 .cmdchip:hover{border-color:var(--ink);background:var(--raise)}
 .cmdinput{
@@ -946,20 +1053,20 @@ h2.ctr{margin-bottom:10px}
   border-radius:var(--r-xl);background:var(--paper);box-shadow:var(--shadow);transition:.16s;
 }
 .cmdinput:focus-within{border-color:var(--slate);box-shadow:0 0 0 3px var(--slate-ring)}
-.cmdinput input{flex:1;border:0;background:none;font:inherit;font-size:15.5px;color:var(--ink);min-width:0}
+.cmdinput input{flex:1;border:0;background:none;font:inherit;font-size:var(--text-base);color:var(--ink);min-width:0}
 .cmdinput input:focus{outline:none}
 .cmdicon{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;color:var(--muted)}
 .cmdicon:hover{background:var(--raise2);color:var(--ink)}
 .cmdgo{width:38px;height:38px;border-radius:999px;background:var(--slate);color:#fff;display:grid;place-items:center;flex:0 0 auto}
 .cmdlog{border:1px solid var(--rule);border-radius:var(--r-m);padding:13px 15px;background:var(--raise)}
-.cmdlogrow{display:flex;justify-content:space-between;gap:14px;font-size:13.5px;color:var(--ink-2);padding:5px 0}
+.cmdlogrow{display:flex;justify-content:space-between;gap:14px;font-size:var(--text-sm);color:var(--ink-2);padding:5px 0}
 .cmdlogrow .num{color:var(--faint);flex:0 0 auto}
 .todaystrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
 .todaycard{display:flex;gap:13px;border:1px solid var(--rule);border-radius:var(--r-l);padding:16px;background:var(--paper)}
 .tspine{width:4px;border-radius:3px;flex:0 0 auto}
-.tstime{font-size:12.5px;font-weight:700;color:var(--muted)}
-.todaycard b{display:block;font-size:15.5px;letter-spacing:-.02em;margin:3px 0}
-.tsmeta{font-size:13px;color:var(--muted)}
+.tstime{font-size:var(--text-sm);font-weight:700;color:var(--muted)}
+.todaycard b{display:block;font-size:var(--text-base);letter-spacing:-.02em;margin:3px 0}
+.tsmeta{font-size:var(--text-sm);color:var(--muted)}
 .tsbtns{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
 .queue{display:flex;flex-direction:column;border:1px solid var(--rule);border-radius:var(--r-l);overflow:hidden}
 .qrow{display:flex;gap:12px;align-items:center;padding:15px 17px;background:var(--paper)}
@@ -967,16 +1074,16 @@ h2.ctr{margin-bottom:10px}
 .qdot{width:8px;height:8px;border-radius:999px;flex:0 0 auto;background:var(--warn)}
 .qrow.good .qdot{background:var(--good)}
 .qtext{flex:1;min-width:0}
-.qtext b{display:block;font-size:14.5px;letter-spacing:-.015em}
-.qtext span{font-size:13.5px;color:var(--muted)}
-.qexp{font-size:12.5px;color:var(--faint);flex:0 0 auto}
+.qtext b{display:block;font-size:var(--text-base);letter-spacing:-.015em}
+.qtext span{font-size:var(--text-sm);color:var(--muted)}
+.qexp{font-size:var(--text-sm);color:var(--faint);flex:0 0 auto}
 .qacts{display:flex;gap:7px;flex:0 0 auto;flex-wrap:wrap}
 .cardrow{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .cardrow.two{grid-template-columns:repeat(2,1fr)}
 .gsline{display:flex;align-items:center;gap:11px;margin:12px 0 14px}
-.gsline .num{font-size:13px;color:var(--muted);flex:0 0 auto}
+.gsline .num{font-size:var(--text-sm);color:var(--muted);flex:0 0 auto}
 .gslist{display:flex;flex-direction:column;gap:2px}
-.gsitem{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:var(--r-s);text-align:left;font-size:14px;transition:background .14s}
+.gsitem{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:var(--r-s);text-align:left;font-size:var(--text-base);transition:background .14s}
 .gsitem:hover{background:var(--raise2)}
 .gscheck{
   width:17px;height:17px;border-radius:999px;border:1.5px solid var(--rule-strong);
@@ -988,13 +1095,13 @@ h2.ctr{margin-bottom:10px}
 .payflow{display:flex;gap:8px;margin:14px 0 12px}
 .payst{flex:1;border:1px solid var(--rule);border-radius:var(--r-s);padding:9px 10px}
 .payst.on{border-color:var(--good);background:var(--good-tint)}
-.payst .num{display:block;font-weight:750;font-size:14px;margin-top:2px}
+.payst .num{display:block;font-weight:700;font-size:var(--text-base);margin-top:2px}
 .rvmini{padding:11px 0;border-top:1px solid var(--rule)}
 .rvmini:first-of-type{border-top:0}
-.rvmini p{font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.rvmini p{font-size:var(--text-sm);color:var(--muted);margin-top:4px;line-height:1.5}
 .sharerow{display:flex;gap:9px;align-items:center;margin:12px 0}
 .shareurl{
-  flex:1;font-family:var(--mono);font-size:13px;padding:9px 12px;background:var(--raise2);
+  flex:1;font-family:var(--mono);font-size:var(--text-sm);padding:9px 12px;background:var(--raise2);
   border-radius:var(--r-s);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .qrwrap{display:flex;gap:14px;align-items:center}
@@ -1018,20 +1125,20 @@ h2.ctr{margin-bottom:10px}
 .footgrid{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:30px}
 .footbrand{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding-right:20px}
 .footbrand .wordmark{
-  text-transform:uppercase;letter-spacing:-.01em;color:var(--ink);font-size:22px;
+  text-transform:uppercase;letter-spacing:-.01em;color:var(--ink);font-size:var(--text-xl);
 }
-.footbrand p{color:var(--muted);font-size:14px;line-height:1.5;max-width:250px}
+.footbrand p{color:var(--muted);font-size:var(--text-base);line-height:1.5;max-width:250px}
 .footcol{display:flex;flex-direction:column;align-items:flex-start;gap:9px}
 .footcol .eyebrow{margin-bottom:3px}
 .footcol button,.footcol a{
-  font-size:14px;color:var(--muted);text-align:left;text-decoration:none;transition:color .14s;
+  font-size:var(--text-base);color:var(--muted);text-align:left;text-decoration:none;transition:color .14s;
 }
 .footcol button:hover,.footcol a:hover{color:var(--ink)}
 .footbase{
   display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
   margin-top:38px;padding-top:24px;border-top:1px solid var(--rule);
 }
-.footlegal{display:flex;gap:18px;flex-wrap:wrap;color:var(--faint);font-size:13px}
+.footlegal{display:flex;gap:18px;flex-wrap:wrap;color:var(--faint);font-size:var(--text-sm)}
 .footbase{justify-content:center;text-align:center;border-top-color:var(--rule-strong)}
 .footbase .footlegal{justify-content:center}
 @media(max-width:1000px){.footgrid{grid-template-columns:repeat(3,1fr);gap:28px}
@@ -1044,7 +1151,7 @@ h2.ctr{margin-bottom:10px}
   padding:14px 20px;
 }
 .notifhead{
-  border-bottom:1px solid var(--rule);font-size:11px;font-weight:700;
+  border-bottom:1px solid var(--rule);font-size:var(--text-xs);font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
 }
 .notifhead span:not(:first-child),.notifrow .sw{justify-self:center}
@@ -1072,7 +1179,7 @@ h2.ctr{margin-bottom:10px}
 .toast{
   position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:200;
   background:var(--ink);color:var(--paper);padding:13px 21px;border-radius:999px;
-  font-size:14px;font-weight:600;box-shadow:var(--shadow-lift);animation:rise .2s;
+  font-size:var(--text-base);font-weight:600;box-shadow:var(--shadow-lift);animation:rise .2s;
 }
 
 /* ── responsive: web layout collapses toward the app's stack ─────── */
@@ -1168,23 +1275,36 @@ h2.ctr{margin-bottom:10px}
 /* ═══════════════════════════════════════════════════════════════════
    §2 / §7 ENFORCEMENT — the type scale and the radius scale, applied last.
    Everything above is the design; this block is the audit made executable.
-   Six sizes: 11.5 micro · 14 small · 16 body · 19 h3 · 30 h2 · 56 display.
+   Eight steps: 10.5 xs · 12 sm · 14.5 base · 15.5 md · lg · xl · 2xl · hero.
    Three radii: 10 control · 16 card · 999 pill.
    The `#app` prefix is deliberate: module CSS is injected into a <style> that
    lands after this one, so an id in the selector is what wins without editing
    ten module files that other work depends on.
+
+   These now name the --text-* steps directly rather than the legacy --t-*
+   aliases. That matters: while the aliases were pointed at the old six-step
+   scale this block silently pinned card titles and meta lines a step small,
+   and re-aliasing would have dragged everything it touches down with it. Each
+   selector below is assigned by ROLE, not by whatever it used to measure.
    ═══════════════════════════════════════════════════════════════════ */
+/* eyebrows, badges, tiny uppercase labels */
 #app .eyebrow,#app .featbadge,#app .verifline,#app .pendline,#app .sporttag,
 #app .se-lbl,#app .se-cmp,#app .co-n,#app .co-lbl,#app .pill,#app .badge,
-#app .fcount .num,#app .card .meta{font-size:var(--t-micro)}
-#app .card .biz,#app .card .ttl,#app .card .price,#app .card .rate,
-#app .fchip,#app .btn,#app .btn.sm,#app select,#app option,#app .se-bar,
+#app .fcount .num{font-size:var(--text-xs)}
+/* meta lines, captions, buttons, secondary card lines */
+#app .card .ttl,#app .card .meta,#app .card .rate,
+#app .fchip,#app .btn,#app .btn.sm,#app .se-bar,
 #app .se-sortwrap,#app .co-tpill,#app .fcount,#app .tlink,
 #app .footcol button,#app .footcol a,#app .footlegal,
-#app .footbrand p{font-size:var(--t-small)}
-#app .pmrow b,#app .pmrow span span,#app .se-live,#app .biz2{font-size:var(--t-small)}
-#app .mark,#app input,#app textarea{font-size:var(--t-body)}
-#app .wordmark{font-size:var(--t-h3)}
+#app .footbrand p,#app .pmrow span span,#app .se-live,
+#app .biz2{font-size:var(--text-sm)}
+/* body-weight UI: form controls, prices, primary rows */
+#app .card .price,#app select,#app option,#app input,#app textarea,
+#app .mark,#app .pmrow b{font-size:var(--text-base)}
+/* card titles and the wordmark. `.card .biz` is the card's primary line --
+   un-muted and weight 600 -- so it takes the card-title step rather than
+   sharing the meta step with `.card .ttl` underneath it. */
+#app .card .biz,#app .wordmark{font-size:var(--text-lg)}
 
 /* §3 — the sort control shipped as a raw native <select> sitting between two
    bespoke pills, keeping the OS chrome, radius and font. Same 36px pill as the
@@ -1238,11 +1358,12 @@ const SPORT_GLYPH = {
   Gymnastics:"🤸",Squash:"🎾",Wrestling:"🤼",Diving:"🤿",Surfing:"🏄",
   Karate:"🥋",Judo:"🥋",Pickleball:"🏓","Table Tennis":"🏓",
 };
-/* Hero photograph. build.py replaces this token with a base64 data URI when
-   assets/hero-stadium.* exists, so the page stays a single self-contained file
-   and survives the CSP that blocks every external request. Empty means the
-   panel falls back to its dusk-stadium gradient — legible, never white. */
-const HERO_IMG = "__HERO_IMG__".indexOf("__HERO") === 0 ? "" : "__HERO_IMG__";
+/* Hero photographs, in slideshow order. build.py replaces this expression with
+   an array of base64 data URIs — one per assets/hero-*.{jpg,jpeg,png,webp},
+   sorted by filename — so the page stays a single self-contained file and
+   survives the CSP that blocks every external request. Empty means the panel
+   falls back to its dusk-stadium gradient — legible, never white. */
+const HERO_IMGS = "__HERO_IMGS__".indexOf("__HERO") === 0 ? [] : [];
 
 const sportColor = s => SPORT_COLOR[s] || "#475569";
 const sportGlyph = s => SPORT_GLYPH[s] || "🏅";
@@ -1849,7 +1970,7 @@ function famFrames(){
       <div class="fhero" style="background:${sportColor(p.sport)}22"></div>
       <b>${esc(p.title)}</b>
       <span class="fpill gold">Background-checked</span>
-      <div class="num" style="font-weight:750;margin-top:6px">${money(p.price)} per session</div>
+      <div class="num" style="font-weight:700;margin-top:6px">${money(p.price)} per session</div>
     </div><p class="fcap">Coach profile with the trust badge</p></div>
   <div class="frame"><div class="fbar"><i></i><i></i><i></i></div>
     <div class="fbody ctr">
@@ -1871,8 +1992,8 @@ function coachFrames(){
   <div class="frame"><div class="fbar"><i></i><i></i><i></i></div>
     <div class="fbody">
       <div class="eyebrow">Net payout</div>
-      <div class="num" style="font-size:26px;font-weight:800;letter-spacing:-.03em">$41</div>
-      <div class="num" style="color:var(--muted);font-size:13px">$45 gross · $4 platform fee</div>
+      <div class="num" style="font-size:var(--text-xl);font-weight:700;letter-spacing:-.03em">$41</div>
+      <div class="num" style="color:var(--muted);font-size:var(--text-sm)">$45 gross · $4 platform fee</div>
       <span class="fpill good">Payouts connected</span>
     </div><p class="fcap">Automatic payouts with the fee itemized</p></div>
   <div class="frame"><div class="fbar"><i></i><i></i><i></i></div>
@@ -1914,7 +2035,7 @@ function coachLandingHTML(){
       <div class="frame tall"><div class="fbar"><i></i><i></i><i></i></div>
         <div class="fbody">
           <div class="eyebrow">Today</div>
-          <b style="font-size:17px">Apex Performance Club</b>
+          <b style="font-size:var(--text-lg)">Apex Performance Club</b>
           <div class="fstats">
             <div><span class="num">5</span><span>listings</span></div>
             <div><span class="num">35</span><span>enrolled</span></div>
@@ -2040,9 +2161,23 @@ function searchPillHTML(){
           <button class="go" id="qgo" aria-label="Search">${ICON.search}</button>
         </div>`;
 }
+/* 3s on screen + .8s of travel per photograph. Changing this changes the
+   cycle length below, but the @keyframes stops are written against a
+   two-photograph cycle — see the note above .hero-media. */
+const HERO_STEP = 3.8;
+function heroMediaHTML(){
+  if(!HERO_IMGS.length) return "";
+  const slides = HERO_IMGS.map((u,i)=>
+    `<div class="hero-slide" style="background-image:url('${u}');animation-delay:${(-i*HERO_STEP).toFixed(3)}s"></div>`
+  ).join("");
+  /* aria-hidden: decorative. The headline carries the meaning. */
+  return `<div class="hero-media" aria-hidden="true"
+     style="--hero-cycle:${(HERO_IMGS.length*HERO_STEP).toFixed(3)}s">${slides}</div>`;
+}
 function heroHTML(){
   return `<section class="hero">
-    <div class="hero-panel"${HERO_IMG?` style="--hero-img:url('${HERO_IMG}')"`:""}>
+    <div class="hero-panel">
+      ${heroMediaHTML()}
       <div class="hero-in">
         ${/* The locked one-liner. The previous headline spoke to an adult
              athlete about a gym, and Sporve does not sell facilities. */""}
@@ -2206,7 +2341,7 @@ function detailHTML(id){
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;padding:20px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">
         ${[["Ages",`${p.minAge}–${p.maxAge}`],["Skill level",p.skill],["Age group",p.ageGroup],
            ["Group size",`${p.enrolled}/${p.cap} enrolled`],["Cancellation",p.cancellationPolicy]]
-          .map(([k,v])=>`<div><div class="eyebrow">${k}</div><div class="num" style="font-weight:650;margin-top:3px">${esc(v)}</div></div>`).join("")}
+          .map(([k,v])=>`<div><div class="eyebrow">${k}</div><div class="num" style="font-weight:700;margin-top:3px">${esc(v)}</div></div>`).join("")}
       </div>
       <h2 style="margin-top:30px">What's included</h2>
       <ul class="incl" style="margin-top:14px">
@@ -2215,22 +2350,22 @@ function detailHTML(id){
       <h2 style="margin-top:34px">Upcoming sessions</h2>
       <div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">
         ${slots.map(s=>`<div class="slot"><div>
-            <div style="font-weight:650">${esc(s.title)}</div>
-            <div class="num" style="color:var(--muted);font-size:13.5px;margin-top:2px">
+            <div style="font-weight:700">${esc(s.title)}</div>
+            <div class="num" style="color:var(--muted);font-size:var(--text-sm);margin-top:2px">
               ${fmtDate(s.date)} · ${s.startTime}–${s.endTime} ${s.tz}</div>
-          </div><span class="num" style="color:var(--muted);font-size:13.5px">${esc(s.address)}</span></div>`).join("")}
+          </div><span class="num" style="color:var(--muted);font-size:var(--text-sm)">${esc(s.address)}</span></div>`).join("")}
       </div>
       ${p.verified?"":`<div class="panel" style="margin-top:30px;background:var(--warn-tint);border-color:transparent">
         <div style="display:flex;gap:11px"><span style="color:var(--warn);flex:0 0 auto">${ICON.shield}</span><div>
           <h3 style="color:var(--warn)">Background check in progress</h3>
-          <p style="color:var(--ink-2);margin-top:5px;font-size:14px">
+          <p style="color:var(--ink-2);margin-top:5px;font-size:var(--text-base)">
             ${esc(p.biz)} has not completed Sporve's per-person background check yet.
             Booking stays open, but the verified badge appears only once the check clears.</p>
         </div></div></div>`}
       ${window.MOD_REVIEWS&&window.MOD_REVIEWS.reviewsFor?window.MOD_REVIEWS.reviewsFor(p.id):""}
       <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;
                   margin-top:34px;padding-top:22px;border-top:1px solid var(--rule);flex-wrap:wrap">
-        <p style="color:var(--muted);font-size:13.5px;max-width:46ch">
+        <p style="color:var(--muted);font-size:var(--text-sm);max-width:46ch">
           Something concerning about this program? Reports go to Sporve's safety team.
           If anyone is in immediate danger, contact local authorities first.</p>
         <button class="btn ghost sm" data-report="${p.id}">Report this program</button>
@@ -2238,17 +2373,17 @@ function detailHTML(id){
     </div>
     <aside class="bookcard">
       <div style="display:flex;align-items:baseline;gap:7px">
-        <span class="num" style="font-size:26px;font-weight:800;letter-spacing:-.03em">${money(p.price)}</span>
+        <span class="num" style="font-size:var(--text-xl);font-weight:700;letter-spacing:-.03em">${money(p.price)}</span>
         <span style="color:var(--muted)">${modelLabel(p.model)}</span>
       </div>
-      <p class="num" style="color:var(--muted);font-size:13.5px;margin-top:5px">
+      <p class="num" style="color:var(--muted);font-size:var(--text-sm);margin-top:5px">
         ${ICON.star} ${p.rating} · ${p.reviews} reviews · ${spots} ${spots===1?"spot":"spots"} left</p>
       <div style="margin:19px 0 8px" class="eyebrow">Choose a session</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${slots.map((s,i)=>`<button class="slot ${i===0?"on":""}" data-slot="${s.id}">
-          <span><span style="font-weight:650">${fmtDate(s.date)}</span>
-            <span class="num" style="color:var(--muted);display:block;font-size:13px">${s.startTime}</span></span>
-          <span class="num" style="font-weight:650">${money(p.price)}</span></button>`).join("")}
+          <span><span style="font-weight:700">${fmtDate(s.date)}</span>
+            <span class="num" style="color:var(--muted);display:block;font-size:var(--text-sm)">${s.startTime}</span></span>
+          <span class="num" style="font-weight:700">${money(p.price)}</span></button>`).join("")}
       </div>
       <div style="margin-top:18px">
         <div class="linerow"><span>${money(p.price)} × 1 session</span><span class="num">${money(p.price)}</span></div>
@@ -2258,9 +2393,9 @@ function detailHTML(id){
       ${spots>0
         ? `<button class="btn wide" data-book="${p.id}" style="margin-top:16px">Request to book</button>`
         : `<button class="btn wide" data-waitlist="${p.id}" style="margin-top:16px">Join the waitlist</button>
-           <p style="text-align:center;color:var(--warn);font-size:12.5px;margin-top:8px">This session is full</p>`}
+           <p style="text-align:center;color:var(--warn);font-size:var(--text-sm);margin-top:8px">This session is full</p>`}
       <button class="btn ghost wide" data-msg="${p.id}" style="margin-top:9px">Message ${esc(p.biz.split(" ")[0])}</button>
-      <p style="text-align:center;color:var(--faint);font-size:12.5px;margin-top:13px">
+      <p style="text-align:center;color:var(--faint);font-size:var(--text-sm);margin-top:13px">
         You won't be charged yet · ${esc(p.cancellationPolicy)} cancellation</p>
     </aside>
   </main>`;
@@ -2281,12 +2416,12 @@ function bookingsHTML(){
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:5px">
             <span class="pill good">${esc(b.status)}</span><span class="pill slate">${esc(b.paymentStatus)}</span></div>
           <h3>${esc(b.program)}</h3>
-          <p class="num" style="color:var(--muted);font-size:14px;margin-top:3px">
+          <p class="num" style="color:var(--muted);font-size:var(--text-base);margin-top:3px">
             ${esc(b.session)} · ${fmtDate(b.date)} · ${b.startTime}</p>
-          <p style="color:var(--muted);font-size:14px">Athlete: ${esc(b.athlete)} · Tier: ${esc(b.tier)}</p>
+          <p style="color:var(--muted);font-size:var(--text-base)">Athlete: ${esc(b.athlete)} · Tier: ${esc(b.tier)}</p>
         </div>
         <div style="text-align:right">
-          <div class="num" style="font-size:20px;font-weight:800;letter-spacing:-.03em">${money(b.price)}</div>
+          <div class="num" style="font-size:var(--text-lg);font-weight:700;letter-spacing:-.03em">${money(b.price)}</div>
           <button class="btn ghost sm" data-open="${b.programId}" style="margin-top:9px">View program</button>
         </div></div>`}).join("")}</div>`
     :`<div class="empty"><div class="big">📅</div><h3>No bookings yet</h3>
@@ -2323,8 +2458,8 @@ function profileHTML(){
         <div style="display:flex;gap:15px;align-items:center">
           <span class="avatar" style="width:58px;height:58px;font-size:19px">${esc(u.firstName[0]+u.lastName[0])}</span>
           <div><h3>${esc(u.firstName+" "+u.lastName)}</h3>
-            <p style="color:var(--muted);font-size:14px">${esc(u.email)}</p>
-            <p class="num" style="color:var(--muted);font-size:14px">${esc(u.phone||"—")}</p></div>
+            <p style="color:var(--muted);font-size:var(--text-base)">${esc(u.email)}</p>
+            <p class="num" style="color:var(--muted);font-size:var(--text-base)">${esc(u.phone||"—")}</p></div>
         </div>
         <div style="margin-top:18px"><div class="eyebrow">Preferred sports</div>
           <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
@@ -2336,32 +2471,32 @@ function profileHTML(){
         <div style="display:flex;flex-direction:column;gap:11px;margin-top:14px">
           ${S.athletes.map(a=>`<div style="display:flex;gap:12px;align-items:center;padding:11px;border:1px solid var(--rule);border-radius:var(--r-m)">
             <span class="avatar" style="width:40px;height:40px">${esc(a.firstName[0])}</span>
-            <div style="flex:1"><div style="font-weight:650">${esc(a.firstName+" "+(a.lastName||""))}</div>
-              <div class="num" style="color:var(--muted);font-size:13.5px">
+            <div style="flex:1"><div style="font-weight:700">${esc(a.firstName+" "+(a.lastName||""))}</div>
+              <div class="num" style="color:var(--muted);font-size:var(--text-sm)">
                 Age ${ageOf(a.dob)} · ${esc((a.preferredSports||[]).join(", ")||"No sport set")}${a.skillLevel?` · ${esc(a.skillLevel)}`:""}</div></div>
             ${a.parentConsent?`<span class="pill good" title="Parental consent on file">${ICON.check} Consent</span>`:""}
           </div>`).join("")}
         </div>
-        <p style="color:var(--faint);font-size:12.5px;margin-top:13px">
+        <p style="color:var(--faint);font-size:var(--text-sm);margin-top:13px">
           Athlete records are visible only to you. Coaches see a first name and age band on a booking — never date of birth, contact, or medical details.</p>
       </div>
       <div class="panel">
         <h3>Progress updates</h3>
         ${SEED.parentUpdates.map(pu=>`<div style="margin-top:13px">
           <div class="eyebrow">${fmtDate(pu.at.slice(0,10))} · ${esc(pu.signal)}</div>
-          <p style="margin-top:7px;color:var(--ink-2);font-size:14.5px">${esc(pu.body)}</p>
+          <p style="margin-top:7px;color:var(--ink-2);font-size:var(--text-base)">${esc(pu.body)}</p>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
             ${pu.skills.map(s=>`<span class="pill slate">${esc(s)}</span>`).join("")}</div>
-          <p style="margin-top:11px;font-size:14px;color:var(--muted)"><b>Practice:</b> ${esc(pu.practice[0])}</p>
-          <p style="margin-top:7px;font-size:14px;font-style:italic;color:var(--ink-2)">"${esc(pu.encouragement)}"</p>
+          <p style="margin-top:11px;font-size:var(--text-base);color:var(--muted)"><b>Practice:</b> ${esc(pu.practice[0])}</p>
+          <p style="margin-top:7px;font-size:var(--text-base);font-style:italic;color:var(--ink-2)">"${esc(pu.encouragement)}"</p>
         </div>`).join("")}
       </div>
       <div class="panel">
         <h3>Notifications</h3>
         <div style="display:flex;flex-direction:column;gap:10px;margin-top:13px">
           ${S.notifications.map(n=>`<div style="display:flex;gap:10px;padding:11px;border-radius:var(--r-m);background:${n.read?"transparent":"var(--slate-tint)"}">
-            <div><div style="font-weight:650;font-size:14.5px">${esc(n.title)}</div>
-              <div style="color:var(--muted);font-size:13.5px;margin-top:2px">${esc(n.message)}</div></div></div>`).join("")}
+            <div><div style="font-weight:700;font-size:var(--text-base)">${esc(n.title)}</div>
+              <div style="color:var(--muted);font-size:var(--text-sm);margin-top:2px">${esc(n.message)}</div></div></div>`).join("")}
         </div>
       </div>
     </div>
@@ -2384,16 +2519,16 @@ function messagesHTML(){
           <span class="avatar" style="width:42px;height:42px">${esc(c.with.split(" ").map(w=>w[0]).slice(0,2).join(""))}</span>
           <span style="flex:1;min-width:0">
             <span style="display:flex;justify-content:space-between;gap:8px">
-              <b style="font-size:14.5px">${esc(c.with)}</b>
-              <span class="num" style="color:var(--faint);font-size:12px">${c.at.slice(5,10)}</span></span>
-            <span style="display:block;color:var(--muted);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.last)}</span>
+              <b style="font-size:var(--text-base)">${esc(c.with)}</b>
+              <span class="num" style="color:var(--faint);font-size:var(--text-sm)">${c.at.slice(5,10)}</span></span>
+            <span style="display:block;color:var(--muted);font-size:var(--text-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.last)}</span>
           </span></button>`).join("")}
       </div>
       <div class="msg-thread">
         ${conv?`<div style="padding:15px 20px;border-bottom:1px solid var(--rule);display:flex;gap:11px;align-items:center">
           <span class="avatar">${esc(conv.with.split(" ").map(w=>w[0]).slice(0,2).join(""))}</span>
           <div><b>${esc(conv.with)}</b>
-            <div style="color:var(--muted);font-size:13px">${esc(PROGRAMS.find(p=>p.id===conv.programId)?.title||"")}</div></div>
+            <div style="color:var(--muted);font-size:var(--text-sm)">${esc(PROGRAMS.find(p=>p.id===conv.programId)?.title||"")}</div></div>
         </div>
         <div class="msg-scroll" id="msgscroll">
           ${msgs.map(m=>`<div class="bub ${m.me?"me":"them"}">${esc(m.text)}</div>`).join("")}
@@ -2443,9 +2578,9 @@ function mapHTML(){
           </div>`
         :`<div style="color:var(--muted);padding:22px 0">
             <h3 style="color:var(--ink)">Pick a pin</h3>
-            <p style="margin-top:7px;font-size:14.5px">Select any price marker to preview that program here.</p>
+            <p style="margin-top:7px;font-size:var(--text-base)">Select any price marker to preview that program here.</p>
             <div style="margin-top:20px;display:flex;flex-direction:column;gap:9px">
-              ${[...new Set(list.map(p=>p.sport))].slice(0,8).map(s=>`<div style="display:flex;align-items:center;gap:9px;font-size:13.5px">
+              ${[...new Set(list.map(p=>p.sport))].slice(0,8).map(s=>`<div style="display:flex;align-items:center;gap:9px;font-size:var(--text-sm)">
                 <i style="width:9px;height:9px;border-radius:3px;background:${sportColor(s)};flex:0 0 auto"></i>${esc(s)}</div>`).join("")}
             </div></div>`}
       </aside>
@@ -2470,8 +2605,8 @@ function assistantHTML(){
                    <img src="${p.img}" alt="">
                    <span class="pi">
                      <b>${esc(p.title)}</b>
-                     <span class="num" style="color:var(--muted);font-size:13px">${esc(p.biz)} · ${money(p.price)} ${modelLabel(p.model)}</span>
-                     <span class="num" style="font-size:12.5px;color:var(--muted)">${ICON.star} ${p.rating} · ages ${p.minAge}–${p.maxAge}</span>
+                     <span class="num" style="color:var(--muted);font-size:var(--text-sm)">${esc(p.biz)} · ${money(p.price)} ${modelLabel(p.model)}</span>
+                     <span class="num" style="font-size:var(--text-sm);color:var(--muted)">${ICON.star} ${p.rating} · ages ${p.minAge}–${p.maxAge}</span>
                      ${p.verified?`<span class="pill gold" style="width:fit-content">${ICON.shield} Background-checked</span>`:""}
                    </span></button>`}).join("")}</div>`:""}
              </div>`).join("")
@@ -2495,7 +2630,7 @@ function assistantHTML(){
         <button class="btn" type="submit" aria-label="Send">${ICON.send}</button>
       </form>
     </div>
-    <p style="color:var(--faint);font-size:12.5px;text-align:center;margin:-42px 0 60px">
+    <p style="color:var(--faint);font-size:var(--text-sm);text-align:center;margin:-42px 0 60px">
       Suggestions are matched from Sporve's live catalogue — never invented.</p>
   </main>`;
 }
@@ -2550,14 +2685,14 @@ function scheduleHTML(){
         <div style="display:flex;align-items:center;gap:13px;margin-bottom:12px">
           <h3 class="num">${fmtDate(d)}</h3>
           <span style="flex:1;height:1px;background:var(--rule)"></span>
-          <span class="num" style="color:var(--faint);font-size:13px">${byDate[d].length} session${byDate[d].length>1?"s":""}</span></div>
+          <span class="num" style="color:var(--faint);font-size:var(--text-sm)">${byDate[d].length} session${byDate[d].length>1?"s":""}</span></div>
         <div style="display:flex;flex-direction:column;gap:9px">
         ${byDate[d].map(b=>{const p=PROGRAMS.find(x=>x.id===b.programId);return `<div class="slot">
           <div style="display:flex;gap:13px;align-items:center;min-width:0">
             <span style="width:4px;align-self:stretch;border-radius:3px;background:${p?sportColor(p.sport):"var(--slate)"};flex:0 0 auto"></span>
             <div style="min-width:0">
-              <div style="font-weight:650">${esc(b.program)}</div>
-              <div class="num" style="color:var(--muted);font-size:13.5px">
+              <div style="font-weight:700">${esc(b.program)}</div>
+              <div class="num" style="color:var(--muted);font-size:var(--text-sm)">
                 ${b.startTime} · ${esc(b.athlete)} · ${esc(b.tier)}</div></div></div>
           <span class="pill good">${esc(b.status)}</span></div>`}).join("")}
         </div></div>`).join("")}</div>`
@@ -2759,7 +2894,7 @@ function dashboardHTML(){
       ${window.MOD_INSIGHTS&&window.MOD_INSIGHTS.demandCard
         ? window.MOD_INSIGHTS.demandCard()
         : `<div class="panel"><h3>Demand near you</h3>
-            <p style="color:var(--muted);font-size:14.5px;margin-top:8px">
+            <p style="color:var(--muted);font-size:var(--text-base);margin-top:8px">
               Search demand for your sports appears here once Insights is enabled.</p></div>`}
     </section>
 
@@ -2767,8 +2902,8 @@ function dashboardHTML(){
       <div class="panel">
         <h3>Earnings</h3>
         ${(()=>{const g=S.bookings.filter(b=>S.listings.includes(b.programId)).reduce((s,b)=>s+b.price,0),f=Math.round(g*0.09);
-          return `<div class="num" style="font-size:30px;font-weight:800;letter-spacing:-.03em;margin-top:6px">${money(g-f)}</div>
-          <div class="num" style="color:var(--muted);font-size:13.5px">${money(g)} gross · ${money(f)} platform fee</div>
+          return `<div class="num" style="font-size:var(--text-2xl);font-weight:700;letter-spacing:-.03em;margin-top:6px">${money(g-f)}</div>
+          <div class="num" style="color:var(--muted);font-size:var(--text-sm)">${money(g)} gross · ${money(f)} platform fee</div>
           <div class="payflow">
             ${[["Pending",money(0)],["In transit",money(0)],["Paid out",money(g-f)]]
               .map(([k,v],i)=>`<div class="payst ${i===2?"on":""}"><span class="eyebrow">${k}</span>
@@ -2785,13 +2920,13 @@ function dashboardHTML(){
             <p>${esc((r.body||"").slice(0,110))}${(r.body||"").length>110?"…":""}</p>
             <button class="tlink" data-ctab="reviews">Reply →</button>
           </div>`).join("")
-          :`<p style="color:var(--muted);font-size:14.5px;margin-top:8px">
+          :`<p style="color:var(--muted);font-size:var(--text-base);margin-top:8px">
              No reviews yet. They unlock after a family completes a session.</p>`;})()}
       </div>
       ${window.MOD_INSIGHTS&&window.MOD_INSIGHTS.watchlistCard
         ? window.MOD_INSIGHTS.watchlistCard()
         : `<div class="panel"><h3>Client watchlist</h3>
-            <p style="color:var(--muted);font-size:14.5px;margin-top:8px">
+            <p style="color:var(--muted);font-size:var(--text-base);margin-top:8px">
               Families whose rebooking pattern breaks will surface here.</p></div>`}
     </section>
 
@@ -2803,11 +2938,11 @@ function dashboardHTML(){
           <button class="btn ghost sm" data-copy="sporve.com/apex-performance">Copy</button>
         </div>
         <div class="qrwrap">${qrHTML("sporve.com/apex-performance")}
-          <p style="color:var(--muted);font-size:13px">Print it and tape it to the gym wall.</p></div>
+          <p style="color:var(--muted);font-size:var(--text-sm)">Print it and tape it to the gym wall.</p></div>
       </div>
       <div class="panel">
         <h3>Bring your existing clients</h3>
-        <p style="color:var(--muted);font-size:14.5px;margin-top:7px">
+        <p style="color:var(--muted);font-size:var(--text-base);margin-top:7px">
           Already coaching families off-platform? Invite them and their bookings, payments,
           and session history run through Sporve from now on.</p>
         <button class="btn sm" data-import="1" style="margin-top:14px">Import clients</button>
@@ -2841,7 +2976,7 @@ function profileStrengthHTML(){
     <div>
       <div class="eyebrow">Next best action</div>
       <b style="display:block;margin-top:4px">${esc(next?next[0]:media.next)}</b>
-      <p style="color:var(--muted);font-size:13.5px;margin-top:4px">
+      <p style="color:var(--muted);font-size:var(--text-sm);margin-top:4px">
         ${next?"Complete this to appear higher in family searches.":"Your profile is complete."}</p>
       ${next?`<button class="tlink" data-ctab="${next[0]==="Photos & video"?"media":next[0]==="Availability set"?"slots":"listings"}">Fix it →</button>`:""}
     </div>
@@ -2914,7 +3049,7 @@ function coachBody(t){
     </div>
     <div class="panel" style="margin-top:22px">
       <h3>Trainer vetting</h3>
-      <p style="color:var(--muted);font-size:14px;margin-top:4px">
+      <p style="color:var(--muted);font-size:var(--text-base);margin-top:4px">
         Every trainer clears their own background check. Your business being approved never vouches for an individual.</p>
       <div style="display:flex;flex-direction:column;gap:13px;margin-top:17px">
         ${S.trainers.map(trainerRow).join("")}
@@ -2924,8 +3059,8 @@ function coachBody(t){
       <h3>Upcoming sessions</h3>
       <div style="display:flex;flex-direction:column;gap:9px;margin-top:14px">
         ${mine.slice(0,3).flatMap(p=>slotsFor(p.id).slice(0,1).map(s=>`<div class="slot">
-          <div><div style="font-weight:650">${esc(p.title)}</div>
-            <div class="num" style="color:var(--muted);font-size:13.5px">${fmtDate(s.date)} · ${s.startTime}</div></div>
+          <div><div style="font-weight:700">${esc(p.title)}</div>
+            <div class="num" style="color:var(--muted);font-size:var(--text-sm)">${fmtDate(s.date)} · ${s.startTime}</div></div>
           <span class="num pill slate">${p.enrolled}/${p.cap}</span></div>`)).join("")}
       </div>
     </div>`;
@@ -2935,9 +3070,9 @@ function coachBody(t){
     <div class="tblwrap panel" style="padding:18px"><table class="tbl">
       <thead><tr><th>Program</th><th>Sport</th><th>Price</th><th>Enrolled</th><th>Rating</th><th>Status</th></tr></thead>
       <tbody>${mine.map(p=>`<tr>
-        <td><b>${esc(p.title)}</b><div class="num" style="color:var(--muted);font-size:13px">Ages ${p.minAge}–${p.maxAge}</div></td>
+        <td><b>${esc(p.title)}</b><div class="num" style="color:var(--muted);font-size:var(--text-sm)">Ages ${p.minAge}–${p.maxAge}</div></td>
         <td><span class="pill" style="background:${sportColor(p.sport)}1A;color:${sportColor(p.sport)}">${esc(p.sport)}</span></td>
-        <td class="num">${money(p.price)}<div style="color:var(--muted);font-size:12.5px">${modelLabel(p.model)}</div></td>
+        <td class="num">${money(p.price)}<div style="color:var(--muted);font-size:var(--text-sm)">${modelLabel(p.model)}</div></td>
         <td class="num">${p.enrolled}/${p.cap}</td>
         <td class="num">${ICON.star} ${p.rating}</td>
         <td><span class="pill good">Published</span></td></tr>`).join("")}
@@ -2948,8 +3083,8 @@ function coachBody(t){
     return `<div class="sec-head" style="margin-top:18px"><h1>Schedule</h1></div>
       <div style="display:flex;flex-direction:column;gap:9px">
       ${all.map(s=>`<div class="slot"><div>
-        <div style="font-weight:650">${esc(s.p.title)}</div>
-        <div class="num" style="color:var(--muted);font-size:13.5px">${fmtDate(s.date)} · ${s.startTime}–${s.endTime} · ${esc(s.address)}</div></div>
+        <div style="font-weight:700">${esc(s.p.title)}</div>
+        <div class="num" style="color:var(--muted);font-size:var(--text-sm)">${fmtDate(s.date)} · ${s.startTime}–${s.endTime} · ${esc(s.address)}</div></div>
         <span class="num pill slate">${s.p.enrolled}/${s.p.cap} enrolled</span></div>`).join("")}</div>`;
   }
   if(t==="roster") return `<div class="sec-head" style="margin-top:18px"><h1>Roster</h1>
@@ -2957,7 +3092,7 @@ function coachBody(t){
     <div class="panel"><h3>Trainers</h3>
       <div style="display:flex;flex-direction:column;gap:13px;margin-top:15px">${S.trainers.map(trainerRow).join("")}</div></div>
     <div class="panel" style="margin-top:16px"><h3>${esc(SEED.teams[0].name)}</h3>
-      <p style="color:var(--muted);font-size:14px">${esc(SEED.teams[0].sport)} · ${SEED.teams[0].roster.length} athlete</p>
+      <p style="color:var(--muted);font-size:var(--text-base)">${esc(SEED.teams[0].sport)} · ${SEED.teams[0].roster.length} athlete</p>
       <div class="tblwrap" style="margin-top:14px"><table class="tbl">
         <thead><tr><th>Athlete</th><th>Jersey</th><th>Available</th><th>Paid</th></tr></thead>
         <tbody>${SEED.teams[0].roster.map(r=>`<tr>
@@ -3080,7 +3215,7 @@ function coachBody(t){
           ${pp.sports.map(s=>`<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</span>`).join("")}</div></div>
       <div class="panel" style="background:var(--raise);border:0;margin-top:6px">
         <div class="eyebrow">Server-controlled</div>
-        <p style="font-size:14px;color:var(--ink-2);margin-top:7px">
+        <p style="font-size:var(--text-base);color:var(--ink-2);margin-top:7px">
           Verification status, background-check status, and payout fields are set by Sporve — a business can never mark itself verified.</p>
         ${/* derived, not asserted — these were hardcoded literals that would
              read "Verified / cleared / connected" for a brand-new coach, and
@@ -3109,7 +3244,7 @@ function trainerRow(m){
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       <span class="avatar" style="width:38px;height:38px">${esc(m.name.split(" ").map(w=>w[0]).join(""))}</span>
       <div style="flex:1;min-width:150px"><b>${esc(m.name)}</b>
-        <div class="num" style="color:var(--muted);font-size:13.5px">${esc(m.specialty)} ·
+        <div class="num" style="color:var(--muted);font-size:var(--text-sm)">${esc(m.specialty)} ·
           ${m.commissionType==="percent"?`${m.commissionValue}% commission`:`$${m.commissionValue} / session`}</div></div>
       <span class="pill ${pill[0]}">${esc(pill[1])}</span>
     </div>
@@ -3190,7 +3325,7 @@ function modalHTML(){
       <div class="field"><label>Password</label><input name="password" type="password" placeholder="Min. 8 characters" required></div>
       <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin:6px 0 4px">
         <input type="checkbox" name="privacy" required style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate)">
-        <span style="font-size:13px;color:var(--muted)">I have read Sporve's <b style="color:var(--slate)">Privacy Policy</b>.</span></label>
+        <span style="font-size:var(--text-sm);color:var(--muted)">I have read Sporve's <b style="color:var(--slate)">Privacy Policy</b>.</span></label>
       <div id="signupErr" class="err hide" style="margin:8px 0"></div>
       <button class="btn wide" type="submit" style="margin-top:12px">Continue →</button>
     </form>`);
@@ -3202,7 +3337,7 @@ function modalHTML(){
       <div id="loginErr" class="err hide" style="margin:8px 0"></div>
       <button class="btn wide" type="submit">Log in</button>
       <button class="btn ghost wide" type="button" data-onboard="1" style="margin-top:9px">Create an account</button>
-      <button type="button" data-modal="forgot" style="width:100%;text-align:center;margin-top:14px;font-size:13.5px;font-weight:600;color:var(--slate)">Forgot your password?</button>
+      <button type="button" data-modal="forgot" style="width:100%;text-align:center;margin-top:14px;font-size:var(--text-sm);font-weight:600;color:var(--slate)">Forgot your password?</button>
     </form>`);
 
   if(m.type==="addchild") return wrap("Add a child",`
@@ -3218,12 +3353,12 @@ function modalHTML(){
       <div class="field"><label>Skill level (optional)</label>
         <select name="skill"><option value="">Not sure yet</option>
           ${["beginner","developing","intermediate","advanced"].map(l=>`<option value="${l}">${l[0].toUpperCase()+l.slice(1)}</option>`).join("")}</select></div>
-      <p style="font-size:15px;line-height:1.47;color:var(--ink-2);margin:4px 0 16px">
+      <p style="font-size:var(--text-base);line-height:1.47;color:var(--ink-2);margin:4px 0 16px">
         I'm this child's parent or legal guardian and I consent to Sporve collecting this
         information to match and book training. You can download or delete it anytime from Profile.</p>
       <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin-bottom:6px">
         <input type="checkbox" name="consent" style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate)">
-        <span style="font-size:13.5px;font-weight:650">I confirm I am the parent or legal guardian.</span></label>
+        <span style="font-size:var(--text-sm);font-weight:700">I confirm I am the parent or legal guardian.</span></label>
       <div id="childErr" class="err hide" style="margin:8px 0"></div>
       <button class="btn wide" type="submit" style="margin-top:10px">Add child</button>
     </form>`);
@@ -3236,7 +3371,7 @@ function modalHTML(){
       <div style="display:flex;gap:14px;align-items:center;padding-bottom:17px;border-bottom:1px solid var(--rule)">
         <img src="${p.img}" alt="" style="width:70px;height:70px;border-radius:var(--r-m);object-fit:cover">
         <div><b>${esc(p.title)}</b>
-          <div style="color:var(--muted);font-size:13.5px">${esc(p.biz)} · ${esc(p.sport)}</div>
+          <div style="color:var(--muted);font-size:var(--text-sm)">${esc(p.biz)} · ${esc(p.sport)}</div>
           ${p.verified?`<span class="pill gold" style="margin-top:5px">${ICON.shield} Background-checked</span>`:""}</div>
       </div>
       <form id="bookForm" style="margin-top:18px">
@@ -3254,7 +3389,7 @@ function modalHTML(){
           <div class="linerow total"><span>Total</span><span class="num">${money(p.price+fee)}</span></div>
         </div>
         <button class="btn wide" type="submit" style="margin-top:14px">Confirm booking</button>
-        <p style="text-align:center;color:var(--faint);font-size:12.5px;margin-top:11px">
+        <p style="text-align:center;color:var(--faint);font-size:var(--text-sm);margin-top:11px">
           ${esc(p.cancellationPolicy)} cancellation · Parental consent is on file for this athlete</p>
       </form>`);
   }
@@ -3295,7 +3430,7 @@ function modalHTML(){
         <div class="field"><label>Max age</label><input name="maxAge" type="number" value="14" required></div>
         <div class="field"><label>Capacity</label><input name="cap" type="number" value="12" required></div>
       </div>
-      <p style="font-size:13px;color:var(--muted)">New listings publish as <b>draft</b> until your background check clears.</p>
+      <p style="font-size:var(--text-sm);color:var(--muted)">New listings publish as <b>draft</b> until your background check clears.</p>
       <button class="btn wide" type="submit" style="margin-top:14px">Create listing</button>
     </form>`);
 
@@ -3309,7 +3444,7 @@ function modalHTML(){
         <div class="field"><label>Value</label><input name="cvalue" type="number" value="15" required></div>
       </div>
       <div class="panel" style="background:var(--warn-tint);border:0">
-        <p style="font-size:14px;color:var(--ink-2)">
+        <p style="font-size:var(--text-base);color:var(--ink-2)">
           The invited trainer starts with <b>no background check</b>. They become bookable only after
           Sporve clears their own check — your business can't verify them.</p></div>
       <button class="btn wide" type="submit" style="margin-top:16px">Send invite</button>
@@ -3365,7 +3500,7 @@ function modalHTML(){
         ${sports.map(s=>`<button class="sportpick ${S.onboardSports.includes(s)?"on":""}" data-pick="${esc(s)}"
           style="--sc:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</button>`).join("")}
       </div>
-      <p class="num" style="color:var(--faint);font-size:12.5px;margin-top:12px">${S.onboardSports.length} selected</p>
+      <p class="num" style="color:var(--faint);font-size:var(--text-sm);margin-top:12px">${S.onboardSports.length} selected</p>
       <button class="btn wide" data-onbnext="1" style="margin-top:14px" ${S.onboardSports.length?"":"disabled"}>Continue</button>
       <button class="btn ghost wide" data-onbback="1" style="margin-top:9px">Back</button>`);
     return wrap("Create your account",`
@@ -3381,7 +3516,7 @@ function modalHTML(){
         <div class="field"><label>Password</label><input name="password" type="password" placeholder="Min. 8 characters" required></div>
         <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin:6px 0 4px">
           <input type="checkbox" name="privacy" required style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate)">
-          <span style="font-size:13px;color:var(--muted)">I have read Sporve's <b style="color:var(--slate)">Privacy Policy</b>.</span></label>
+          <span style="font-size:var(--text-sm);color:var(--muted)">I have read Sporve's <b style="color:var(--slate)">Privacy Policy</b>.</span></label>
         <div id="signupErr" class="err hide" style="margin:8px 0"></div>
         <button class="btn wide" type="submit" style="margin-top:12px">Create account →</button>
         <button class="btn ghost wide" type="button" data-onbback="1" style="margin-top:9px">Back</button>
@@ -3400,7 +3535,7 @@ Marcus Chen, marcus@example.com"></textarea></div>
         <textarea name="note" rows="3">Hi — I've moved my scheduling and payments to Sporve. Same sessions, same me; you'll just book and pay in one place from now on.</textarea></div>
       <div id="importErr" class="err hide" style="margin:8px 0"></div>
       <button class="btn wide" type="submit">Send invites</button>
-      <p style="text-align:center;color:var(--faint);font-size:12.5px;margin-top:11px">
+      <p style="text-align:center;color:var(--faint);font-size:var(--text-sm);margin-top:11px">
         Nothing is sent until you press this. Families are never charged to accept.</p>
     </form>`);
 
@@ -3414,15 +3549,15 @@ Marcus Chen, marcus@example.com"></textarea></div>
         <div style="padding:15px">
           <div style="display:flex;justify-content:space-between;gap:10px">
             <b>${esc(p.biz)}</b><span class="num">${ICON.star} ${p.rating}</span></div>
-          <div style="color:var(--muted);font-size:14px;margin-top:3px">${esc(p.title)}</div>
-          <div class="num" style="color:var(--muted);font-size:13.5px">Ages ${p.minAge}–${p.maxAge} · ${esc(p.skill)}</div>
+          <div style="color:var(--muted);font-size:var(--text-base);margin-top:3px">${esc(p.title)}</div>
+          <div class="num" style="color:var(--muted);font-size:var(--text-sm)">Ages ${p.minAge}–${p.maxAge} · ${esc(p.skill)}</div>
           <span class="pill gold" style="margin-top:8px">${ICON.shield} Background-checked</span>
-          <div class="num" style="font-weight:750;margin-top:9px">${money(p.price)} ${modelLabel(p.model)}</div>
+          <div class="num" style="font-weight:700;margin-top:9px">${money(p.price)} ${modelLabel(p.model)}</div>
         </div>
       </div>
       <div class="panel" style="background:var(--raise);border:0;margin-top:16px">
         <div class="eyebrow">What parents notice first</div>
-        <p style="font-size:14px;color:var(--ink-2);margin-top:7px">
+        <p style="font-size:var(--text-base);color:var(--ink-2);margin-top:7px">
           Your photo, the trust badge, and your price — in that order. Listings with more
           photos get more requests, so that's usually the fastest thing to improve.</p>
         <button class="btn ghost sm" data-ctab="media" style="margin-top:11px">Open media library</button>
@@ -3456,7 +3591,7 @@ Marcus Chen, marcus@example.com"></textarea></div>
       ${u?`<div style="display:flex;gap:13px;align-items:center;padding-bottom:16px;border-bottom:1px solid var(--rule)">
         <span class="avatar" style="width:46px;height:46px;font-size:16px">${esc(u.firstName[0]+u.lastName[0])}</span>
         <div><b>${esc(u.firstName+" "+u.lastName)}</b>
-          <div style="color:var(--muted);font-size:13.5px">${esc(u.email)}</div></div></div>
+          <div style="color:var(--muted);font-size:var(--text-sm)">${esc(u.email)}</div></div></div>
       <div style="display:flex;flex-direction:column;gap:2px;margin-top:12px">
         ${[["profile","Profile"],["bookings","Bookings"],["schedule","Schedule"],["messages","Messages"],
            ["saved","Saved"],["timeline","Athlete progress"],["goals","Goals & plan"],
@@ -3550,18 +3685,18 @@ function infoHTML(key){
       ${d.sections.map(s=>`<section>
         <h3>${esc(s.h)}</h3>
         <p style="color:var(--ink-2);margin-top:8px;line-height:1.62">${
-          esc(s.b).replace(/support@sporve\.com/,'<a href="mailto:support@sporve.com" style="color:var(--slate);font-weight:650">support@sporve.com</a>')
+          esc(s.b).replace(/support@sporve\.com/,'<a href="mailto:support@sporve.com" style="color:var(--slate);font-weight:700">support@sporve.com</a>')
         }</p></section>`).join("")}
     </div>
     <div class="panel" style="max-width:68ch;background:var(--raise);border:0">
       <div class="eyebrow">Contact</div>
       <div style="display:flex;flex-wrap:wrap;gap:22px;margin-top:11px">
-        <div><div style="font-weight:650">Support</div>
-          <a href="mailto:support@sporve.com" style="color:var(--slate);font-size:14.5px">support@sporve.com</a></div>
-        <div><div style="font-weight:650">Safety team</div>
-          <a href="mailto:safety@sporve.com" style="color:var(--slate);font-size:14.5px">safety@sporve.com</a></div>
-        <div><div style="font-weight:650">Location</div>
-          <div style="color:var(--muted);font-size:14.5px">Miami, FL</div></div>
+        <div><div style="font-weight:700">Support</div>
+          <a href="mailto:support@sporve.com" style="color:var(--slate);font-size:var(--text-base)">support@sporve.com</a></div>
+        <div><div style="font-weight:700">Safety team</div>
+          <a href="mailto:safety@sporve.com" style="color:var(--slate);font-size:var(--text-base)">safety@sporve.com</a></div>
+        <div><div style="font-weight:700">Location</div>
+          <div style="color:var(--muted);font-size:var(--text-base)">Miami, FL</div></div>
       </div>
     </div>
   </main>`;
@@ -3587,14 +3722,14 @@ function notifSettingsHTML(){
     <div class="panel" style="max-width:760px;padding:0">
       <div class="notifhead"><span>Notification</span><span>Email</span><span>Text</span><span>Push</span></div>
       ${rows.map(([k,t,d])=>`<div class="notifrow">
-        <div><div style="font-weight:650">${t}</div>
-          <div style="color:var(--muted);font-size:13.5px">${d}</div></div>
+        <div><div style="font-weight:700">${t}</div>
+          <div style="color:var(--muted);font-size:var(--text-sm)">${d}</div></div>
         ${["email","sms","push"].map(ch=>`<label class="sw" aria-label="${t} via ${ch}">
           <input type="checkbox" data-notif="${k}.${ch}" ${S.notifPrefs[k]&&S.notifPrefs[k][ch]?"checked":""}>
           <span class="track2"><span class="knob"></span></span></label>`).join("")}
       </div>`).join("")}
     </div>
-    <p style="color:var(--faint);font-size:12.5px;margin-top:14px;max-width:760px">
+    <p style="color:var(--faint);font-size:var(--text-sm);margin-top:14px;max-width:760px">
       Safety and account-security notices are sent regardless of these settings.</p>
   </main>`;
 }

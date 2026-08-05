@@ -422,35 +422,35 @@ function sendCheckin(row, text){
 /* ═══════════════════ CSS ═══════════════════ */
 const CSS = `
 .in-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:18px 0 6px;flex-wrap:wrap}
-.in-lede{color:var(--muted);font-size:14px;max-width:66ch;margin-top:5px}
+.in-lede{color:var(--muted);font-size:var(--text-base);max-width:66ch;margin-top:5px}
 .in-banner{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--rule-strong);
   border-radius:var(--r-m);padding:13px 15px;background:var(--raise);margin-top:14px}
-.in-banner p{font-size:13.5px;color:var(--ink-2);line-height:1.5;max-width:78ch}
+.in-banner p{font-size:var(--text-sm);color:var(--ink-2);line-height:1.5;max-width:78ch}
 .in-tags{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
-.in-note{font-size:12.5px;color:var(--faint);margin-top:10px;line-height:1.5;max-width:78ch}
+.in-note{font-size:var(--text-sm);color:var(--faint);margin-top:10px;line-height:1.5;max-width:78ch}
 .in-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px}
 .in-card{border:1px solid var(--rule);border-radius:var(--r-l);padding:20px;background:var(--paper)}
 /* wrap + don't shrink the pill: without these the "Sample data" badge was
    squeezed past the card's padding at narrow widths (.in-head already wraps) */
 .in-cardhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .in-cardhead>.pill{flex:0 0 auto}
-.in-big{font-size:15.5px;color:var(--ink);line-height:1.5;letter-spacing:-.012em}
-.in-big b{font-weight:750}
-.in-sub{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}
+.in-big{font-size:var(--text-base);color:var(--ink);line-height:1.5;letter-spacing:-.012em}
+.in-big b{font-weight:700}
+.in-sub{font-size:var(--text-sm);color:var(--muted);margin-top:4px;line-height:1.5}
 
 .in-funnel{margin-top:6px}
 .in-frow{display:grid;grid-template-columns:minmax(132px,1.1fr) minmax(0,3fr) minmax(96px,auto);
   gap:14px;align-items:center;padding:13px 0;border-top:1px solid var(--rule)}
 .in-frow:first-child{border-top:0}
-.in-fname{font-size:14px;font-weight:650;color:var(--ink);letter-spacing:-.01em}
-.in-fnote{font-size:12px;color:var(--faint);margin-top:2px;line-height:1.45}
+.in-fname{font-size:var(--text-base);font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.in-fnote{font-size:var(--text-sm);color:var(--faint);margin-top:2px;line-height:1.45}
 .in-ftrack{position:relative;height:24px;border-radius:var(--r-s);background:var(--raise2)}
 .in-ffill{height:100%;min-width:3px;border-radius:var(--r-s);background:var(--slate)}
-.in-fnum{text-align:right;font-size:16px;font-weight:750;color:var(--ink);letter-spacing:-.02em}
-.in-fconv{font-size:12px;color:var(--muted);margin-top:2px;text-align:right}
+.in-fnum{text-align:right;font-size:var(--text-base);font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.in-fconv{font-size:var(--text-sm);color:var(--muted);margin-top:2px;text-align:right}
 .in-step{display:grid;grid-template-columns:minmax(132px,1.1fr) minmax(0,3fr) minmax(96px,auto);
   gap:14px;align-items:center;padding:0 0 2px}
-.in-steptxt{grid-column:2/4;font-size:12.5px;color:var(--faint);display:flex;align-items:center;gap:8px}
+.in-steptxt{grid-column:2/4;font-size:var(--text-sm);color:var(--faint);display:flex;align-items:center;gap:8px}
 .in-steptxt i{display:block;width:1px;height:12px;background:var(--rule-strong);margin-left:6px}
 
 .in-plist{display:flex;flex-direction:column;gap:14px;margin-top:4px}
@@ -461,16 +461,16 @@ const CSS = `
 .in-pmed{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--rule-strong)}
 .in-pyou{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:999px;
   background:var(--slate);border:2.5px solid var(--paper)}
-.in-pends{display:flex;justify-content:space-between;font-size:12px;color:var(--faint)}
-.in-pread{font-size:13px;color:var(--ink-2);margin-top:7px;line-height:1.5}
+.in-pends{display:flex;justify-content:space-between;font-size:var(--text-sm);color:var(--faint)}
+.in-pread{font-size:var(--text-sm);color:var(--ink-2);margin-top:7px;line-height:1.5}
 
 .in-warns{display:flex;flex-direction:column;gap:10px;margin-top:6px}
 .in-warn{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--rule);
   border-radius:var(--r-m);padding:13px 15px}
 .in-warn.in-lv-warn{border-color:var(--warn);background:var(--warn-tint)}
 .in-warn.in-lv-good{border-color:var(--good);background:var(--good-tint)}
-.in-warn p{font-size:13.5px;color:var(--ink-2);line-height:1.5}
-.in-warn .in-act{font-size:12.5px;font-weight:700;color:var(--ink);margin-top:5px}
+.in-warn p{font-size:var(--text-sm);color:var(--ink-2);line-height:1.5}
+.in-warn .in-act{font-size:var(--text-sm);font-weight:700;color:var(--ink);margin-top:5px}
 .in-dot{width:9px;height:9px;border-radius:999px;flex:0 0 auto;margin-top:6px}
 .in-dot.in-lv-warn{background:var(--warn)}
 .in-dot.in-lv-good{background:var(--good)}
@@ -479,10 +479,10 @@ const CSS = `
 .in-wlrow{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;
   border-top:1px solid var(--rule);padding-top:12px;flex-wrap:wrap}
 .in-wlrow:first-child{border-top:0;padding-top:0}
-.in-who{font-size:14.5px;font-weight:700;letter-spacing:-.015em}
+.in-who{font-size:var(--text-base);font-weight:700;letter-spacing:-.015em}
 .in-swatch{display:inline-block;width:8px;height:8px;border-radius:2px;vertical-align:1px;margin-right:7px}
-.in-draft{width:100%;font-family:inherit;font-size:14px;line-height:1.55}
-.in-preface{background:var(--raise);border-radius:var(--r-m);padding:13px 15px;font-size:13.5px;
+.in-draft{width:100%;font-family:inherit;font-size:var(--text-base);line-height:1.55}
+.in-preface{background:var(--raise);border-radius:var(--r-m);padding:13px 15px;font-size:var(--text-sm);
   color:var(--ink-2);line-height:1.5;margin-bottom:16px}
 @media(max-width:1020px){.in-two{grid-template-columns:1fr}}
 @media(max-width:620px){
@@ -528,12 +528,12 @@ function funnelHTML(){
       <span class="num">${esc(pct1(last.n, top))}</span> of appearances became a paid booking.</p>
 
     <div class="tblwrap" style="margin-top:14px"><table class="tbl">
-      <caption style="text-align:left;font-size:12.5px;color:var(--faint);padding-bottom:8px">
+      <caption style="text-align:left;font-size:var(--text-sm);color:var(--faint);padding-bottom:8px">
         The same figures as numbers, for reading without the bars.</caption>
       <thead><tr><th>Stage</th><th>Count</th><th>Of previous stage</th><th>Of ${esc(st[0].label.toLowerCase())}</th></tr></thead>
       <tbody>${st.map((s, i) => `<tr>
         <td><b style="font-weight:600">${esc(s.label)}</b>
-          <div style="color:var(--muted);font-size:12.5px">${esc(s.note)}</div></td>
+          <div style="color:var(--muted);font-size:var(--text-sm)">${esc(s.note)}</div></td>
         <td class="num">${esc(n0(s.n))}</td>
         <td class="num">${i === 0 ? "—" : esc(pct1(s.n, st[i - 1].n))}</td>
         <td class="num">${esc(pct1(s.n, top))}</td>
@@ -559,7 +559,7 @@ function priceRowHTML(pp){
     <div class="in-phead">
       <div><b style="font-weight:700">${sportDot(p.sport)}${esc(p.title)}</b>
         <div class="in-sub">${esc(p.sport)} · ${esc(modelLabel(p.model))}</div></div>
-      <div class="num" style="font-size:16px;font-weight:750">${esc(money(p.price))}</div>
+      <div class="num" style="font-size:var(--text-base);font-weight:700">${esc(money(p.price))}</div>
     </div>
     ${bar}
     <p class="in-pread">${esc(pp.read)}</p>
@@ -682,8 +682,8 @@ function insightsView(){
 
   <div class="in-banner">
     <div style="min-width:0">
-      <div class="in-tags">${SAMPLE_PILL}<span style="font-size:13px;color:var(--muted)">funnel and search volume</span>
-        ${DERIVED_PILL}<span style="font-size:13px;color:var(--muted)">pricing, availability, cadence</span></div>
+      <div class="in-tags">${SAMPLE_PILL}<span style="font-size:var(--text-sm);color:var(--muted)">funnel and search volume</span>
+        ${DERIVED_PILL}<span style="font-size:var(--text-sm);color:var(--muted)">pricing, availability, cadence</span></div>
       <p>This account has not launched, so no search impressions, profile views, or booking requests have
         been recorded for it. The funnel below is a seeded illustration of what those stages look like for
         a comparable Miami coach — it is not a measurement of your account and will be replaced by real
@@ -763,21 +763,21 @@ function insightsView(){
       const p = prog(r.programId);
       return `<tr>
         <td><b>${esc(r.athlete)}</b>
-          <div style="color:var(--muted);font-size:12.5px">${esc(r.why)}</div></td>
+          <div style="color:var(--muted);font-size:var(--text-sm)">${esc(r.why)}</div></td>
         <td>${esc(r.family)}</td>
         <td>${p ? `${sportDot(p.sport)}<b style="font-weight:600">${esc(p.title)}</b>` : esc(r.programId)}</td>
         <td class="num">${esc(fmtDate(r.lastSessionDate))}</td>
         <td class="num">${r.typicalGapDays ? esc(r.typicalGapDays + " days") : "—"}
-          ${r.typicalGapDays ? `<div style="color:var(--muted);font-size:12.5px">${esc(cadenceShort(r.typicalGapDays))}</div>` : ""}</td>
+          ${r.typicalGapDays ? `<div style="color:var(--muted);font-size:var(--text-sm)">${esc(cadenceShort(r.typicalGapDays))}</div>` : ""}</td>
         <td class="num">${esc(String(r.gap))} days
-          ${r.ratio ? `<div style="color:var(--muted);font-size:12.5px">${esc(r.ratio.toFixed(1))}× usual</div>` : ""}</td>
+          ${r.ratio ? `<div style="color:var(--muted);font-size:var(--text-sm)">${esc(r.ratio.toFixed(1))}× usual</div>` : ""}</td>
         <td><span class="pill ${esc(r.statusTone)}">${esc(r.statusLabel)}</span></td>
         <td>${r.source === "booked"
           ? `<span class="pill slate">Booking history</span>`
           : `<span class="pill gold">Sample family</span>`}</td>
         <td><button class="btn sm" data-in-checkin="${esc(r.id)}">
             ${checkedIn[r.id] ? "Send another" : "Draft check-in"}</button>
-          ${checkedIn[r.id] ? `<div style="color:var(--muted);font-size:12.5px;margin-top:4px">Check-in sent</div>` : ""}</td>
+          ${checkedIn[r.id] ? `<div style="color:var(--muted);font-size:var(--text-sm);margin-top:4px">Check-in sent</div>` : ""}</td>
       </tr>`;
     }).join("")}</tbody></table></div>`
   : `<div class="empty" style="border:1px solid var(--rule);border-radius:var(--r-l)">
@@ -806,7 +806,7 @@ function checkinModal(){
         ? " These dates are seeded sample data for this demo family."
         : " These dates come from real bookings in this account."}
     </div>
-    <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">
+    <p style="color:var(--muted);font-size:var(--text-sm);margin-bottom:14px">
       Drafted from that gap and nothing else — no claim about availability the calendar cannot back.
       Read it, change anything, then send. It goes to your existing thread with the family.</p>
     <form id="inCheckinForm">

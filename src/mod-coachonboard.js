@@ -306,7 +306,7 @@ const reachable = (i, d) => i <= firstOpen(d);
 const CSS = `
 .cob-page{padding:26px 0 84px}
 .cob-top{max-width:70ch;margin-bottom:22px}
-.cob-lede{color:var(--muted);font-size:15px;margin-top:8px;line-height:1.6}
+.cob-lede{color:var(--muted);font-size:var(--text-base);margin-top:8px;line-height:1.6}
 .cob-grid{display:grid;grid-template-columns:264px minmax(0,1fr);gap:38px;align-items:start}
 .cob-rail{position:sticky;top:104px}
 .cob-rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
@@ -317,22 +317,22 @@ const CSS = `
 .cob-steplink:disabled{cursor:not-allowed;opacity:.55}
 .cob-stepitem.on .cob-steplink{background:var(--slate-tint)}
 .cob-dot{width:24px;height:24px;border-radius:999px;flex:0 0 auto;display:grid;place-items:center;
-  font-size:12px;font-weight:700;border:2px solid var(--rule-strong);color:var(--faint);background:var(--paper)}
+  font-size:var(--text-sm);font-weight:700;border:2px solid var(--rule-strong);color:var(--faint);background:var(--paper)}
 .cob-stepitem.done .cob-dot{background:var(--good);border-color:var(--good);color:var(--paper)}
 .cob-stepitem.on .cob-dot{border-color:var(--slate);color:var(--slate);background:var(--paper)}
 .cob-steptxt{min-width:0}
-.cob-steptxt b{display:block;font-size:14px;letter-spacing:-.012em;color:var(--ink-2);line-height:1.3}
+.cob-steptxt b{display:block;font-size:var(--text-base);letter-spacing:-.012em;color:var(--ink-2);line-height:1.3}
 .cob-stepitem.on .cob-steptxt b{color:var(--slate)}
-.cob-steptxt span{display:block;font-size:11.5px;color:var(--faint);margin-top:2px}
+.cob-steptxt span{display:block;font-size:var(--text-xs);color:var(--faint);margin-top:2px}
 .cob-railfoot{margin-top:16px;padding:13px 14px;background:var(--raise);border-radius:var(--r-m);
-  font-size:12.5px;color:var(--muted);line-height:1.5}
+  font-size:var(--text-sm);color:var(--muted);line-height:1.5}
 .cob-card{border:1px solid var(--rule);border-radius:var(--r-l);padding:26px;background:var(--paper)}
 .cob-head{margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
 .cob-head h2{letter-spacing:-.026em}
-.cob-head p{color:var(--muted);font-size:14px;margin-top:7px;max-width:64ch;line-height:1.58}
+.cob-head p{color:var(--muted);font-size:var(--text-base);margin-top:7px;max-width:64ch;line-height:1.58}
 .cob-two{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
 .cob-three{display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 16px}
-.cob-help{font-size:12.5px;color:var(--faint);margin:-10px 0 16px;line-height:1.5}
+.cob-help{font-size:var(--text-sm);color:var(--faint);margin:-10px 0 16px;line-height:1.5}
 .cob-bad input,.cob-bad select,.cob-bad textarea{border-color:var(--danger)}
 .cob-bad label,.cob-bad legend{color:var(--danger)}
 .cob-consent.cob-bad,fieldset.cob-bad .cob-picks,fieldset.cob-bad .cob-days{
@@ -340,24 +340,24 @@ const CSS = `
 .cob-picks{display:flex;flex-wrap:wrap;gap:8px;max-height:326px;overflow:auto;padding:3px}
 .cob-svc{border:1px solid var(--rule);border-radius:var(--r-l);padding:19px;margin-bottom:14px;background:var(--paper)}
 .cob-svchead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}
-.cob-svcno{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.cob-svcsum{font-size:13px;color:var(--muted);margin:-6px 0 2px}
+.cob-svcno{font-size:var(--text-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.cob-svcsum{font-size:var(--text-sm);color:var(--muted);margin:-6px 0 2px}
 .cob-fmt{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-bottom:16px}
 .cob-fmtopt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1.5px solid var(--rule);
   border-radius:var(--r-m);cursor:pointer;transition:border-color .14s,background .14s}
 .cob-fmtopt:hover{border-color:var(--rule-strong);background:var(--raise)}
 .cob-fmtopt.on{border-color:var(--slate);background:var(--slate-tint)}
 .cob-fmtopt input{width:16px;height:16px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--slate)}
-.cob-fmtopt b{font-size:13.5px;letter-spacing:-.012em;display:block}
-.cob-fmtopt span{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:1px}
+.cob-fmtopt b{font-size:var(--text-sm);letter-spacing:-.012em;display:block}
+.cob-fmtopt span{display:block;font-size:var(--text-sm);color:var(--muted);line-height:1.4;margin-top:1px}
 .cob-take{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
   background:var(--raise);border-radius:var(--r-m);padding:13px 15px;margin-top:2px}
 .cob-takefig{text-align:right}
-.cob-takefig b{display:block;font-size:20px;font-weight:800;letter-spacing:-.03em}
-.cob-takefig span{display:block;font-size:12px;color:var(--muted)}
-.cob-takenote{font-size:12.5px;color:var(--muted);max-width:40ch;line-height:1.45}
+.cob-takefig b{display:block;font-size:var(--text-lg);font-weight:700;letter-spacing:-.03em}
+.cob-takefig span{display:block;font-size:var(--text-sm);color:var(--muted)}
+.cob-takenote{font-size:var(--text-sm);color:var(--muted);max-width:40ch;line-height:1.45}
 .cob-days{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
-.cob-day{padding:9px 16px;border:1px solid var(--rule);border-radius:999px;font-size:13.5px;font-weight:600;
+.cob-day{padding:9px 16px;border:1px solid var(--rule);border-radius:999px;font-size:var(--text-sm);font-weight:600;
   color:var(--ink-2);transition:.14s}
 .cob-day:hover{border-color:var(--ink-2)}
 .cob-day.on{border-color:var(--slate);background:var(--slate-tint);color:var(--slate)}
@@ -366,19 +366,19 @@ const CSS = `
 .cob-consent:hover{border-color:var(--rule-strong);background:var(--raise)}
 .cob-consent.on{border-color:var(--slate);background:var(--slate-tint)}
 .cob-consent input{width:18px;height:18px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--slate)}
-.cob-consent span{font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.cob-consent span{font-size:var(--text-sm);color:var(--ink-2);line-height:1.5}
 .cob-truth{border:1px solid var(--rule-strong);border-radius:var(--r-l);padding:18px 20px;background:var(--raise);margin-bottom:20px}
-.cob-truth h4{margin:0 0 4px;font-size:14px;letter-spacing:-.01em}
-.cob-truth p{font-size:13.5px;color:var(--ink-2);line-height:1.58;margin-top:9px}
+.cob-truth h4{margin:0 0 4px;font-size:var(--text-base);letter-spacing:-.01em}
+.cob-truth p{font-size:var(--text-sm);color:var(--ink-2);line-height:1.58;margin-top:9px}
 .cob-truth p:first-of-type{margin-top:0}
 .cob-lock{display:flex;gap:11px;align-items:flex-start;background:var(--warn-tint);border-radius:var(--r-m);
   padding:14px 16px;margin-bottom:18px}
 .cob-lock svg{color:var(--warn);flex:0 0 auto;margin-top:3px}
-.cob-lock p{font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.cob-lock p{font-size:var(--text-sm);color:var(--ink-2);line-height:1.55}
 .cob-rb{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px 20px;margin-bottom:14px}
 .cob-rbhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
-.cob-rbhead h4{font-size:15px;letter-spacing:-.016em}
-.cob-rb .linerow b{font-weight:650;color:var(--ink)}
+.cob-rbhead h4{font-size:var(--text-base);letter-spacing:-.016em}
+.cob-rb .linerow b{font-weight:700;color:var(--ink)}
 .cob-rb .linerow span:last-child{text-align:right;min-width:0}
 .cob-nav{display:flex;align-items:center;gap:14px;margin-top:24px;padding-top:20px;border-top:1px solid var(--rule);flex-wrap:wrap}
 .cob-nav .err{flex:1;min-width:180px;line-height:1.45}
@@ -471,7 +471,7 @@ function sportsStep(d, err){
       }).join("")}
     </div>
   </fieldset>
-  <p class="num" style="color:var(--faint);font-size:12.5px;margin-top:12px">${d.sports.length} of ${sports.length} selected</p>
+  <p class="num" style="color:var(--faint);font-size:var(--text-sm);margin-top:12px">${d.sports.length} of ${sports.length} selected</p>
   ${d.sports.length ? `<div class="cob-chips" style="margin-top:10px">
     ${d.sports.map(s => `<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</span>`).join("")}
   </div>` : ""}
@@ -553,7 +553,7 @@ function pricingStep(d, err){
       <div class="cob-svchead">
         <div style="min-width:0">
           <div class="cob-svcno">Service ${i + 1}</div>
-          <b style="font-size:15.5px;letter-spacing:-.02em">${esc(s.name || "Untitled service")}</b>
+          <b style="font-size:var(--text-base);letter-spacing:-.02em">${esc(s.name || "Untitled service")}</b>
           <div class="cob-svcsum" style="margin-top:2px">${esc(svcSummary(s))}</div>
         </div>
       </div>
@@ -851,17 +851,17 @@ function verifyIdModal(){
       <b style="color:var(--ink)">${esc(d.legalName || "the individual coach")}</b> — the person, not the business.</p>
     ${rows.map(([h, b]) => `<div class="linerow" style="display:block">
       <b style="display:block;color:var(--ink)">${esc(h)}</b>
-      <span style="display:block;color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:3px">${esc(b)}</span>
+      <span style="display:block;color:var(--muted);font-size:var(--text-sm);line-height:1.5;margin-top:3px">${esc(b)}</span>
     </div>`).join("")}
     <div class="panel" style="background:var(--warn-tint);border:0;margin-top:18px">
-      <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55">
+      <p style="font-size:var(--text-sm);color:var(--ink-2);line-height:1.55">
         Three things this form can never do: mark you verified, approve your business, or publish a listing.
         Those are written by Sporve after the partner returns a result — which is why every field on the
         previous step is stored as <span class="num">pending</span> no matter what you type.</p>
     </div>
     <div class="panel" style="background:var(--raise);border:0;margin-top:12px">
       <div class="eyebrow">Cost and timing</div>
-      <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-top:8px">
+      <p style="font-size:var(--text-sm);color:var(--ink-2);line-height:1.55;margin-top:8px">
         Sporve pays for the check. Results usually return in 2–5 business days; a record that needs a
         court clerk to confirm it can take longer.</p>
     </div>

@@ -425,20 +425,20 @@ function commit(kind, p, m){
 const CSS = `
 /* every selector co-prefixed so nothing collides with the host or MOD_SEARCH */
 .co-rail{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 0 22px}
-.co-rail .co-lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-right:2px}
+.co-rail .co-lbl{font-size:var(--text-xs);font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-right:2px}
 .co-tpill{
   display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;
-  border:1px solid var(--rule-strong);background:var(--paper);font-size:13.5px;font-weight:650;
+  border:1px solid var(--rule-strong);background:var(--paper);font-size:var(--text-sm);font-weight:700;
   color:var(--muted);transition:.15s;
 }
 .co-tpill:hover{border-color:var(--ink);color:var(--ink)}
 .co-tpill.on{background:var(--ink);border-color:var(--ink);color:#fff}
-.co-tpill .co-n{font-variant-numeric:tabular-nums;opacity:.65;font-size:12.5px}
+.co-tpill .co-n{font-variant-numeric:tabular-nums;opacity:.65;font-size:var(--text-sm)}
 .co-tpill.on .co-n{opacity:.8}
 
 .co-badge{
   display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;
-  font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  font-size:var(--text-xs);font-weight:700;letter-spacing:.07em;text-transform:uppercase;
 }
 .co-badge.private{background:#E4F2F6;color:#0E7490}
 .co-badge.camp{background:#FAEEE0;color:#B45309}
@@ -449,8 +449,8 @@ const CSS = `
 
 /* ── company index ──────────────────────────────────────────────── */
 .co-head{padding:44px 0 6px}
-.co-head h1{font-size:clamp(30px,4vw,46px);letter-spacing:-.038em;line-height:1.05}
-.co-head p{color:var(--muted);font-size:16px;max-width:56ch;margin-top:14px}
+.co-head h1{font-size:var(--text-hero);letter-spacing:-.015em;line-height:1.04}
+.co-head p{color:var(--muted);font-size:var(--text-md);max-width:56ch;margin-top:14px}
 .co-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:20px;padding:30px 0 60px}
 .co-card{
   text-align:left;display:flex;flex-direction:column;border:1px solid var(--rule);
@@ -463,30 +463,32 @@ const CSS = `
 /* unverified operators get no hero polish — the treatment agrees with the state */
 .co-card.co-pending .co-shot img{filter:saturate(.55) contrast(.96)}
 .co-card .co-body{padding:18px 20px 20px;display:flex;flex-direction:column;gap:7px}
-.co-card .co-nm{font-size:18px;font-weight:750;letter-spacing:-.025em}
-.co-card .co-tag{color:var(--muted);font-size:14px;line-height:1.45}
+.co-card .co-nm{font-size:var(--text-lg);font-weight:700;letter-spacing:-.025em}
+.co-card .co-tag{color:var(--muted);font-size:var(--text-base);line-height:1.45}
 .co-mix{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
 .co-dot{width:9px;height:9px;border-radius:3px;display:block}
-.co-stats{display:flex;gap:16px;margin-top:10px;padding-top:13px;border-top:1px solid var(--rule);font-size:13px;color:var(--faint)}
+.co-stats{display:flex;gap:16px;margin-top:10px;padding-top:13px;border-top:1px solid var(--rule);font-size:var(--text-sm);color:var(--faint)}
 .co-stats b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
 
-.co-trust{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650}
+.co-trust{display:flex;align-items:center;gap:6px;font-size:var(--text-sm);font-weight:700}
 .co-trust.ok{color:var(--gold-ink)}
 .co-trust.no{color:var(--warn)}
 
 /* ── company profile ────────────────────────────────────────────── */
 .co-hero{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:44px;padding:34px 0 8px;align-items:start}
-.co-hero h1{font-size:clamp(30px,4vw,48px);letter-spacing:-.04em;line-height:1.04}
-.co-hero .co-bio{color:var(--muted);font-size:16.5px;line-height:1.6;margin-top:16px;max-width:60ch}
+.co-hero h1{font-size:var(--text-hero);letter-spacing:-.015em;line-height:1.04}
+.co-hero .co-bio{color:var(--muted);font-size:var(--text-md);line-height:1.6;margin-top:16px;max-width:60ch}
 .co-heroshot{border-radius:var(--r-l);overflow:hidden;aspect-ratio:4/3;background:var(--raise2)}
 .co-heroshot img{width:100%;height:100%;object-fit:cover}
 .co-facts{display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;padding-top:20px;border-top:1px solid var(--rule)}
-.co-fact .k{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
-.co-fact .v{font-size:19px;font-weight:750;letter-spacing:-.025em;margin-top:3px;font-variant-numeric:tabular-nums}
+.co-fact .k{font-size:var(--text-xs);font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.co-fact .v{font-size:var(--text-lg);font-weight:700;letter-spacing:-.025em;margin-top:3px;font-variant-numeric:tabular-nums}
 
 .co-sec{padding:38px 0 0}
-.co-sec h2{font-size:23px;letter-spacing:-.03em}
-.co-sec .co-sub{color:var(--muted);font-size:15px;margin-top:7px;max-width:62ch}
+/* No font-size/letter-spacing override here: an h2 takes the scale's h2 step
+   and the display face's tracking from the host base rule. The old -.03em was
+   tuned for a face this page no longer loads. */
+.co-sec .co-sub{color:var(--muted);font-size:var(--text-base);margin-top:7px;max-width:62ch}
 
 .co-list{display:flex;flex-direction:column;gap:12px;padding:22px 0 60px}
 .co-row{
@@ -496,11 +498,11 @@ const CSS = `
 .co-row:hover{border-color:var(--rule-strong);box-shadow:var(--shadow)}
 .co-row .co-thumb{border-radius:var(--r-m);overflow:hidden;background:var(--raise2)}
 .co-row .co-thumb img{width:100%;height:100%;object-fit:cover}
-.co-row h3{font-size:16.5px;letter-spacing:-.022em;margin-top:7px}
-.co-row .co-meta{color:var(--faint);font-size:13.5px;margin-top:4px;font-variant-numeric:tabular-nums}
+.co-row h3{font-size:var(--text-base);letter-spacing:-.022em;margin-top:7px}
+.co-row .co-meta{color:var(--faint);font-size:var(--text-sm);margin-top:4px;font-variant-numeric:tabular-nums}
 .co-row .co-act{display:flex;flex-direction:column;align-items:flex-end;gap:9px;flex:0 0 auto}
-.co-row .co-px{font-size:15px;font-weight:750;font-variant-numeric:tabular-nums;white-space:nowrap}
-.co-row .co-px span{font-weight:500;color:var(--muted);font-size:13px}
+.co-row .co-px{font-size:var(--text-base);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.co-row .co-px span{font-weight:500;color:var(--muted);font-size:var(--text-sm)}
 @media(max-width:820px){
   .co-hero{grid-template-columns:1fr;gap:26px}
   .co-row{grid-template-columns:92px minmax(0,1fr);gap:14px}
@@ -513,20 +515,20 @@ const CSS = `
   display:flex;align-items:center;gap:10px;padding:14px 22px;
   border-bottom:1px solid var(--rule);background:var(--raise);
 }
-.co-kick .co-unit{color:var(--muted);font-size:12.5px}
+.co-kick .co-unit{color:var(--muted);font-size:var(--text-sm)}
 .co-fg{margin-top:22px}
 .co-fg:first-child{margin-top:0}
 .co-fg > .co-fgh{
   display:flex;align-items:baseline;gap:10px;padding-bottom:8px;margin-bottom:12px;
   border-bottom:1px solid var(--rule);
 }
-.co-fg > .co-fgh b{font-size:14px;letter-spacing:-.015em}
-.co-fg > .co-fgh .co-ct{margin-left:auto;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.co-fg > .co-fgh b{font-size:var(--text-base);letter-spacing:-.015em}
+.co-fg > .co-fgh .co-ct{margin-left:auto;font-size:var(--text-xs);color:var(--faint);font-variant-numeric:tabular-nums}
 
 .co-opts{display:flex;gap:8px;flex-wrap:wrap}
 .co-opt{
   padding:9px 14px;border:1px solid var(--rule-strong);border-radius:var(--r-m);
-  font-size:13.5px;font-weight:650;background:var(--paper);transition:.14s;
+  font-size:var(--text-sm);font-weight:700;background:var(--paper);transition:.14s;
   font-variant-numeric:tabular-nums;
 }
 .co-opt:hover{border-color:var(--ink-2)}
@@ -544,35 +546,35 @@ const CSS = `
 .co-sesrow:hover{border-color:var(--ink-2);background:var(--raise)}
 .co-sesrow.on{border-color:var(--slate);background:var(--slate-tint);box-shadow:0 0 0 1px var(--slate)}
 .co-sesrow:disabled{opacity:.45;cursor:not-allowed}
-.co-sesrow .co-dt{font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
-.co-sesrow .co-seats{margin-left:auto;font-size:12.5px;font-weight:650;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.co-sesrow .co-dt{font-weight:700;font-size:var(--text-base);font-variant-numeric:tabular-nums}
+.co-sesrow .co-seats{margin-left:auto;font-size:var(--text-sm);font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto}
 .co-sesrow .co-seats.low{color:var(--danger)}
 .co-sesrow .co-seats.out{color:var(--faint)}
-.co-eb{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--good)}
+.co-eb{font-size:var(--text-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--good)}
 
-.co-tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.co-tbl{width:100%;border-collapse:collapse;font-size:var(--text-sm)}
 .co-tbl th{
-  text-align:left;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  text-align:left;font-size:var(--text-xs);letter-spacing:.09em;text-transform:uppercase;
   color:var(--faint);font-weight:700;padding:0 10px 8px 0;
 }
 .co-tbl td{padding:8px 10px 8px 0;border-top:1px solid var(--rule);vertical-align:top}
-.co-tbl td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:650}
-.co-tbl tr.co-tot td{border-top:1.5px solid var(--rule-strong);font-weight:800;font-size:15px;padding-top:11px}
-.co-tbl .co-why{display:block;color:var(--faint);font-size:12px;font-weight:400;margin-top:2px}
+.co-tbl td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700}
+.co-tbl tr.co-tot td{border-top:1.5px solid var(--rule-strong);font-weight:700;font-size:var(--text-base);padding-top:11px}
+.co-tbl .co-why{display:block;color:var(--faint);font-size:var(--text-sm);font-weight:400;margin-top:2px}
 
 .co-sched{display:flex;flex-direction:column;gap:0}
-.co-schedrow{display:flex;gap:14px;padding:7px 0;border-top:1px solid var(--rule);font-size:13.5px}
+.co-schedrow{display:flex;gap:14px;padding:7px 0;border-top:1px solid var(--rule);font-size:var(--text-sm)}
 .co-schedrow:first-child{border-top:0}
-.co-schedrow .t{font-variant-numeric:tabular-nums;color:var(--faint);flex:0 0 62px;font-weight:650}
+.co-schedrow .t{font-variant-numeric:tabular-nums;color:var(--faint);flex:0 0 62px;font-weight:700}
 
 .co-checks{display:flex;flex-direction:column;gap:9px}
-.co-check{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.co-check{display:flex;gap:10px;align-items:flex-start;font-size:var(--text-sm);color:var(--ink-2);line-height:1.45}
 .co-check input{margin:3px 0 0;flex:0 0 auto;accent-color:var(--slate)}
-.co-ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:13.5px;line-height:1.6}
+.co-ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:var(--text-sm);line-height:1.6}
 
 .co-note{
   border-left:3px solid var(--warn);background:var(--warn-tint);color:var(--ink-2);
-  padding:12px 14px;border-radius:0 var(--r-s) var(--r-s) 0;font-size:13px;line-height:1.5;margin-top:14px;
+  padding:12px 14px;border-radius:0 var(--r-s) var(--r-s) 0;font-size:var(--text-sm);line-height:1.5;margin-top:14px;
 }
 .co-note.plain{border-left-color:var(--rule-strong);background:var(--raise)}
 .co-note b{color:var(--ink)}
@@ -581,9 +583,9 @@ const CSS = `
   display:flex;align-items:center;gap:14px;margin-top:24px;padding-top:18px;border-top:1px solid var(--rule);
 }
 .co-foot .co-tot{flex:1;min-width:0}
-.co-foot .co-tot .k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.co-foot .co-tot .v{font-size:22px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.co-foot .co-tot .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.co-foot .co-tot .k{font-size:var(--text-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.co-foot .co-tot .v{font-size:var(--text-xl);font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.co-foot .co-tot .d{font-size:var(--text-sm);color:var(--muted);margin-top:1px}
 `;
 
 /* ═══════════════════ VIEWS ═══════════════════ */
@@ -650,7 +652,7 @@ function companyView(){
       <div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <span class="co-badge ${t}">${esc(TYPE[t].label)}</span>
-          <span style="font-size:12.5px;color:var(--faint)">${sg(p.sport)} ${esc(p.sport)}</span>
+          <span style="font-size:var(--text-sm);color:var(--faint)">${sg(p.sport)} ${esc(p.sport)}</span>
         </div>
         <h3>${esc(p.title)}</h3>
         <div class="co-meta">Ages ${p.minAge}–${p.maxAge} · ${esc(p.skill)} · ${p.rating} ★ (${p.reviews})</div>
@@ -781,7 +783,7 @@ function campSheet(p, m){
         <span>
           <span class="co-dt">${fmt(s.start)} – ${fmt(s.end)}</span>
           ${s.earlyBird ? `<span class="co-eb" style="margin-left:8px">Early bird · 10% off</span>` : ""}
-          <span style="display:block;color:var(--faint);font-size:12.5px;margin-top:2px">Mon–Fri · ${meta.daily[0][0]}–${meta.daily[meta.daily.length - 1][0]}</span>
+          <span style="display:block;color:var(--faint);font-size:var(--text-sm);margin-top:2px">Mon–Fri · ${meta.daily[0][0]}–${meta.daily[meta.daily.length - 1][0]}</span>
         </span>
         <span class="co-seats ${out ? "out" : low ? "low" : ""}">${out ? "Waitlist" : s.seats + " of " + s.cap + " left"}</span>
       </button>`;

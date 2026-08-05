@@ -615,17 +615,17 @@
   const css = `
 .sf-wrap{padding-bottom:80px}
 .sf-wrap .sec-head{align-items:flex-start;margin:30px 0 18px}
-.sf-lede{color:var(--muted);margin-top:9px;max-width:62ch;font-size:15.5px}
+.sf-lede{color:var(--muted);margin-top:9px;max-width:62ch;font-size:var(--text-md)}
 .sf-body-copy{color:var(--ink-2);margin-top:9px;max-width:66ch}
-.sf-fine{color:var(--faint);font-size:12.5px;margin-top:12px;line-height:1.5}
-.sf-meta{color:var(--muted);font-size:13px}
+.sf-fine{color:var(--faint);font-size:var(--text-sm);margin-top:12px;line-height:1.5}
+.sf-meta{color:var(--muted);font-size:var(--text-sm)}
 .sf-optional{text-transform:none;letter-spacing:0;font-weight:600;color:var(--faint)}
 .sf-gap{margin-top:12px}
 .sf-push{margin-left:auto}
 
 .sf-note{border:1px solid var(--rule);border-radius:var(--r-m);padding:15px 17px;background:var(--raise)}
-.sf-note h3{font-size:15.5px}
-.sf-note p{color:var(--ink-2);font-size:14px;margin-top:6px;line-height:1.5;max-width:66ch}
+.sf-note h3{font-size:var(--text-base)}
+.sf-note p{color:var(--ink-2);font-size:var(--text-base);margin-top:6px;line-height:1.5;max-width:66ch}
 .sf-note-warn{background:var(--warn-tint);border-color:transparent}
 .sf-note-warn h3,.sf-note-warn b{color:var(--warn)}
 .sf-note-warn p{color:var(--ink-2)}
@@ -634,32 +634,32 @@
 .sf-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:26px}
 
 .sf-panel{margin-bottom:18px}
-.sf-panel h2{font-size:19px}
+.sf-panel h2{font-size:var(--text-lg)}
 .sf-sec{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:14px}
 
 .sf-list{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:11px}
-.sf-list li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:var(--ink-2);line-height:1.5;max-width:70ch}
+.sf-list li{display:flex;gap:10px;align-items:flex-start;font-size:var(--text-base);color:var(--ink-2);line-height:1.5;max-width:70ch}
 .sf-list b{color:var(--ink)}
 .sf-tick{color:var(--good);flex:0 0 auto;margin-top:4px;display:block}
 
-.sf-none{color:var(--muted);font-size:14.5px;padding:6px 0 2px}
+.sf-none{color:var(--muted);font-size:var(--text-base);padding:6px 0 2px}
 .sf-wrap table.tbl td b{font-weight:700}
 
 .sf-mini{margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)}
 .sf-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--rule)}
 .sf-row:last-child{border-bottom:0;padding-bottom:0}
 .sf-row-in{display:flex;flex-direction:column;gap:2px;flex:1;min-width:210px}
-.sf-row-in b{font-size:14.5px;letter-spacing:-.015em}
+.sf-row-in b{font-size:var(--text-base);letter-spacing:-.015em}
 
 .pill.sf-closed{background:var(--raise2);color:var(--ink-2)}
 
 /* ── modal internals ── */
 .sf-body .sf-note{margin-bottom:16px}
-.sf-body .sf-lede{margin:0 0 16px;font-size:14.5px}
+.sf-body .sf-lede{margin:0 0 16px;font-size:var(--text-base)}
 .sf-target{border:1px solid var(--rule);border-radius:var(--r-m);padding:12px 14px;margin-bottom:16px;
   display:flex;flex-direction:column;gap:3px;background:var(--raise)}
-.sf-target b{font-size:14.5px;letter-spacing:-.015em}
-.sf-count{color:var(--muted);font-size:12.5px}
+.sf-target b{font-size:var(--text-base);letter-spacing:-.015em}
+.sf-count{color:var(--muted);font-size:var(--text-sm)}
 .sf-count.out{color:var(--warn);font-weight:700}
 .sf-body textarea{resize:vertical;min-height:96px;line-height:1.5}
 .sf-body .btn.wide+.btn.wide,.sf-body .btn.wide.sf-gap{margin-top:9px}
@@ -669,8 +669,8 @@
 .sf-choice input{position:absolute;opacity:0;width:1px;height:1px}
 .sf-choice-in{display:flex;flex-direction:column;gap:3px;padding:13px 15px;border:1.5px solid var(--rule);
   border-radius:var(--r-m);transition:.15s}
-.sf-choice-in b{font-size:15px;letter-spacing:-.018em}
-.sf-choice-in span{font-size:13.5px;color:var(--muted);line-height:1.45}
+.sf-choice-in b{font-size:var(--text-base);letter-spacing:-.018em}
+.sf-choice-in span{font-size:var(--text-sm);color:var(--muted);line-height:1.45}
 .sf-choice:hover .sf-choice-in{border-color:var(--ink-2);background:var(--raise)}
 .sf-choice.on .sf-choice-in{border-color:var(--slate);background:var(--slate-tint);box-shadow:0 0 0 1px var(--slate)}
 .sf-choice input:focus-visible+.sf-choice-in{outline:2px solid var(--slate);outline-offset:2px}

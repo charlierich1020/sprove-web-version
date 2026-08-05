@@ -291,50 +291,50 @@ const GRID_START = 7, GRID_END = 21;                       // 7am → 9pm rows
 /* ═══════════════════ CSS ═══════════════════ */
 const CSS = `
 .co-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:18px 0 6px;flex-wrap:wrap}
-.co-lede{color:var(--muted);font-size:14px;max-width:64ch;margin-top:5px}
+.co-lede{color:var(--muted);font-size:var(--text-base);max-width:64ch;margin-top:5px}
 .co-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);gap:20px;align-items:start;margin-top:16px}
-.co-note{background:var(--raise);border-radius:var(--r-m);padding:13px 15px;font-size:13.5px;color:var(--ink-2)}
+.co-note{background:var(--raise);border-radius:var(--r-m);padding:13px 15px;font-size:var(--text-sm);color:var(--ink-2)}
 .co-opts{display:flex;flex-direction:column;gap:10px;margin:0 0 18px}
 .co-opt{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--rule);
   border-radius:var(--r-m);cursor:pointer;transition:border-color .14s,background .14s}
 .co-opt:hover{border-color:var(--rule-strong);background:var(--raise)}
 .co-opt input{width:17px;height:17px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--slate)}
 .co-opt.on{border-color:var(--slate);background:var(--slate-tint)}
-.co-opt b{font-size:15px;letter-spacing:-.015em}
-.co-opt span{display:block;font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+.co-opt b{font-size:var(--text-base);letter-spacing:-.015em}
+.co-opt span{display:block;font-size:var(--text-sm);color:var(--muted);line-height:1.45;margin-top:2px}
 .co-grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-.co-help{font-size:12.5px;color:var(--faint);margin-top:-10px;margin-bottom:16px}
+.co-help{font-size:var(--text-sm);color:var(--faint);margin-top:-10px;margin-bottom:16px}
 .co-prev{position:sticky;top:104px;border:1px solid var(--rule-strong);border-radius:var(--r-l);
   padding:20px;background:var(--paper)}
 .co-prevhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
-.co-prevline{padding:11px 0;border-top:1px solid var(--rule);font-size:14px;color:var(--ink-2)}
+.co-prevline{padding:11px 0;border-top:1px solid var(--rule);font-size:var(--text-base);color:var(--ink-2)}
 .co-prevline:first-of-type{border-top:0}
-.co-prevline b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:2px}
+.co-prevline b{display:block;color:var(--ink);font-size:var(--text-sm);margin-bottom:2px}
 .co-pos{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;
-  background:var(--raise2);color:var(--ink-2);font-size:12.5px;font-weight:700}
+  background:var(--raise2);color:var(--ink-2);font-size:var(--text-sm);font-weight:700}
 .co-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 4px}
 .co-gridwrap{border:1px solid var(--rule);border-radius:var(--r-l);padding:14px;background:var(--paper);margin-top:14px}
 .co-week{display:grid;grid-template-columns:64px repeat(7,minmax(74px,1fr));gap:4px;min-width:620px}
-.co-day{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
+.co-day{font-size:var(--text-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
   text-align:center;padding-bottom:4px}
-.co-hh{font-size:11.5px;color:var(--faint);text-align:right;padding-right:8px;line-height:30px}
+.co-hh{font-size:var(--text-xs);color:var(--faint);text-align:right;padding-right:8px;line-height:30px}
 .co-cell{height:30px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--paper);
   padding:0;width:100%;transition:background .12s,border-color .12s}
 .co-cell:hover{border-color:var(--ink-2);background:var(--raise)}
 .co-cell.on{border-color:transparent;background:var(--cc);box-shadow:inset 0 0 0 1px var(--rule)}
 .co-cell.clash{box-shadow:inset 0 0 0 2px var(--danger)}
-.co-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.co-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:var(--text-sm);color:var(--muted)}
 .co-legend i{width:11px;height:11px;border-radius:3px;display:inline-block;vertical-align:-1px;margin-right:6px}
 .co-alert{border:1px solid var(--danger);border-radius:var(--r-m);padding:14px 16px;margin-top:16px;
   background:color-mix(in srgb,var(--danger) 7%,transparent)}
-.co-alert h4{margin:0 0 8px;font-size:14px;color:var(--danger);letter-spacing:-.01em}
-.co-alert li{font-size:13.5px;color:var(--ink-2);margin-top:5px;line-height:1.5}
+.co-alert h4{margin:0 0 8px;font-size:var(--text-base);color:var(--danger);letter-spacing:-.01em}
+.co-alert li{font-size:var(--text-sm);color:var(--ink-2);margin-top:5px;line-height:1.5}
 .co-row{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px;margin-bottom:14px;background:var(--paper)}
 .co-row.off{background:var(--raise)}
 .co-row.off .co-body{opacity:.55}
 .co-rowhead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}
-.co-trig{font-size:12px;color:var(--faint);letter-spacing:.01em}
-.co-when{font-size:13px;color:var(--muted);margin-top:3px}
+.co-trig{font-size:var(--text-sm);color:var(--faint);letter-spacing:.01em}
+.co-when{font-size:var(--text-sm);color:var(--muted);margin-top:3px}
 .co-sw{display:inline-flex;align-items:center;gap:9px;flex:0 0 auto;cursor:pointer}
 .co-sw input{position:absolute;opacity:0;width:44px;height:26px;margin:0;cursor:pointer}
 .co-track{position:relative;width:44px;height:26px;border-radius:999px;background:var(--rule-strong);
@@ -344,13 +344,13 @@ const CSS = `
 .co-sw input:checked + .co-track{background:var(--good)}
 .co-sw input:checked + .co-track .co-knob{transform:translateX(18px)}
 .co-sw input:focus-visible + .co-track{outline:2px solid var(--slate);outline-offset:2px}
-.co-swtxt{font-size:12.5px;font-weight:700;color:var(--muted);min-width:22px}
+.co-swtxt{font-size:var(--text-sm);font-weight:700;color:var(--muted);min-width:22px}
 .co-chips{display:flex;gap:7px;flex-wrap:wrap;margin:-4px 0 12px}
-.co-chip{padding:5px 10px;border:1px solid var(--rule);border-radius:999px;font-size:12px;
+.co-chip{padding:5px 10px;border:1px solid var(--rule);border-radius:999px;font-size:var(--text-sm);
   color:var(--ink-2);transition:.14s}
 .co-chip:hover{border-color:var(--slate);color:var(--slate);background:var(--slate-tint)}
 .co-prevbox{border:1px solid var(--rule);border-radius:var(--r-m);padding:13px 15px;background:var(--raise)}
-.co-prevbox p{font-size:14px;color:var(--ink-2);line-height:1.55;margin-top:6px;white-space:pre-wrap}
+.co-prevbox p{font-size:var(--text-base);color:var(--ink-2);line-height:1.55;margin-top:6px;white-space:pre-wrap}
 @media(max-width:1020px){
   .co-two{grid-template-columns:1fr}
   .co-prev{position:static}
@@ -467,24 +467,24 @@ function waitlistView(){
       return `<tr>
         <td><span class="co-pos num">${pos == null ? "—" : pos}</span></td>
         <td><b>${esc(e.athlete)}</b>
-          <div class="num" style="color:var(--muted);font-size:12.5px">Age ${e.athleteAge}</div></td>
+          <div class="num" style="color:var(--muted);font-size:var(--text-sm)">Age ${e.athleteAge}</div></td>
         <td>${esc(e.parent)}</td>
         <td>${p ? `<b style="font-weight:600">${esc(p.title)}</b>
             <div style="margin-top:4px"><span class="pill" style="background:${sportColor(p.sport)}1A;color:${sportColor(p.sport)}">${esc(p.sport)}</span>
-            <span class="num" style="color:var(--muted);font-size:12.5px;margin-left:6px">${p.enrolled}/${p.cap} full</span></div>`
+            <span class="num" style="color:var(--muted);font-size:var(--text-sm);margin-left:6px">${p.enrolled}/${p.cap} full</span></div>`
           : `<span style="color:var(--muted)">Program removed</span>`}</td>
         <td class="num">${esc(since(e.joinedAt))}
-          <div style="color:var(--muted);font-size:12.5px">joined ${esc(fmtDate(e.joinedAt.slice(0, 10)))}</div></td>
+          <div style="color:var(--muted);font-size:var(--text-sm)">joined ${esc(fmtDate(e.joinedAt.slice(0, 10)))}</div></td>
         <td>${esc(e.via)}</td>
         <td><span class="pill ${pill[0]}">${esc(pill[1])}</span>
-          ${left ? `<div class="num" style="color:var(--muted);font-size:12.5px;margin-top:3px">${esc(left)} left</div>` : ""}
-          ${st === "expired" && e.expiresAt ? `<div style="color:var(--muted);font-size:12.5px;margin-top:3px">no reply</div>` : ""}</td>
+          ${left ? `<div class="num" style="color:var(--muted);font-size:var(--text-sm);margin-top:3px">${esc(left)} left</div>` : ""}
+          ${st === "expired" && e.expiresAt ? `<div style="color:var(--muted);font-size:var(--text-sm);margin-top:3px">no reply</div>` : ""}</td>
         <td>${
           st === "waiting" || st === "expired"
             ? `<button class="btn sm" data-co-offer="${esc(e.id)}">Offer a spot</button>`
             : st === "offered"
               ? `<button class="btn ghost sm" data-co-accept="${esc(e.id)}">Mark accepted</button>`
-              : `<span style="color:var(--muted);font-size:13px">Enrolled</span>`
+              : `<span style="color:var(--muted);font-size:var(--text-sm)">Enrolled</span>`
         }</td>
       </tr>`;
     }).join("")}</tbody></table></div>`
@@ -551,7 +551,7 @@ function slotsView(){
   </div>
 
   <div class="sec-head" style="margin:26px 0 12px"><h3>Recurring rules</h3>
-    <span class="num" style="color:var(--muted);font-size:13.5px">${rules.length} rule${rules.length === 1 ? "" : "s"}</span></div>
+    <span class="num" style="color:var(--muted);font-size:var(--text-sm)">${rules.length} rule${rules.length === 1 ? "" : "s"}</span></div>
 
   ${rules.length ? `<div class="tblwrap panel" style="padding:18px"><table class="tbl">
     <thead><tr><th>Program</th><th>Day</th><th>Time</th><th>Capacity</th><th>Effective</th><th>Status</th><th></th></tr></thead>
@@ -564,10 +564,10 @@ function slotsView(){
           : `<span style="color:var(--muted)">${esc(r.programId)}</span>`}</td>
         <td>${esc(wdName(r.weekday))}</td>
         <td class="num">${esc(t12(r.start))} – ${esc(t12(r.end))}
-          <div style="color:var(--muted);font-size:12.5px">${esc(durLabel(toMin(r.end) - toMin(r.start)))}</div></td>
+          <div style="color:var(--muted);font-size:var(--text-sm)">${esc(durLabel(toMin(r.end) - toMin(r.start)))}</div></td>
         <td class="num">${r.capacity}</td>
         <td class="num">${esc(fmtDate(r.effectiveFrom))}
-          <div style="color:var(--muted);font-size:12.5px">through ${esc(r.effectiveUntil ? fmtDate(r.effectiveUntil) : "no end date")}</div></td>
+          <div style="color:var(--muted);font-size:var(--text-sm)">through ${esc(r.effectiveUntil ? fmtDate(r.effectiveUntil) : "no end date")}</div></td>
         <td>${bad ? `<span class="pill warn">Conflict</span>` : `<span class="pill good">Clear</span>`}</td>
         <td><button class="x" data-co-delslot="${esc(r.id)}"
           aria-label="Delete the ${esc(wdName(r.weekday))} ${esc(t12(r.start))} block">${ICON.x}</button></td>
@@ -597,7 +597,7 @@ function messagesView(){
       return `<div class="co-row ${m.enabled ? "" : "off"}" data-co-rowfor="${esc(k)}">
         <div class="co-rowhead">
           <div style="min-width:0">
-            <b style="font-size:15.5px;letter-spacing:-.02em">${esc(label)}</b>
+            <b style="font-size:var(--text-base);letter-spacing:-.02em">${esc(label)}</b>
             <div class="co-trig num">${esc(k)}</div>
             <div class="co-when">${esc(when)}</div>
           </div>
@@ -706,13 +706,13 @@ function offerSpotModal(){
   return wrap("Offer a spot", `
     <div class="panel" style="background:var(--raise);border:0;margin-bottom:18px">
       <b>${esc(e.athlete)}</b><span class="num" style="color:var(--muted)"> · age ${e.athleteAge}</span>
-      <div style="color:var(--muted);font-size:13.5px;margin-top:3px">
+      <div style="color:var(--muted);font-size:var(--text-sm);margin-top:3px">
         Parent ${esc(e.parent)} · waiting <span class="num">${esc(since(e.joinedAt))}</span>${pos ? ` · position <span class="num">${pos}</span>` : ""}</div>
       ${p ? `<div style="margin-top:9px"><b style="font-weight:600">${esc(p.title)}</b>
-        <div class="num" style="color:var(--muted);font-size:13.5px">${p.enrolled}/${p.cap} enrolled · ${money(p.price)} ${esc(modelLabel(p.model))}</div></div>` : ""}
+        <div class="num" style="color:var(--muted);font-size:var(--text-sm)">${p.enrolled}/${p.cap} enrolled · ${money(p.price)} ${esc(modelLabel(p.model))}</div></div>` : ""}
     </div>
     <div class="panel" style="background:var(--warn-tint);border:0;margin-bottom:18px">
-      <p style="font-size:14px;color:var(--ink-2)">
+      <p style="font-size:var(--text-base);color:var(--ink-2)">
         This offer <b>expires 24 hours after you send it</b> — at
         <span class="num">${esc(stamp(expiry))}</span>. If ${esc(e.athlete.split(" ")[0])}'s family has not
         accepted and paid by then, the hold is released and the spot passes to the next athlete in line.</p>

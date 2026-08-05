@@ -35,27 +35,34 @@ for n in names:
 
 built = host.replace(MARKER, "\n".join(blocks) if blocks else MARKER)
 
-# The hero photograph is inlined as a data URI rather than linked: the page has
-# to stay one self-contained file that survives a CSP blocking every external
-# request. Drop any assets/hero-stadium.{jpg,jpeg,png,webp} in and it is picked
-# up automatically; with none present the token stays and the CSS gradient
-# fallback renders instead.
+# (The hero photographs are handled further down, next to their token.)
 # Sentinel is a paid Hoefler&Co face and is deliberately NOT in this repo.
 # Drop the licensed webfonts in assets/fonts/ and they get emitted as @font-face
 # rules with the binaries inlined, so the single-file + CSP constraints hold.
 # Filenames drive weight/style: Sentinel-Bold.woff2, Sentinel-BookItalic.woff2, ...
+# Order matters — the first key found in the tail wins, so "extrabold" has to be
+# tested before "bold" or every ExtraBold file would inline as 700.
 FONT_WEIGHTS = {"light": 300, "book": 400, "roman": 400, "regular": 400,
-                "medium": 500, "semibold": 600, "bold": 700, "black": 800}
-# The filename PREFIX now names the family, so both contracted faces inline
-# from the same drop folder:
-#   Bricolage-Bold.woff2   -> font-family:"Bricolage Grotesque", weight 700
-#   Hanken-Regular.woff2   -> font-family:"Hanken Grotesk",      weight 400
+                "medium": 500, "semibold": 600, "extrabold": 800,
+                "bold": 700, "black": 800}
+# The filename PREFIX names the family, so every contracted face inlines from
+# the same drop folder:
+#   Syne-Variable.woff2    -> font-family:"Syne",              weight 600 800
+#   Jakarta-Variable.woff2 -> font-family:"Plus Jakarta Sans",  weight 400 700
 # Anything else keeps working under its own prefix (e.g. Sentinel-Book.woff2).
 FAMILY_BY_PREFIX = {
+    "syne": "Syne",
+    "jakarta": "Plus Jakarta Sans",
     "bricolage": "Bricolage Grotesque",
     "hanken": "Hanken Grotesk",
     "sentinel": "Sentinel",
 }
+# Google serves ONE variable woff2 per family — every weight URL in a css2
+# response for Syne or Plus Jakarta Sans returns a byte-identical file. Seven
+# static faces would have been 208KB of duplicate binary; two variable faces are
+# 60KB. A file named <Prefix>-Variable.woff2 therefore emits a single @font-face
+# carrying the whole weight range instead of one face per weight.
+VARIABLE_RANGE = {"Syne": "600 800", "Plus Jakarta Sans": "400 700"}
 font_files = sorted(glob.glob(os.path.join(ROOT, "assets", "fonts", "*.woff2")))
 faces, fam_seen = [], set()
 for fp in font_files:
@@ -64,12 +71,15 @@ for fp in font_files:
     family = FAMILY_BY_PREFIX.get(prefix, stem.split("-", 1)[0])
     tail = stem.split("-", 1)[1].lower() if "-" in stem else "regular"
     italic = "italic" in tail
-    weight = next((v for k, v in FONT_WEIGHTS.items() if k in tail.replace("italic", "")), 400)
+    if "variable" in tail:
+        weight = VARIABLE_RANGE.get(family, "100 900")
+    else:
+        weight = next((v for k, v in FONT_WEIGHTS.items() if k in tail.replace("italic", "")), 400)
     import base64 as _b64
     with open(fp, "rb") as f:
         b64 = _b64.b64encode(f.read()).decode("ascii")
     faces.append(
-        '@font-face{font-family:"%s";font-weight:%d;font-style:%s;font-display:swap;'
+        '@font-face{font-family:"%s";font-weight:%s;font-style:%s;font-display:swap;'
         'src:url(data:font/woff2;base64,%s) format("woff2")}'
         % (family, weight, "italic" if italic else "normal", b64))
     fam_seen.add(family)
@@ -78,27 +88,41 @@ if faces:
     print("fonts: %d face(s) inlined across %s" % (len(faces), ", ".join(sorted(fam_seen))))
 else:
     print("fonts: NONE FOUND at assets/fonts/*.woff2")
-    print("       The type contract names Bricolage Grotesque (display) + Hanken")
-    print("       Grotesk (body). Neither is present, so the page renders on the")
-    print("       system slab/sans fallback and the contract is NOT met.")
-    print("       Drop Bricolage-{Regular,Bold}.woff2 and Hanken-{Regular,Bold}.woff2")
-    print("       into assets/fonts/ and rebuild.")
+    print("       The type contract names Syne (display) + Plus Jakarta Sans")
+    print("       (body). Neither is present, so the page renders on the system")
+    print("       fallback stacks and the contract is NOT met.")
+    print("       Drop Syne-Variable.woff2 and Jakarta-Variable.woff2 into")
+    print("       assets/fonts/ and rebuild. Both are OFL, from Google Fonts.")
 
-HERO_TOKEN = "__HERO_IMG__"
+# The hero photographs are inlined as data URIs rather than linked, for the same
+# single-file/CSP reason as the fonts. Every assets/hero-*.{jpg,jpeg,png,webp} is
+# picked up, sorted by filename — that sort IS the slideshow order, so the names
+# carry it (hero-1-swimming.jpg, hero-2-tennis.jpg). With none present the token
+# stays and the CSS gradient fallback renders instead.
+HERO_TOKEN = "__HERO_IMGS__"
+MIME = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp"}
 hero_dir = os.path.join(ROOT, "assets")
-hero = next((p for ext in ("jpg", "jpeg", "png", "webp")
-             for p in glob.glob(os.path.join(hero_dir, "hero-stadium." + ext))), None)
-if hero:
+heroes = sorted(p for ext in MIME for p in glob.glob(os.path.join(hero_dir, "hero-*." + ext)))
+if heroes:
     import base64
-    mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp"}[hero.rsplit(".", 1)[1].lower()]
-    with open(hero, "rb") as f:
-        raw = f.read()
-    uri = "data:image/%s;base64,%s" % (mime, base64.b64encode(raw).decode("ascii"))
-    built = built.replace('"%s".indexOf("__HERO") === 0 ? "" : "%s"' % (HERO_TOKEN, HERO_TOKEN),
-                          '"%s"' % uri)
-    print("hero image: %s (%.0f KB inlined)" % (os.path.basename(hero), len(raw) / 1024))
+    uris, hero_bytes = [], 0
+    for h in heroes:
+        with open(h, "rb") as f:
+            raw = f.read()
+        hero_bytes += len(raw)
+        uris.append("data:image/%s;base64,%s"
+                    % (MIME[h.rsplit(".", 1)[1].lower()], base64.b64encode(raw).decode("ascii")))
+    built = built.replace('"%s".indexOf("__HERO") === 0 ? [] : []' % HERO_TOKEN,
+                          "[%s]" % ",".join('"%s"' % u for u in uris))
+    print("hero images: %d inlined (%.0f KB) — %s"
+          % (len(heroes), hero_bytes / 1024, ", ".join(os.path.basename(h) for h in heroes)))
+    if len(heroes) != 2:
+        print("       NOTE: the @keyframes stops in the host are written against a")
+        print("       TWO-photograph cycle. %d photographs will still cycle, but the"
+              % len(heroes))
+        print("       hold/slide split will be off — recompute them (see .hero-media).")
 else:
-    print("hero image: none at assets/hero-stadium.* — gradient fallback in use")
+    print("hero images: none at assets/hero-*.* — gradient fallback in use")
 
 # The Artifact platform supplies <!doctype>/<head>, but a file opened from disk
 # or served by a plain static server does not — without an explicit charset the
