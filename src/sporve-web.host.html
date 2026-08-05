@@ -2241,8 +2241,11 @@ function productMenuHTML(){
   const about=[["What is Sporve?","nav:product"],
     ["How background checks work","nav:trust"],
     ["Examples","nav:companies"]];
+  /* "Instant booking" pointed at nav:explore — byte-identical to "Search by
+     sport & age" directly above it. Two rows, one destination, and neither
+     showed a booking flow. The menu now has one row per destination. */
   const fam=[["Search by sport & age","nav:explore"],["Map search","nav:map"],
-    ["Instant booking","nav:explore"],["Messaging","nav:messages"],
+    ["Messaging","nav:messages"],
     ["Bookings & receipts","nav:bookings"],["Saved coaches","nav:saved"],
     ["Athlete progress","nav:timeline"]];
   const co=[["Scheduling & availability","tab:slots"],["Payments & payouts","tab:finances"],
@@ -2695,6 +2698,13 @@ function coachLandingHTML(){
     ["Scheduling & availability","Set recurring availability once. Families book only real open slots, and the seat count is enforced at the database — double-booking isn't possible.","Open the schedule","slots"],
     ["Payments & payouts","Families check out in-app. Payouts run automatically and every booking keeps a receipt, a refund trail, and the cancellation policy that applied at purchase.","See payouts","finances"],
     ["Client roster","Every family, session, and note in one place — including which trainer is cleared to work with which athlete.","See the roster","roster"],
+    /* The three below existed as menu rows with nowhere to land. Every "For
+       coaches" entry in the mega-menu now has a section on this page, because
+       for a signed-out visitor this page IS the destination -- see the
+       data-pdest handler. Copy describes what the module actually does. */
+    ["Session notes","Write a note once and it reaches the right parent, attached to the session it came from. Drafts queue until you send them.","See session notes","notes"],
+    ["Media & consent","Photos and clips stay locked to the athletes whose parents have granted consent. Consent is per athlete and revocable, and the library enforces it rather than reminding you about it.","See media & consent","media"],
+    ["Insights","What families searched for near you, which of your services fill, and where your pricing sits against comparable listings.","See insights","insights"],
     ["AI assistant","Reschedule, offer a waitlist spot, or message a group by typing what you want. It only acts on your real calendar.","Try the assistant","dashboard"]];
   const faq=[
     ["How does the background check work?","Every individual clears their own check — not the business. Your listings stay unbookable and hidden from search until yours clears, and an org being approved never vouches for a trainer on its roster."],
@@ -2731,8 +2741,10 @@ function coachLandingHTML(){
   </section>
 
   <div id="coachfeats"></div>
+  ${/* id per band so a signed-out click on a coach menu row lands ON the
+        feature it named instead of the top of a generic pitch. */""}
   ${feats.map(([t,d,link,tab],i)=>`
-  <section class="band ${i%2?"alt":""}">
+  <section class="band ${i%2?"alt":""}" id="coach-${esc(tab)}">
     <div class="shell split ${i%2?"rev":""}">
       <div class="splitcopy">
         <h2>${esc(t)}</h2>
@@ -4523,7 +4535,29 @@ function wire(){
       if(!isVerified()){S.onboardStep=0;S.modal={type:"onboard"};}
       else{S.coachTab="dashboard";S.route={name:"dashboard",arg:null};}
       window.scrollTo(0,0);render();return;}
-    if(kind==="tab"){S.portal="coach";S.coachTab=arg;go("dashboard");return;}
+    /* A signed-out visitor cannot be shown a coach dashboard, so render()
+       substitutes coachLandingHTML(). That meant all six "For coaches" menu
+       rows -- Scheduling, Payments, Roster, Session notes, Media, Insights --
+       plus "Works with how you run" delivered ONE identical page: seven
+       entries, one destination, for precisely the audience the menu is
+       courting. Measured before this change: 6 of 6 rows, 1 distinct page.
+
+       It also silently switched them into the coach portal, which drops the
+       whole family nav (topbarHTML renders primaryNavHTML only when
+       portal==="family"), so the exit was a single "Back to families" link.
+
+       Now the guest stays in the family portal and lands on the section of the
+       coach page that matches the row they clicked. The verified path is
+       unchanged. */
+    if(kind==="tab"){
+      if(!isVerified()){
+        go("coachinfo");
+        const el=document.getElementById("coach-"+arg);
+        if(el) el.scrollIntoView({block:"start"});
+        return;
+      }
+      S.portal="coach";S.coachTab=arg;go("dashboard");return;
+    }
     go(arg);
   });
   /* Toggle flips the view in place — same route, swapped scroll (spec Part 2). */
@@ -4748,6 +4782,10 @@ function wire(){
     if(d==="becomecoach"){S.modal=null;const f=()=>{S.portal="coach";go("dashboard");};
       isVerified()?f():(S.pendingIntent=f,S.modal={type:"authsheet"},render());return;}
     if(d==="import"){S.modal={type:"importclients"};render();return;}
+    /* "coachfeatures" was never matched and arrived here by fall-through, so
+       the token was dead string and any typo behaved identically. Explicit
+       now; the fall-through stays as the safety net it should have been. */
+    if(d==="coachfeatures"){go("coachinfo");return;}
     go("coachinfo");
   });
   $("[data-soon]").forEach(b=>b.onclick=()=>toast(b.dataset.soon+" isn't wired up yet"));
