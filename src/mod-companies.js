@@ -449,7 +449,7 @@ const CSS = `
 
 /* ── company index ──────────────────────────────────────────────── */
 .co-head{padding:44px 0 6px}
-.co-head h1{font-size:var(--text-hero);letter-spacing:-.015em;line-height:1.04}
+.co-head h1{font-size:var(--text-hero);letter-spacing:.005em;line-height:1.04}
 .co-head p{color:var(--muted);font-size:var(--text-md);max-width:56ch;margin-top:14px}
 .co-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:20px;padding:30px 0 60px}
 .co-card{
@@ -476,7 +476,7 @@ const CSS = `
 
 /* ── company profile ────────────────────────────────────────────── */
 .co-hero{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:44px;padding:34px 0 8px;align-items:start}
-.co-hero h1{font-size:var(--text-hero);letter-spacing:-.015em;line-height:1.04}
+.co-hero h1{font-size:var(--text-hero);letter-spacing:.005em;line-height:1.04}
 .co-hero .co-bio{color:var(--muted);font-size:var(--text-md);line-height:1.6;margin-top:16px;max-width:60ch}
 .co-heroshot{border-radius:var(--r-l);overflow:hidden;aspect-ratio:4/3;background:var(--raise2)}
 .co-heroshot img{width:100%;height:100%;object-fit:cover}
@@ -498,7 +498,7 @@ const CSS = `
 .co-row:hover{border-color:var(--rule-strong);box-shadow:var(--shadow)}
 .co-row .co-thumb{border-radius:var(--r-m);overflow:hidden;background:var(--raise2)}
 .co-row .co-thumb img{width:100%;height:100%;object-fit:cover}
-.co-row h3{font-size:var(--text-base);letter-spacing:-.022em;margin-top:7px}
+.co-row h3{font-size:var(--text-base);letter-spacing:-.015em;margin-top:7px}
 .co-row .co-meta{color:var(--faint);font-size:var(--text-sm);margin-top:4px;font-variant-numeric:tabular-nums}
 .co-row .co-act{display:flex;flex-direction:column;align-items:flex-end;gap:9px;flex:0 0 auto}
 .co-row .co-px{font-size:var(--text-base);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}

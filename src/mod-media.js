@@ -358,7 +358,7 @@ const CSS = `
 .md-slot{border:1px solid var(--rule);border-radius:var(--r-l);padding:16px;background:var(--paper);
   display:flex;flex-direction:column;gap:11px}
 .md-slothead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.md-slot h4{margin:0;font-size:var(--text-base);letter-spacing:-.018em;font-weight:700}
+.md-slot h4{margin:0;font-size:var(--text-base);letter-spacing:-.015em;font-weight:700}
 .md-why{font-size:var(--text-sm);color:var(--muted);line-height:1.45}
 .md-hint{font-size:var(--text-sm);line-height:1.45;color:var(--faint)}
 .md-hint.todo{color:var(--warn)}

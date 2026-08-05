@@ -328,7 +328,7 @@ const CSS = `
   font-size:var(--text-sm);color:var(--muted);line-height:1.5}
 .cob-card{border:1px solid var(--rule);border-radius:var(--r-l);padding:26px;background:var(--paper)}
 .cob-head{margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
-.cob-head h2{letter-spacing:-.026em}
+.cob-head h2{letter-spacing:.005em}
 .cob-head p{color:var(--muted);font-size:var(--text-base);margin-top:7px;max-width:64ch;line-height:1.58}
 .cob-two{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
 .cob-three{display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 16px}
@@ -368,7 +368,7 @@ const CSS = `
 .cob-consent input{width:18px;height:18px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--slate)}
 .cob-consent span{font-size:var(--text-sm);color:var(--ink-2);line-height:1.5}
 .cob-truth{border:1px solid var(--rule-strong);border-radius:var(--r-l);padding:18px 20px;background:var(--raise);margin-bottom:20px}
-.cob-truth h4{margin:0 0 4px;font-size:var(--text-base);letter-spacing:-.01em}
+.cob-truth h4{margin:0 0 4px;font-size:var(--text-base);letter-spacing:-.015em}
 .cob-truth p{font-size:var(--text-sm);color:var(--ink-2);line-height:1.58;margin-top:9px}
 .cob-truth p:first-of-type{margin-top:0}
 .cob-lock{display:flex;gap:11px;align-items:flex-start;background:var(--warn-tint);border-radius:var(--r-m);
@@ -377,7 +377,7 @@ const CSS = `
 .cob-lock p{font-size:var(--text-sm);color:var(--ink-2);line-height:1.55}
 .cob-rb{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px 20px;margin-bottom:14px}
 .cob-rbhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
-.cob-rbhead h4{font-size:var(--text-base);letter-spacing:-.016em}
+.cob-rbhead h4{font-size:var(--text-base);letter-spacing:-.015em}
 .cob-rb .linerow b{font-weight:700;color:var(--ink)}
 .cob-rb .linerow span:last-child{text-align:right;min-width:0}
 .cob-nav{display:flex;align-items:center;gap:14px;margin-top:24px;padding-top:20px;border-top:1px solid var(--rule);flex-wrap:wrap}

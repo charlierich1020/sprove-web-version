@@ -327,7 +327,7 @@ const CSS = `
 .co-legend i{width:11px;height:11px;border-radius:3px;display:inline-block;vertical-align:-1px;margin-right:6px}
 .co-alert{border:1px solid var(--danger);border-radius:var(--r-m);padding:14px 16px;margin-top:16px;
   background:color-mix(in srgb,var(--danger) 7%,transparent)}
-.co-alert h4{margin:0 0 8px;font-size:var(--text-base);color:var(--danger);letter-spacing:-.01em}
+.co-alert h4{margin:0 0 8px;font-size:var(--text-base);color:var(--danger);letter-spacing:-.015em}
 .co-alert li{font-size:var(--text-sm);color:var(--ink-2);margin-top:5px;line-height:1.5}
 .co-row{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px;margin-bottom:14px;background:var(--paper)}
 .co-row.off{background:var(--raise)}
