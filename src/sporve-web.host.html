@@ -273,8 +273,9 @@ img{max-width:100%;display:block}
   position:absolute;left:0;right:0;top:100%;z-index:70;
   background:var(--paper);border-bottom:1px solid var(--rule);
   box-shadow:var(--shadow-lift);
-  opacity:0;visibility:hidden;transform:translateY(-6px);
-  transition:opacity .16s,transform .16s,visibility .16s;
+  /* opacity 0->1 with translateY(8px->0), the Amboras dropdown entrance. */
+  opacity:0;visibility:hidden;transform:translateY(8px);
+  transition:opacity .2s ease-out,transform .2s ease-out,visibility .2s;
 }
 .prodwrap:hover .productmenu,.prodwrap:focus-within .productmenu{
   opacity:1;visibility:visible;transform:none;
@@ -403,10 +404,19 @@ img{max-width:100%;display:block}
    its content (96 top + stack + 96 bottom) instead of a min-height clamp that
    left ~160px of empty dark below the search bar. Margins match the page
    gutter, so the panel's edges line up with the card grid beneath it. */
-.hero{padding:24px 0 0}
+.hero{padding:20px 0 0}
 .hero-panel{
   position:relative;overflow:hidden;
-  width:min(100% - 48px, calc(var(--shell) - 48px));margin:0 auto;
+  /* Full-bleed, not shell-width. The grid below stays capped at --shell; the
+     panel breaks out of it and runs edge to edge on a 20px gutter, so the
+     photograph is the widest thing on the page. */
+  width:calc(100% - 40px);max-width:1760px;margin:0 auto;
+  /* The frame carries the PHOTOGRAPHS' proportion, not an arbitrary height.
+     The two are 1000x558 (1.792) and 1000x671 (1.490); 1000/612 is their
+     geometric mean, so each gives up the same 4.4% per edge and neither is
+     stretched. Squaring the frame to one of them would have cost the other
+     ~17%. This is why the panel is tall — a short frame is what crops. */
+  aspect-ratio:1000/612;
   border-radius:var(--r-card);
   display:grid;place-items:center;
   /* near-black with a slate tint under ~4% lightness variance — material,
@@ -516,7 +526,10 @@ img{max-width:100%;display:block}
 
 @media(max-width:640px){
   .hero{padding:16px 0 0}
-  .hero-panel{width:calc(100% - 24px);border-radius:var(--r-card)}
+  /* A 1.63 frame at phone width is 210px tall — shorter than the headline.
+     Drop the ratio here and let the content set the height again; a portrait
+     viewport crops a landscape photograph no matter what the frame does. */
+  .hero-panel{width:calc(100% - 24px);aspect-ratio:auto;border-radius:var(--r-card)}
   .hero-in{padding:56px 18px;gap:14px}
   .hero .searchpill{height:auto;flex-wrap:wrap;padding:8px;gap:6px;border-radius:var(--r-card)}
   .sp-seg,.sp-where{flex:1 0 100%;padding:10px 14px;border:1px solid var(--rule);border-radius:var(--r-ctl)}
@@ -1324,6 +1337,182 @@ h2.ctr{margin-bottom:10px}
 /* radii — every rounded thing resolves to one of three */
 #app .mark,#app .featbadge,#app .payst,#app .gscheck{border-radius:var(--r-ctl)}
 #app .pmdot,#app .sporttag i,#app .qdot,#app .tspine,#app .co-dot{border-radius:var(--r-pill)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LANDING — Amboras-pattern layer.
+   Structure, motion and interaction borrowed from amboras.app; every
+   colour resolves to an existing Sporve token. Nothing new is introduced
+   to the palette: --paper/--raise/--raise2 grounds, --ink/--muted/--faint
+   text, --accent (#C2410C) for the one accent, --rule for hairlines.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Available to a screen reader, absent for everyone else. Used where an icon
+   carries meaning on its own (the shield on a background-checked listing). */
+.vis-hide{
+  position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+}
+
+/* ── Scroll reveal. Section-by-section entrance, IntersectionObserver-driven.
+   The un-revealed state is only applied once JS confirms it can observe, so
+   a failed script leaves the content visible instead of blank. */
+.js-rev [data-rev]{opacity:0;transform:translateY(18px);
+  transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1)}
+.js-rev [data-rev].in{opacity:1;transform:none}
+.js-rev [data-rev][data-rev-d="1"]{transition-delay:.08s}
+.js-rev [data-rev][data-rev-d="2"]{transition-delay:.16s}
+.js-rev [data-rev][data-rev-d="3"]{transition-delay:.24s}
+
+/* ── Infinite horizontal carousel. Track holds the card set twice; the
+   animation travels exactly -50%, so the second copy lands where the first
+   began and the seam is invisible. Hover pauses. */
+.amq{position:relative;overflow:hidden;width:100%}
+.amq::before,.amq::after{
+  content:"";position:absolute;top:0;bottom:0;width:120px;z-index:2;pointer-events:none;
+}
+.amq::before{left:0;background:linear-gradient(90deg,var(--paper),transparent)}
+.amq::after{right:0;background:linear-gradient(270deg,var(--paper),transparent)}
+.amq-track{display:flex;gap:18px;width:max-content;animation:marqueeRight 46s linear infinite}
+.amq:hover .amq-track,.amq:focus-within .amq-track{animation-play-state:paused}
+@keyframes marqueeRight{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+
+/* A real program from PROGRAMS, not a mockup. */
+.amq-card{
+  width:288px;flex:0 0 auto;background:var(--paper);border:1px solid var(--rule);
+  border-radius:var(--r-card);padding:16px;text-align:left;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:10px;transition:box-shadow .18s,transform .18s;
+}
+.amq-card:hover{box-shadow:var(--shadow-lift);transform:translateY(-3px)}
+.amq-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.amq-tag{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--r-pill);
+  font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.14em;
+}
+.amq-tag i{width:6px;height:6px;border-radius:var(--r-pill);flex:0 0 auto}
+.amq-card b{font-size:var(--text-base);letter-spacing:-.01em;line-height:1.3;color:var(--ink)}
+.amq-meta{font-size:var(--text-sm);color:var(--muted);display:flex;gap:8px;align-items:center}
+.amq-price{margin-top:auto;font-size:var(--text-sm);color:var(--ink);font-weight:700}
+.amq-price span{font-weight:400;color:var(--faint)}
+
+/* ── Ticker. Same mechanism, text instead of cards, "+" between entries. */
+.tick{
+  border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+  background:var(--raise);overflow:hidden;padding:15px 0;
+}
+.tick-track{display:flex;width:max-content;animation:marqueeRight 38s linear infinite}
+.tick:hover .tick-track{animation-play-state:paused}
+.tick-item{
+  display:flex;align-items:center;gap:34px;padding-right:34px;white-space:nowrap;
+  font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.18em;
+  color:var(--faint);
+}
+.tick-item em{color:var(--accent);font-style:normal;font-weight:700}
+
+/* ── Live metrics widget. */
+.lgrid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:center}
+.lchecks{margin-top:22px;display:flex;flex-direction:column;gap:11px}
+.lcheck{display:flex;align-items:center;gap:11px;font-size:var(--text-base);color:var(--ink-2)}
+.lcheck i{
+  width:21px;height:21px;border-radius:var(--r-pill);flex:0 0 auto;display:grid;place-items:center;
+  background:var(--accent-tint);color:var(--accent);
+}
+.lcheck svg{stroke-dasharray:22;stroke-dashoffset:22;transition:stroke-dashoffset .5s ease .1s}
+[data-rev].in .lcheck svg,.js-rev-off .lcheck svg{stroke-dashoffset:0}
+.lcard{
+  background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-card);
+  padding:20px;box-shadow:var(--shadow-lift);
+}
+.lcard-hd{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding-bottom:14px;border-bottom:1px solid var(--rule);
+}
+.lcard-live{display:flex;align-items:center;gap:8px;font-size:var(--text-xs);
+  font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--faint)}
+.lcard-live i{width:8px;height:8px;border-radius:var(--r-pill);background:var(--good);
+  animation:livepulse 2.4s ease-in-out infinite}
+.lstats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+.lstat{background:var(--raise);border:1px solid var(--rule);border-radius:var(--r-ctl);padding:14px}
+.lstat span{font-size:var(--text-xs);font-weight:600;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--faint);display:block}
+.lstat b{font-family:var(--display);font-weight:800;font-size:var(--text-xl);
+  letter-spacing:-.02em;line-height:1;display:block;margin-top:7px;color:var(--ink)}
+.lrow{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  background:var(--raise);border-radius:var(--r-ctl);padding:11px 13px;
+  font-size:var(--text-sm);color:var(--ink-2);
+}
+.lrow+.lrow{margin-top:8px}
+.lrow em{font-style:normal;font-weight:700;color:var(--accent);white-space:nowrap}
+
+/* ── Dual-path: two journeys side by side. */
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:34px}
+.dpath{
+  background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-card);
+  padding:28px;display:flex;flex-direction:column;transition:border-color .18s,box-shadow .18s;
+}
+.dpath:hover{border-color:var(--rule-strong);box-shadow:var(--shadow)}
+.dpath>.eyebrow{color:var(--accent)}
+.dpath h3{margin-top:10px}
+.dpath>p{color:var(--muted);font-size:var(--text-base);line-height:1.55;margin-top:9px}
+.dlist{margin:18px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.dlist li{display:flex;gap:10px;align-items:flex-start;font-size:var(--text-sm);color:var(--ink-2)}
+.dlist svg{flex:0 0 auto;margin-top:2px;color:var(--accent)}
+.dpath .btn{margin-top:22px;align-self:flex-start}
+
+/* ── Numbered step cards, 01 / 02 / 03. */
+.stepgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px}
+.scard{
+  background:var(--paper);border:1px solid var(--rule);border-radius:var(--r-card);
+  padding:28px;position:relative;transition:border-color .18s,transform .18s;
+}
+.scard:hover{border-color:var(--rule-strong);transform:translateY(-3px)}
+.scard .snum{
+  font-family:var(--display);font-weight:800;font-size:var(--text-xl);letter-spacing:-.02em;
+  line-height:1;color:var(--accent);opacity:.42;display:block;
+}
+.scard b{display:block;margin-top:15px}
+.scard p{color:var(--muted);font-size:var(--text-sm);line-height:1.55;margin-top:8px}
+
+/* ── Accordion. The answer stays in the DOM and animates on grid-template-rows,
+   so opening one does not reflow the page the way add/remove-from-DOM does.
+   The "+" rotates 45deg into an "x" — same glyph, no icon swap. */
+.acc{border-top:1px solid var(--rule)}
+.accitem{border-bottom:1px solid var(--rule)}
+.accq{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px;
+  padding:22px 2px;text-align:left;font-size:var(--text-lg);font-weight:700;
+  letter-spacing:-.015em;color:var(--ink);transition:color .16s;
+}
+.accq:hover{color:var(--accent)}
+.accitem.on .accq{color:var(--accent)}
+.accplus{position:relative;width:17px;height:17px;flex:0 0 auto;
+  transition:transform .26s cubic-bezier(.22,1,.36,1)}
+.accplus::before,.accplus::after{
+  content:"";position:absolute;left:50%;top:50%;background:currentColor;border-radius:1px;
+}
+.accplus::before{width:15px;height:2px;transform:translate(-50%,-50%)}
+.accplus::after{width:2px;height:15px;transform:translate(-50%,-50%)}
+.accitem.on .accplus{transform:rotate(45deg)}
+.accwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.22,1,.36,1)}
+.accitem.on .accwrap{grid-template-rows:1fr}
+.accinner{overflow:hidden}
+.acca{color:var(--muted);font-size:var(--text-base);line-height:1.62;max-width:70ch;
+  padding:0 2px 24px}
+
+@media(max-width:900px){
+  .lgrid,.dual{grid-template-columns:1fr;gap:28px}
+  .stepgrid{grid-template-columns:1fr}
+  .lstats{grid-template-columns:1fr}
+  .amq::before,.amq::after{width:48px}
+}
+/* Motion is decoration here; none of it carries meaning. */
+@media(prefers-reduced-motion:reduce){
+  .amq-track,.tick-track{animation:none}
+  .js-rev [data-rev]{opacity:1;transform:none;transition:none}
+  .lcheck svg{stroke-dashoffset:0;transition:none}
+  .accwrap{transition:none}
+  .accplus{transition:none}
+}
 </style>
 
 <div id="app"></div>
@@ -1853,10 +2042,58 @@ function subnavHTML(){return "";}
    Full-width bands stacked vertically. Search lives in the nav only — never
    duplicated in the hero. "Become a coach" appears exactly three times:
    nav, showcase, final CTA.                                                  */
+/* A stroked check, sized at the call site. Stroked rather than filled so the
+   landing's reveal can draw it on with stroke-dashoffset. */
+const TICK=(s,w)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"
+  aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>`;
+
+/* Every figure on this page is computed from PROGRAMS at render time rather
+   than typed in. A marketing number that can drift out of step with the
+   catalogue is a number that will eventually be false, and this page is
+   public. If the dataset changes, the landing changes with it. */
+function landingFacts(){
+  const sports=[...new Set(PROGRAMS.map(p=>p.sport))];
+  const bizes=[...new Set(PROGRAMS.map(p=>p.biz))];
+  const verifiedBiz=[...new Set(PROGRAMS.filter(p=>p.verified).map(p=>p.biz))];
+  const prices=PROGRAMS.map(p=>p.price);
+  return {
+    programs:PROGRAMS.length, sports:sports.length, bizes, verifiedBiz,
+    bizCount:bizes.length, verifiedCount:verifiedBiz.length,
+    minPrice:Math.min(...prices),
+    rating:(PROGRAMS.reduce((a,p)=>a+p.rating,0)/PROGRAMS.length).toFixed(1),
+    reviews:PROGRAMS.reduce((a,p)=>a+p.reviews,0),
+  };
+}
+
+/* The infinite carousel. The card set is emitted TWICE and the track travels
+   exactly -50%, so copy two arrives where copy one started and the loop has
+   no seam. Duplicates are aria-hidden so a screen reader hears the set once. */
+function heroCarouselHTML(){
+  const cards=PROGRAMS.filter(p=>p.featured).concat(PROGRAMS.filter(p=>!p.featured)).slice(0,10);
+  const card=p=>`<div class="amq-card">
+    <div class="amq-top">
+      <span class="amq-tag" style="background:${sportColor(p.sport)}14;color:${sportColor(p.sport)}">
+        <i style="background:${sportColor(p.sport)}"></i>${esc(p.sport)}</span>
+      ${p.verified?`<span class="verifline" title="Background-checked"
+        ><span class="vis-hide">Background-checked</span>${ICON.shield}</span>`:""}
+    </div>
+    <b>${esc(p.title)}</b>
+    <span class="amq-meta">${ICON.star} ${p.rating} · ages ${p.minAge}–${p.maxAge}</span>
+    <span class="amq-price">${money(p.price)} <span>${modelLabel(p.model)}</span></span>
+  </div>`;
+  const set=cards.map(card).join("");
+  return `<div class="amq" aria-label="Programs on Sporve">
+    <div class="amq-track">${set}<span aria-hidden="true" style="display:contents">${set}</span></div>
+  </div>`;
+}
+
 function landingHTML(){
+  const f=landingFacts();
   const heroSports=["Soccer","Basketball","Tennis","Baseball","Swimming"];
   const gridSports=[...new Set(PROGRAMS.map(p=>p.sport))].slice(0,12);
   const seg=S.showcaseSide||"families";
+  const tickSet=f.bizes.map(b=>`${esc(b.toUpperCase())} <em>+</em>`).join(" ");
   return `
   <section class="band hero">
     <div class="shell hero-in">
@@ -1869,7 +2106,15 @@ function landingHTML(){
         <button class="hchip alt" data-nav="explore">All sports →</button>
       </div>
     </div>
+    ${heroCarouselHTML()}
   </section>
+
+  <div class="tick" aria-label="Businesses on Sporve">
+    <div class="tick-track">
+      <span class="tick-item">${tickSet}</span>
+      <span class="tick-item" aria-hidden="true">${tickSet}</span>
+    </div>
+  </div>
 
   <section class="band">
     <div class="shell">
@@ -1885,7 +2130,73 @@ function landingHTML(){
     </div>
   </section>
 
+  <section class="band">
+    <div class="shell lgrid">
+      <div data-rev>
+        <div class="eyebrow" style="color:var(--accent)">What's on Sporve today</div>
+        <h2 style="margin-top:12px">Every listing here is a real one.</h2>
+        <p class="sub" style="margin-top:14px">
+          No placeholder inventory and no seeded numbers. The catalogue below is the
+          same data the search, the map and the assistant read from.</p>
+        <div class="lchecks">
+          ${[["Per-person background checks, not business-level"],
+             ["Reviews unlock only after a completed session"],
+             ["A child profile needs recorded parental consent"]]
+            .map(([t])=>`<div class="lcheck"><i>${TICK(12,3.4)}</i><span>${esc(t)}</span></div>`).join("")}
+        </div>
+      </div>
+
+      <div class="lcard" data-rev data-rev-d="1">
+        <div class="lcard-hd">
+          <span class="lcard-live"><i></i>Live catalogue</span>
+          <span class="featbadge" style="background:var(--accent-tint);color:var(--accent)">Miami, FL</span>
+        </div>
+        <div class="lstats">
+          <div class="lstat"><span>Programs</span><b data-count="${f.programs}">0</b></div>
+          <div class="lstat"><span>Sports</span><b data-count="${f.sports}">0</b></div>
+          <div class="lstat"><span>Businesses</span><b data-count="${f.bizCount}">0</b></div>
+        </div>
+        <div class="lrow"><span>Background-checked businesses</span>
+          <em>${f.verifiedCount} of ${f.bizCount}</em></div>
+        <div class="lrow"><span>Average rating across ${f.reviews} reviews</span>
+          <em>${f.rating} ★</em></div>
+        <div class="lrow"><span>Sessions start from</span><em>${money(f.minPrice)}</em></div>
+      </div>
+    </div>
+  </section>
+
   <section class="band alt">
+    <div class="shell">
+      <h2 class="ctr" data-rev>Two ways in</h2>
+      <p class="sub ctr" data-rev>The same platform families book on is the one coaches run their week on.</p>
+      <div class="dual">
+        <div class="dpath" data-rev>
+          <div class="eyebrow">For families</div>
+          <h3>Find someone you'd trust with your kid</h3>
+          <p>Search by sport, your child's age and your budget. Book and pay without leaving the page.</p>
+          <ul class="dlist">
+            ${["Every coach clears a per-person check","Message before you spend anything",
+               "Sessions, receipts and updates in one thread","One account, however many kids"]
+              .map(t=>`<li>${TICK(14,3)}<span>${esc(t)}</span></li>`).join("")}
+          </ul>
+          <button class="btn" data-nav="explore">Find a coach</button>
+        </div>
+        <div class="dpath" data-rev data-rev-d="1">
+          <div class="eyebrow">For coaches</div>
+          <h3>Run your week, get paid on time</h3>
+          <p>Your calendar, your policies, your prices. Sporve handles the admin around them.</p>
+          <ul class="dlist">
+            ${["Free to join and list","Bring the families you already coach",
+               "Checkout and automatic payouts","Roster, notes, media and insights"]
+              .map(t=>`<li>${TICK(14,3)}<span>${esc(t)}</span></li>`).join("")}
+          </ul>
+          <button class="btn ghost" data-becomecoach="1">Become a coach</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
     <div class="shell">
       <h2 class="ctr">One product, two sides</h2>
       <p class="sub ctr">The same platform families book on is the one coaches run their week on.</p>
@@ -1921,13 +2232,38 @@ function landingHTML(){
 
   <section class="band alt">
     <div class="shell">
-      <h2 class="ctr">How it works</h2>
-      <div class="steps">
-        ${[["Search","Tell us the sport, your kid's age, and your budget."],
-           ["Book","Pick a real open slot and pay in one flow."],
-           ["Show up","Directions, coach contact, and updates land in one thread."]]
-          .map(([t,d],i)=>`<div class="step3"><span class="stepnum num">${i+1}</span>
+      <h2 class="ctr" data-rev>Three steps, start to session</h2>
+      <p class="sub ctr" data-rev>No membership, no booking fee, nothing to install.</p>
+      <div class="stepgrid">
+        ${[["Search","Tell us the sport, your kid's age, and your budget. The assistant matches on distance and level too."],
+           ["Book","Pick a real open slot and pay in one flow. Cancellation terms are shown before you commit, not after."],
+           ["Show up","Directions, coach contact, session notes and receipts all land in one thread."]]
+          .map(([t,d],i)=>`<div class="scard" data-rev data-rev-d="${i}">
+            <span class="snum">0${i+1}</span>
             <b>${esc(t)}</b><p>${esc(d)}</p></div>`).join("")}
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="shell" style="max-width:860px">
+      <h2 class="ctr" data-rev>Questions, answered</h2>
+      <div class="acc" data-rev style="margin-top:34px">
+        ${[["Is every coach really background-checked?",
+            "Yes, and per person rather than per business. An approved business cannot vouch for an individual on Sporve — each coach clears their own check, and an unverified coach never appears in search, in results, or in anything the assistant suggests."],
+           ["What does it cost a family?",
+            "You pay the coach's price for the session. There is no booking fee and no membership. Browsing, messaging a coach, saving coaches and managing your athletes are all free."],
+           ["Can I message a coach before I book?",
+            "Yes. Ask about equipment, group size, or experience before you spend anything. Messages, bookings and receipts stay in one thread per coach."],
+           ["Can one account cover more than one child?",
+            "Yes. One profile per family, however many kids you have and however many sports they play. Each child's profile requires recorded parental consent before it can exist."],
+           ["How do reviews work?",
+            "A review can only be written after a session that actually completed. That is enforced in code, not by moderation, so the rating you see is from families who turned up."]]
+          .map(([q,a],i)=>`<div class="accitem" data-acc>
+            <button class="accq" aria-expanded="false">
+              <span>${esc(q)}</span><span class="accplus" aria-hidden="true"></span></button>
+            <div class="accwrap"><div class="accinner"><p class="acca">${esc(a)}</p></div></div>
+          </div>`).join("")}
       </div>
     </div>
   </section>
@@ -4259,7 +4595,68 @@ function wire(){
 }
 
 /* module wiring + host-owned toggles, run at the end of every render */
+/* ── Landing interactions ────────────────────────────────────────────
+   render() replaces #app wholesale, so everything here re-binds each pass and
+   nothing may assume it survived. Three pieces:
+
+   1. Scroll reveal. The hidden state lives behind a `.js-rev` class added HERE
+      rather than in the stylesheet, so if this function never runs — script
+      error, ancient browser — the page renders fully visible instead of blank.
+   2. Counting numerals. Driven off the same observer so the count starts when
+      the card is actually on screen, not at load behind three folds.
+   3. The accordion toggles a class directly and does NOT call render(). Going
+      through state would rebuild #app and throw away the CSS transition, which
+      is exactly the layout jolt the pattern exists to avoid. */
+function wireLanding(){
+  const app=document.getElementById("app");
+  const reveals=document.querySelectorAll("[data-rev]");
+  const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  if(reveals.length&&"IntersectionObserver" in window&&!reduce){
+    app.classList.add("js-rev");
+    const io=new IntersectionObserver((entries,obs)=>{
+      entries.forEach(e=>{
+        if(!e.isIntersecting) return;
+        e.target.classList.add("in");
+        e.target.querySelectorAll("[data-count]").forEach(countUp);
+        obs.unobserve(e.target);
+      });
+    /* threshold 0 + a shallow bottom margin: fire as soon as the element
+       crosses into view. A larger threshold reads as a blank hole on a phone,
+       where one section can be most of the viewport. */
+    },{rootMargin:"0px 0px -6% 0px",threshold:0});
+    reveals.forEach(el=>io.observe(el));
+  } else {
+    /* No observer, or the visitor asked for less motion: show the end state. */
+    reveals.forEach(el=>el.classList.add("in"));
+    document.querySelectorAll("[data-count]").forEach(el=>el.textContent=el.dataset.count);
+  }
+
+  function countUp(el){
+    const target=Number(el.dataset.count)||0;
+    if(reduce||target<=0){el.textContent=target;return;}
+    const dur=900, t0=performance.now();
+    const tick=now=>{
+      const p=Math.min(1,(now-t0)/dur);
+      /* ease-out cubic: fast off the line, settles on the real figure */
+      el.textContent=Math.round(target*(1-Math.pow(1-p,3)));
+      if(p<1) requestAnimationFrame(tick); else el.textContent=target;
+    };
+    requestAnimationFrame(tick);
+  }
+
+  document.querySelectorAll("[data-acc]").forEach(item=>{
+    const btn=item.querySelector(".accq");
+    if(!btn) return;
+    btn.onclick=()=>{
+      const open=item.classList.toggle("on");
+      btn.setAttribute("aria-expanded",String(open));
+    };
+  });
+}
+
 function wireExtras(){
+  wireLanding();
   document.querySelectorAll("[data-notif]").forEach(el=>{
     el.onchange=()=>{
       const [k,ch]=el.dataset.notif.split(".");
