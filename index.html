@@ -1402,6 +1402,30 @@ h2.ctr{margin-bottom:10px}
    text, --accent (#C2410C) for the one accent, --rule for hairlines.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════ INVARIANT: dark ground, light type ═══════════════
+   A black or near-black background carries WHITE or SLATE text. Never a
+   token that can resolve dark, never a mid-grey, never an accent that was
+   tuned for a white page. This is a rule, not a preference — it is the
+   failure this file has already shipped twice (white-on-white headline,
+   c6cf658; near-black-on-black under a dark theme, caught in QA).
+
+   Concretely, on #000: headings #FFFFFF (21:1), body #AEB8C4 (10.45:1),
+   eyebrows #8B97A5 (7.07:1), accent --accent-on-dark #F08A62 (8.52:1),
+   focus ring #E8EDF3 (17.84:1). --accent #C2410C is 4.06:1 and is BANNED
+   on black for anything but large display text.
+
+   To verify after any change, paste into the console and walk the routes —
+   it resolves the painted background through transparent ancestors, so it
+   catches inherited grounds that a CSS grep cannot:
+
+     lum=c=>{const v=c.map(x=>{x/=255;return x<=.03928?x/12.92:
+       Math.pow((x+.055)/1.055,2.4)});return .2126*v[0]+.7152*v[1]+.0722*v[2]}
+     — flag any text whose ground luminance < .18 and whose ratio < 4.5:1.
+
+   Last run: clean across home, explore, coachinfo, trust, pricing, product,
+   companies, the coach landing and the modal layer.
+   ══════════════════════════════════════════════════════════════════ */
+
 /* ── CONTRAST LAYER ──────────────────────────────────────────────────
    The page ran white -> raised-grey -> white with a single black band at the
    very end. That is a narrow range, and it is why the scroll reads flat. This
