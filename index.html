@@ -70,11 +70,18 @@
   --text-xl:clamp(21px,1.9vw,27px);    /* stat numerals, sub-headers          */
   --text-2xl:clamp(24px,2.2vw,32px);   /* section headers (h2)                */
   --text-hero:clamp(32px,3.6vw,54px);  /* h1 only                             */
-  /* The ONE class of exception: a `font-size` that sizes a GLYPH inside a
-     fixed-dimension box -- an avatar initial in a 32px circle, an emoji, a
-     chevron. Those are icon dimensions expressed in font-size units, not type,
-     and a fluid clamp would burst the box. They stay in px on purpose. Search
-     for a font-size sitting next to an explicit width+height to find them.
+  /* The ONE class of exception: a `font-size` that sizes a GLYPH rather than
+     text -- an avatar initial, an emoji, a chevron, a sport badge's icon.
+     Those are icon dimensions expressed in font-size units, and a fluid clamp
+     would either burst a fixed box or scale an icon with the viewport. They
+     stay in px on purpose.
+
+     Most sit next to an explicit width+height, which is the easy way to spot
+     them. Four do not -- .empty .big, .bandhead span, .faqi and .sparkdash are
+     unboxed glyphs in free-flowing containers. They are still glyphs and still
+     exempt; an earlier version of this note said "inside a fixed-dimension
+     box", which described nine of the thirteen and quietly implied the other
+     four were drift.
 
      The six legacy --t-* names stay as aliases onto the eight steps so the ten
      feature modules keep resolving, exactly as --r-s/--r-m/--r-l alias onto the
@@ -232,8 +239,11 @@ img{max-width:100%;display:block}
    where it stands alone (auth sheet, avatar fallbacks). The wordmark is the
    one piece of text that is NOT black: it carries the slate brand colour. */
 .topbar .brand .mark,.footbase .mark{display:none}
+/* No letter-spacing: the base .wordmark rule sets .02em, and three cascading
+   values (.02 / -.005 / -.01) on one uppercase Syne mark meant the logo was
+   tracked differently in the header, the footer and the auth sheet. */
 .topbar .wordmark,.footbase .wordmark,.footbrand .wordmark{
-  text-transform:uppercase;letter-spacing:-.005em;color:var(--slate);font-size:var(--t-h3);
+  text-transform:uppercase;color:var(--slate);font-size:var(--text-lg);
 }
 .searchpill{
   flex:1;max-width:520px;display:flex;align-items:center;gap:0;
@@ -998,7 +1008,9 @@ h2.ctr{margin-bottom:10px}
   display:inline-flex;align-items:center;gap:8px;color:var(--paper);
   font-size:var(--text-base);font-weight:700;letter-spacing:-.015em;
 }
-.tritem svg{color:var(--gold)}
+/* --gold #D4A94E is a second accent on the same black ground the rest of the
+   dark layer serves with --accent-on-dark. One accent per ground. */
+.tritem svg{color:var(--accent-on-dark)}
 .finalcta{border-bottom:0}
 .ctarow{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;margin-top:20px}
 /* coach landing */
@@ -1182,7 +1194,7 @@ h2.ctr{margin-bottom:10px}
 .footgrid{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:30px}
 .footbrand{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding-right:20px}
 .footbrand .wordmark{
-  text-transform:uppercase;letter-spacing:-.01em;color:var(--ink);font-size:var(--text-xl);
+  text-transform:uppercase;color:var(--ink);font-size:var(--text-xl);
 }
 .footbrand p{color:var(--muted);font-size:var(--text-base);line-height:1.5;max-width:250px}
 .footcol{display:flex;flex-direction:column;align-items:flex-start;gap:9px}
@@ -2558,7 +2570,7 @@ function landingHTML(){
     <div class="shell">
       <div class="trustrow">
         ${["Background checks","Secure payments","Verified reviews","COPPA-conscious"]
-          .map(t=>`<span class="tritem">${ICON.shield} ${esc(t)}</span>`).join("")}
+          .map(t=>`<span class="tritem"><span aria-hidden="true">${ICON.shield}</span> ${esc(t)}</span>`).join("")}
       </div>
       <p class="sub ctr" style="margin-top:14px">
         Coaches are gated on a per-person background check — an approved business never vouches for an individual.
@@ -14761,7 +14773,10 @@ const CSS = `
 /* ── company profile ────────────────────────────────────────────── */
 .co-hero{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:44px;padding:34px 0 8px;align-items:start}
 .co-hero h1{font-size:var(--text-hero);letter-spacing:.005em;line-height:1.04}
-.co-hero .co-bio{color:var(--muted);font-size:var(--text-md);line-height:1.6;margin-top:16px;max-width:60ch}
+/* --text-base, not --text-md: md is reserved for a one-line lead under a
+   headline. This is a 60ch operator bio at line-height 1.6 -- body copy that
+   happens to sit under an h1. */
+.co-hero .co-bio{color:var(--muted);font-size:var(--text-base);line-height:1.6;margin-top:16px;max-width:60ch}
 .co-heroshot{border-radius:var(--r-l);overflow:hidden;aspect-ratio:4/3;background:var(--raise2)}
 .co-heroshot img{width:100%;height:100%;object-fit:cover}
 .co-facts{display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;padding-top:20px;border-top:1px solid var(--rule)}

@@ -477,7 +477,10 @@ const CSS = `
 /* ── company profile ────────────────────────────────────────────── */
 .co-hero{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:44px;padding:34px 0 8px;align-items:start}
 .co-hero h1{font-size:var(--text-hero);letter-spacing:.005em;line-height:1.04}
-.co-hero .co-bio{color:var(--muted);font-size:var(--text-md);line-height:1.6;margin-top:16px;max-width:60ch}
+/* --text-base, not --text-md: md is reserved for a one-line lead under a
+   headline. This is a 60ch operator bio at line-height 1.6 -- body copy that
+   happens to sit under an h1. */
+.co-hero .co-bio{color:var(--muted);font-size:var(--text-base);line-height:1.6;margin-top:16px;max-width:60ch}
 .co-heroshot{border-radius:var(--r-l);overflow:hidden;aspect-ratio:4/3;background:var(--raise2)}
 .co-heroshot img{width:100%;height:100%;object-fit:cover}
 .co-facts{display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;padding-top:20px;border-top:1px solid var(--rule)}
