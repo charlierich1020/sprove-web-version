@@ -17,6 +17,13 @@ len=${#prompt}
 
 [ "$len" -lt 900 ] && exit 0
 
+# Observed firing on a background-agent completion notification, which arrives
+# in the user role and is easily over the length gate. Those are results coming
+# back, not recommendations going out — a thesis pass on one is circular.
+case "$prompt" in
+  *"<task-notification>"*|*"SYSTEM NOTIFICATION"*|*"hook success:"*) exit 0 ;;
+esac
+
 cat <<'EOF'
 <system-reminder>
 The message above is long enough to be a pasted recommendation, spec, or brief.

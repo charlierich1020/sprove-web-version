@@ -1778,9 +1778,26 @@ const PROGRAMS = RAW.map(r=>{
   o.cancellationPolicy = o.id==="prog_2" ? "strict" : "moderate";
   return o;
 });
+/* ONE definition of what makes a business background-checked, used everywhere.
+   It was two: this list took `list[0].verified` -- the FIRST listing deciding
+   for the whole business, i.e. one program vouching for an operator, which is
+   the exact inverse of the FAQ sentence "an approved business cannot vouch for
+   an individual on Sporve" (HANDOFF defect #11). The landing separately used
+   an every() roll-up. Two implementations of one trust rule is how the
+   contradiction comes back, so there is now one.
+
+   every(), not some(): the conservative reading, and the only one consistent
+   with a per-person policy. Note the honest limit -- `verified` is a
+   per-PROGRAM flag and the catalogue has no coach entity at all (checked:
+   mock_data.dart has none), so this is a business-level derivation. The
+   per-person language on the landing describes POLICY, not this data. */
+const bizVerified=name=>{
+  const list=PROGRAMS.filter(p=>p.biz===name);
+  return list.length>0&&list.every(p=>p.verified);
+};
 const BUSINESSES=[...new Set(PROGRAMS.map(p=>p.biz))].map(b=>{
   const list=PROGRAMS.filter(p=>p.biz===b);
-  return {name:b,verified:list[0].verified,count:list.length,
+  return {name:b,verified:bizVerified(b),count:list.length,
     sports:[...new Set(list.map(p=>p.sport))],
     rating:(list.reduce((s,p)=>s+p.rating,0)/list.length).toFixed(1)};
 });
@@ -2230,15 +2247,9 @@ const TICK=(s,w)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="non
 function landingFacts(){
   const sports=[...new Set(PROGRAMS.map(p=>p.sport))];
   const bizes=[...new Set(PROGRAMS.map(p=>p.biz))];
-  /* every(), not some(). A business counts as background-checked only if ALL
-     of its programs are. The page says two bands up that checks are
-     "per-person, not business-level" and the FAQ says an approved business
-     cannot vouch for an individual -- an any-match roll-up would contradict
-     both the moment one program in a business differed. Same answer on
-     today's data (verification is uniform per business); different, and
-     wrong, the day it isn't. */
-  const verifiedBiz=[...new Set(PROGRAMS.map(p=>p.biz))]
-    .filter(b=>PROGRAMS.filter(p=>p.biz===b).every(p=>p.verified));
+  /* Shared with BUSINESSES via bizVerified() -- see the note there for why
+     there is exactly one definition of this rule. */
+  const verifiedBiz=[...new Set(PROGRAMS.map(p=>p.biz))].filter(bizVerified);
   const prices=PROGRAMS.map(p=>p.price);
   return {
     programs:PROGRAMS.length, sports:sports.length, bizes, verifiedBiz,
