@@ -1390,9 +1390,10 @@ const SEED={
 const S={
   /* Home IS the browse grid — the original landing. The marketing scroll that
      briefly lived here is gone; only the nav additions above it were kept. */
-  /* Boots on the marketing landing, not the browse grid. landingHTML() and
-     coachLandingHTML() were fully written but never reachable from render(). */
-  route:{name:"home",arg:null},
+  /* Boots on the browse grid — the scroll-through-the-product experience.
+     The marketing scroll stays reachable at the `home` route (and from the
+     Product menu), it just isn't the first thing a visitor lands on. */
+  route:{name:"explore",arg:null},
   sportOpen:false,                 // the topbar sport chooser
   sportAnchor:null,                // px offset of the Sport button, for the panel
   showcaseSide:"families",
