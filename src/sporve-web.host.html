@@ -2636,19 +2636,19 @@ function notFoundHTML(name){
 /* PART 2 — four-column Product menu. Every row resolves to a real route via
    the existing data-pdest contract; nothing falls through to Explore. */
 function productMenuHTML(){
-  const about=[["What is Sporve?","nav:product"],
-    ["How background checks work","nav:trust"],
-    ["Examples","nav:companies"]];
-  /* "Instant booking" pointed at nav:explore — byte-identical to "Search by
-     sport & age" directly above it. Two rows, one destination, and neither
-     showed a booking flow. The menu now has one row per destination. */
-  const fam=[["Search by sport & age","nav:explore"],["Map search","nav:map"],
-    ["Messaging","nav:messages"],
-    ["Bookings & receipts","nav:bookings"],["Saved coaches","nav:saved"],
-    ["Athlete progress","nav:timeline"]];
-  const co=[["Scheduling & availability","tab:slots"],["Payments & payouts","tab:finances"],
-    ["Client roster","tab:roster"],["Session notes","tab:notes"],
-    ["Media & consent","tab:media"],["Insights","tab:insights"]];
+  /* §9.1: every bold menu row lands on its OWN marketing page (page:<id>), not
+     an app view — this is the only path by which the 17 pages are reachable. */
+  const about=[["What is Sporve?","page:what-is"],
+    ["How background checks work","page:background-checks"],
+    ["Examples","page:examples"]];
+  const fam=[["Search by sport & age","page:search"],["Map search","page:map-search"],
+    ["Instant booking","page:instant-booking"],
+    ["Messaging","page:messaging"],
+    ["Bookings & receipts","page:bookings-receipts"],["Saved coaches","page:saved"],
+    ["Athlete progress","page:athlete-progress"]];
+  const co=[["Scheduling & availability","page:scheduling"],["Payments & payouts","page:payments"],
+    ["Client roster","page:roster"],["Session notes","page:session-notes"],
+    ["Media & consent","page:media-consent"],["Insights","page:insights"]];
   const row=(t,a)=>`<button class="pmrow2" role="menuitem" data-pdest="${esc(a)}">${esc(t)}</button>`;
   const col=(eyebrow,rows)=>`<div class="pmcol">
     <div class="eyebrow">${esc(eyebrow)}</div>${rows.map(r=>row(r[0],r[1])).join("")}</div>`;
@@ -2659,7 +2659,7 @@ function productMenuHTML(){
     <div class="pmdiv" aria-hidden="true"></div>
     <div class="pmcol pmnew">
       <div class="eyebrow">New</div>
-      <button class="pmfeat" role="menuitem" data-pdest="nav:assistant">
+      <button class="pmfeat" role="menuitem" data-pdest="page:ai-coach">
         <span class="pmfeat-art" aria-hidden="true">${ICON.send}</span>
         <b>AI Coach</b>
         <span>Describe your kid's goal in plain words. It only ever suggests
@@ -5923,6 +5923,10 @@ function wire(){
       }
       S.portal="coach";S.coachTab=arg;go("dashboard");return;
     }
+    /* page:<id> → the marketing page, in the family portal. Without this the
+       split's kind==="page" fell through to go("<id>"), which set an unknown
+       route name and never rendered pageHTML — the 17 pages' one nav path. */
+    if(kind==="page"){S.portal="family";go("page",arg);return;}
     go(arg);
   });
   /* Toggle flips the view in place — same route, swapped scroll (spec Part 2). */
