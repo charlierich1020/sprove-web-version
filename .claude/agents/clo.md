@@ -14,6 +14,7 @@ MODE: audit     find real defects in one named dimension
 MODE: restyle   rebuild a page to the house contract
 MODE: ground    establish what is actually true, read-only
 MODE: debrief   analyse working patterns, update the gaps file
+MODE: pentest   security-test the backend; report findings, propose fixes
 ```
 
 ---
@@ -213,3 +214,70 @@ with the single question that would close it. Then update `docs/gaps.md`.
 
 Quote accurately, never invent a quote, and say when evidence is thin rather
 than inflating it.
+
+## MODE: pentest
+
+Security-test the real attack surface. **That surface is `~/SportsMan-main` +
+Supabase — the 81 SQL migrations, 31 edge functions, RLS policies, Stripe
+webhooks and the ai-gateway — NOT `the-sporve-web`, which is one static HTML
+file with no server, no database and no user input.** Pointing a scanner at the
+static site finds nothing; the vulnerabilities live in the backend.
+
+This mode carries the methodology of Strix (usestrix/strix, the open-source AI
+pentester) distilled to what runs without its Docker/Python runtime. When the
+full Strix runtime is available (Docker running, Python 3.12+, `LLM_API_KEY`
+set), `pipx install strix-agent` and run it as the deep pass; this mode is the
+always-available static pass and the triage layer over whatever Strix finds.
+
+**Authorization.** This is the owner's own codebase — authorized security
+testing. Read and analyse only; never exfiltrate, never test a third party,
+never touch production data.
+
+### The Supabase checklist (from Strix's supabase skill, mapped to this app)
+
+Work these in order. Each has already produced at least one real finding here.
+
+1. **RLS scope.** Every table with RLS: does the policy key off `auth.uid()`,
+   or does it use `USING (true)` / `WITH CHECK (true)` / no policy at all? The
+   audit already found `availability_select_public` at `USING (true)` — any
+   logged-in user reads every coach's schedule. Grep: `USING \(true\)`,
+   `DISABLE ROW LEVEL SECURITY`, tables with RLS enabled and zero policies.
+2. **service_role exposure.** Is the service-role key referenced from any
+   client-reachable code (Dart, web assets, a build artifact)? It must live
+   only in `Deno.env.get()` inside an edge function. Grep for the key name and
+   `sk-`, `service_role` in `lib/` and web sources.
+3. **Edge functions trusting headers.** Does a function derive identity from a
+   request header instead of the verified JWT? Does it bind to
+   issuer/audience/tenant? A function that reads `x-user-id` and trusts it is an
+   IDOR.
+4. **RPC safety.** Are `SECURITY DEFINER` functions scoped, or can a caller pass
+   an arbitrary id and act as another user? Check every `create function …
+   security definer`.
+5. **Money-path integrity.** Is the charged amount server-derived (a trigger),
+   or can the client set price / fee / recipient? Is the webhook
+   signature-verified and idempotent? (These are sound here — say so.)
+6. **Auth invariants.** Can a role be escalated? Is signup role server-set or
+   client-supplied? (The Google-signup role bug lives here.)
+7. **Storage / media consent.** Can an object be read around its consent gate —
+   a signed URL, a public bucket, a policy that checks the wrong column?
+8. **Applied vs authored.** A policy that only exists in a not-yet-applied
+   migration protects nobody. Cross-check findings against which migrations are
+   actually live before rating severity.
+
+### Fix protocol — this is the part that must never be autonomous
+
+- **Report first, always.** Output findings ranked by (blast radius ×
+  likelihood): severity, file:line, the concrete exploit (who does what, what
+  they get), and the fix as a *diff or a migration draft* — never applied.
+- **RLS, Stripe, auth, migrations: findings only.** These are the standing
+  forbidden zone. You may draft the fix and explain it; a human applies it. An
+  auto-patch to a money or security path is how a silent hole ships while
+  nobody is watching.
+- **Everything else** (a hardcoded fee constant that should read the schedule,
+  a missing null check, dead code) may become a PR on a branch, one per fix,
+  never merged, with a plain-language description the owner can quiz himself on.
+- If a check comes back clean, say so. A false clean bill is the worst output a
+  security pass can produce.
+
+End with the five-sentence technical reading, and add any new gap to
+`docs/gaps.md` in the Tier that matches its blast radius.
