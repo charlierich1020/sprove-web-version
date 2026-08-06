@@ -1488,6 +1488,23 @@ h2.ctr{margin-bottom:10px}
 .card .shot img{filter:brightness(.88) contrast(1.03)}
 .card:hover .shot img{filter:brightness(.97) contrast(1.02)}
 
+/* ── Sport rail. Six marks from the sport ramp under a page eyebrow.
+   This is the "orange, blue and green in short places" the reference site
+   uses -- and on that site those accents ARE the ramp: #DA5A05 Basketball,
+   #2EA136 Soccer, #2384FB Baseball. So the accent system needs no new hue,
+   only permission to appear as a MARK. Never as text: the ramp is tuned for
+   marks and measures 3.35-3.95:1 as label type, which is why .amq-tag uses
+   sportInk() instead. */
+.sportrail{display:flex;gap:6px;margin-top:14px}
+.sportrail i{width:26px;height:4px;border-radius:var(--r-pill);flex:0 0 auto}
+/* The card keeps its own white ground inside a dark band, so its text stays
+   dark -- it is a white card ON black, not text on black. Scoped to the card
+   only: an earlier attempt also set `.prodsec .sub` to inherit, which at
+   (0,3,0) outranked `.band.dark .sub` and inherited straight to #000 on #000.
+   Measured 1.00:1. The invariant catches this; leave it able to. */
+.band.dark .prodcard{color:var(--ink)}
+.band.dark .prodcard span:last-child{color:var(--muted)}
+
 /* Available to a screen reader, absent for everyone else. Used where an icon
    carries meaning on its own (the shield on a background-checked listing). */
 .vis-hide{
@@ -2966,43 +2983,83 @@ function productHTML(){
   const card=(g,t,d,a)=>`<button class="prodcard" data-pdest="${esc(a)}">
     <span class="ic" aria-hidden="true">${g}</span>
     <b>${esc(t)}</b><span>${esc(d)}</span></button>`;
-  return `${subnavHTML()}<main class="shell" style="padding-bottom:64px">
-    <div class="exhero">
-      <div>
-        <h1 class="display">Everything Sporve does.</h1>
-        <p class="exlede">One product, two sides. The platform families book on is the same
-          one coaches run their week on — and the rules below hold in both.</p>
+  /* Full-width stacked section blocks, alternating slate -> white -> black ->
+     slate -> white top to bottom. This was one mono-white <main class="shell">
+     with three headings in it; the page is the same content in the same order,
+     re-grounded so the eye can tell the three audiences apart while scrolling.
+
+     The grounds are the ones already in the file. Measured against the
+     reference site: its slate #F7F9FF vs --raise #F7F8FA is dE 2.1, and its
+     black #0A0C0F vs --ink is dE 3.6 -- both imperceptible, so no new colour
+     is introduced to match it.
+
+     Accent use is the sport ramp, which is what the reference site's "orange,
+     blue and green" actually are (#DA5A05 Basketball, #2EA136 Soccer,
+     #2384FB Baseball). Short places only: a rule under the eyebrow, the emoji
+     already on the cards. Never as body text -- the ramp is tuned to read as
+     a mark and fails AA as type. */
+  const rail=["Basketball","Soccer","Swimming","Tennis","Baseball","Boxing"]
+    .map(s=>`<i style="background:${sportColor(s)}" title="${esc(s)}"></i>`).join("");
+  return `${subnavHTML()}
+  <section class="band alt" style="padding:64px 0 56px">
+    <div class="shell">
+      <div class="eyebrow" data-rev>The product</div>
+      <div class="sportrail" aria-hidden="true" data-rev>${rail}</div>
+      <h1 style="margin-top:16px;max-width:16ch" data-rev>Everything Sporve does.</h1>
+      <p class="lede" style="margin:16px 0 0;max-width:58ch;text-align:left" data-rev>One product, two
+        sides. The platform families book on is the same one coaches run their week on — and the
+        rules below hold in both.</p>
+      <div class="ctarow" style="margin-top:26px;justify-content:flex-start" data-rev>
+        <button class="btn" data-nav="explore">Start searching</button>
+        <button class="btn ghost" data-becomecoach="1">Become a coach</button>
       </div>
-      <button class="advfilters" data-nav="explore">Start searching</button>
     </div>
+  </section>
 
-    <div class="prodsec">
-      <h2>For families and athletes</h2>
-      <p class="sub">Find someone you would trust with your kid, then book them without leaving the page.</p>
+  <section class="band">
+    <div class="shell">
+      <div class="prodsec" data-rev>
+        <h2>For families and athletes</h2>
+        <p class="sub">Find someone you would trust with your kid, then book them without leaving the page.</p>
+      </div>
+      <div class="prodgrid" data-rev>${fam.map(r=>card(r[0],r[1],r[2],r[3])).join("")}</div>
     </div>
-    <div class="prodgrid">${fam.map(r=>card(r[0],r[1],r[2],r[3])).join("")}</div>
+  </section>
 
-    <div class="prodsec">
-      <h2>For coaches and programs</h2>
-      <p class="sub">Free to join and list. The platform fee is taken only when you get paid, and itemized on every payout.</p>
+  <section class="band dark">
+    <div class="shell">
+      <div class="prodsec" data-rev>
+        <h2>For coaches and programs</h2>
+        <p class="sub">Free to join and list. The platform fee is taken only when you get paid,
+          and itemised on every payout.</p>
+      </div>
+      <div class="prodgrid" data-rev>${co.map(r=>card(r[0],r[1],r[2],r[3])).join("")}</div>
     </div>
-    <div class="prodgrid">${co.map(r=>card(r[0],r[1],r[2],r[3])).join("")}</div>
+  </section>
 
-    <div class="prodsec">
-      <h2>What the platform enforces</h2>
-      <p class="sub">These are not labels on a marketing page. They hold in the code.</p>
+  <section class="band alt">
+    <div class="shell">
+      <div class="prodsec" data-rev>
+        <h2>What the platform enforces</h2>
+        <p class="sub">These are not labels on a marketing page. They hold in the code.</p>
+      </div>
+      <div class="prodgrid" data-rev>
+        ${rules.map(([t,d])=>`<div class="prodcard" style="cursor:default">
+          <span class="ic" aria-hidden="true">${ICON.shield}</span>
+          <b>${esc(t)}</b><span>${esc(d)}</span></div>`).join("")}
+      </div>
     </div>
-    <div class="prodgrid">
-      ${rules.map(([t,d])=>`<div class="prodcard" style="cursor:default">
-        <span class="ic" aria-hidden="true">${ICON.shield}</span>
-        <b>${esc(t)}</b><span>${esc(d)}</span></div>`).join("")}
-    </div>
+  </section>
 
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:34px">
-      <button class="btn" data-nav="explore">Find a coach</button>
-      <button class="btn ghost" data-becomecoach="1">Become a coach</button>
+  <section class="band finalcta">
+    <div class="shell ctr">
+      <h2 data-rev>Start on either side</h2>
+      <div class="ctarow" data-rev>
+        <button class="btn" data-nav="explore">Find a coach</button>
+        <button class="btn ghost" data-becomecoach="1">Become a coach</button>
+      </div>
     </div>
-  </main>`;
+  </section>`;
 }
 
 /* ── detail ──────────────────────────────────────────────────────── */
