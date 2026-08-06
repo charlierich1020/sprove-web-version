@@ -49,6 +49,7 @@ FONT_WEIGHTS = {"light": 300, "book": 400, "roman": 400, "regular": 400,
 # the same drop folder:
 #   Syne-Variable.woff2    -> font-family:"Syne",              weight 600 800
 #   Jakarta-Variable.woff2 -> font-family:"Plus Jakarta Sans",  weight 400 700
+#   Hanken-Variable.woff2  -> font-family:"Hanken Grotesk",     weight 400 800
 # Anything else keeps working under its own prefix (e.g. Sentinel-Book.woff2).
 FAMILY_BY_PREFIX = {
     "syne": "Syne",
@@ -62,7 +63,11 @@ FAMILY_BY_PREFIX = {
 # static faces would have been 208KB of duplicate binary; two variable faces are
 # 60KB. A file named <Prefix>-Variable.woff2 therefore emits a single @font-face
 # carrying the whole weight range instead of one face per weight.
-VARIABLE_RANGE = {"Syne": "600 800", "Plus Jakarta Sans": "400 700"}
+VARIABLE_RANGE = {"Syne": "600 800", "Plus Jakarta Sans": "400 700",
+                  # The serious register. One family doing display AND body, so
+                  # it needs the full working range rather than a display band:
+                  # 400 body, 700 UI labels, 800 headlines.
+                  "Hanken Grotesk": "400 800"}
 font_files = sorted(glob.glob(os.path.join(ROOT, "assets", "fonts", "*.woff2")))
 faces, fam_seen = [], set()
 for fp in font_files:

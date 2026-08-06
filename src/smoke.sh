@@ -33,7 +33,7 @@ else
   fail "build.py failed:"; sed 's/^/        /' /tmp/smoke-build.txt; exit 1
 fi
 grep -q "NONE FOUND" /tmp/smoke-build.txt && fail "fonts missing -- type contract not met" \
-  || pass "both faces inlined"
+  || pass "all faces inlined"
 [ -s index.html ] && pass "index.html emitted ($(wc -c < index.html) bytes)" \
   || { fail "index.html empty or missing"; exit 1; }
 

@@ -1403,6 +1403,45 @@ h2.ctr{margin-bottom:10px}
    text, --accent (#C2410C) for the one accent, --rule for hairlines.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════ TWO TYPOGRAPHIC REGISTERS ═══════════════
+   Default register: Syne (display) + Plus Jakarta Sans (body). Expressive,
+   geometric, slightly quirky. Carries the landing, the dashboard, and most of
+   the product surfaces.
+
+   Serious register: Hanken Grotesk alone, doing display AND body, with weight
+   doing all the differentiation (800 headline / 700 label / 400 body). It goes
+   on the pages where the subject is money, safety, consent or law — where a
+   quirky display face reads as levity about something the reader is being
+   asked to trust.
+
+   It works by re-declaring the two family tokens on a wrapper. Custom
+   properties cascade, so everything inside inherits the swap without a single
+   per-rule override -- the whole point of having had exactly two family tokens
+   in the first place. Nothing else changes: the 8-step scale, the colour
+   system, .band rhythm and the dark-ground invariant are register-agnostic.
+
+   Syne's tracking is tuned for its own geometry, so the serious register
+   relaxes the caps tracking slightly -- Hanken's uppercase is narrower and
+   closes up at -.015em. */
+.reg-serious{
+  --display:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --sans:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  /* Re-declaring the tokens is not enough on its own. A custom property only
+     changes an element that actually EVALUATES it -- headings do, because
+     their rule says font-family:var(--display). A <p> has no font-family rule
+     at all; it inherits the COMPUTED family from <body>, which sits outside
+     this wrapper and already resolved --sans to Plus Jakarta. So the wrapper
+     has to set the family on itself, giving every inheriting descendant a new
+     value to inherit. Measured before this line: headings Hanken, body still
+     Plus Jakarta. */
+  font-family:var(--sans);
+}
+.reg-serious h1,.reg-serious h2,.reg-serious h3,.reg-serious h4{
+  font-weight:800;letter-spacing:-.02em;
+}
+.reg-serious .display,.reg-serious h1,.reg-serious h2{letter-spacing:-.022em}
+.reg-serious .eyebrow,.reg-serious .t-label,.reg-serious .t-chip{font-weight:700}
+
 /* ═══════════════ INVARIANT: dark ground, light type ═══════════════
    A black or near-black background carries WHITE or SLATE text. Never a
    token that can resolve dark, never a mid-grey, never an accent that was
@@ -3047,7 +3086,13 @@ function productHTML(){
     </div>
   </section>
 
-  <section class="band alt">
+  ${/* Second black block, deliberately adjacent to the one above rather than
+        alternating back to slate. Two darks in a row read as one chapter --
+        "here is the coach side, and here is what the platform will not let
+        anyone do" belong together -- and it breaks the checkerboard the strict
+        alternation was producing. Rhythm for this page is now
+        slate / white / black / black / white. */""}
+  <section class="band dark">
     <div class="shell">
       <div class="prodsec" data-rev>
         <h2>What the platform enforces</h2>
@@ -4631,8 +4676,20 @@ function render(){
      bug where a nav entry points at a surface that does not exist. */
   else body=notFoundHTML(r.name);
 
-  document.getElementById("app").innerHTML=topbarHTML()+body+
-    footerHTML();
+  /* Which register this page speaks in. Chosen by SUBJECT, not by section:
+     money, safety, consent and law get Hanken; everything else keeps Syne +
+     Plus Jakarta. Four of the sixteen product-toggle pages qualify -- the 25%
+     the owner asked for -- plus pricing and the legal/help pages, which are
+     not in the toggle but are the same kind of reading.
+
+     Coach tabs are matched on S.coachTab because they all share the
+     "dashboard" route name. */
+  const seriousRoute=["trust","bookings","pricing","info","wallet"].includes(r.name);
+  const seriousTab=S.portal==="coach"&&["finances","media"].includes(S.coachTab);
+  const app=document.getElementById("app");
+  app.classList.toggle("reg-serious",seriousRoute||seriousTab);
+
+  app.innerHTML=topbarHTML()+body+footerHTML();
   document.getElementById("layer").innerHTML=modalHTML()+(S.toast?`<div class="toast">${esc(S.toast)}</div>`:"");
 
   const sc=document.getElementById("msgscroll"); if(sc) sc.scrollTop=sc.scrollHeight;

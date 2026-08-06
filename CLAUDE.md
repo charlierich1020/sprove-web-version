@@ -51,7 +51,40 @@ The reference site `sporve.vercel.app` uses this same system: its slate
 and every chromatic colour on it is a sport token. Briefs proposing
 `#E05A47`/`#38BDF8`/`#10B981` are approximating what is already here.
 
-## 4. Fan out to subagents
+## 4. Two typographic registers, chosen by subject
+
+- **Expressive — Syne (display) + Plus Jakarta Sans (body).** The default.
+  Landing, dashboard, and ~75% of the product-toggle pages.
+- **Serious — Hanken Grotesk alone**, weight doing all the work (800 headline /
+  700 label / 400 body). For pages whose subject is **money, safety, consent or
+  law**, where a quirky display face reads as levity about something the reader
+  is being asked to trust.
+
+Currently serious: `trust`, `bookings`, `pricing`, `info`, `wallet`, and the
+coach `finances` and `media` tabs. Four of the sixteen product-toggle pages —
+the 25% asked for.
+
+Switch by adding `reg-serious` to `#app`; `render()` decides. The class
+re-declares `--display` and `--sans` **and sets `font-family` on itself** — the
+second part is required, because a custom property only changes an element that
+actually evaluates it. Headings do (`font-family:var(--display)`); a `<p>` does
+not, it inherits the computed family from `<body>`, which is outside the
+wrapper. Without that line you get Hanken headings over Plus Jakarta body.
+
+## 5. Section rhythm — chapters, not a checkerboard
+
+Do not alternate mechanically. Runs of two are wanted: white / black / black /
+white, or black / black / white / black / white / white. Two blocks of the same
+ground read as one **chapter**, which is the point — group sections that belong
+together and let the ground say so.
+
+Two constraints when doubling up: keep the hairline join between them
+(`.band.dark` carries `border-bottom-color:#1C222B`) so the pair still has
+internal structure, and never double up two *white* blocks without a divider —
+148px of unbroken white padding reads as one over-long run, which has already
+happened once.
+
+## 6. Fan out to subagents
 
 ~8 times: *"have the agents hekp you run through the remainder"*. For any
 multi-part task, run subagents in parallel rather than serially, and say which
@@ -62,7 +95,7 @@ before launching read-only auditors, because editing files while they read
 stalls them; and **tell them to `rg -l` then read line ranges**, because
 pointing an agent at a 208-file repo without that reliably times it out.
 
-## 5. Teach as you go — explain every edit
+## 7. Teach as you go — explain every edit
 
 Stated directly: *"Make sure that the agent helps me learn exactly what is
 going on after each edit."*
@@ -75,7 +108,7 @@ literally), say which and why, so the owner can overrule it.
 The owner did not write this code. A change he cannot follow is a change he
 cannot review, and an unreviewable change is how the wrong thing ships twice.
 
-## 6. Check a spec's premises before building on them
+## 8. Check a spec's premises before building on them
 
 Pasted briefs have repeatedly asserted things that are not true of this repo —
 fonts that are not embedded, reference files that do not exist, a package
@@ -85,7 +118,7 @@ report the mismatch rather than silently building on it or silently ignoring
 it. A spec that reverses a decision the owner made earlier is the most
 important case: surface it, do not just pick one.
 
-## 7. When the owner has to act, give click-level steps
+## 9. When the owner has to act, give click-level steps
 
 ~7 times: *"this still to vauge, tell me exactly where to go, what to click"*.
 Exact URL, exact button label, full copy-paste-ready values. No "navigate to
@@ -99,7 +132,7 @@ your project settings".
 bash src/smoke.sh
 ```
 
-Exit 0 = safe. It checks: the build emits, both faces inline, the host script
+Exit 0 = safe. It checks: the build emits, all three faces inline, the host script
 boots, no JS errors on 13 visitor-reachable routes, the dark-ground invariant
 holds, no horizontal overflow at three breakpoints, and every rendered font
 size is on the 8-step scale. Every one of those is a defect this repo has
