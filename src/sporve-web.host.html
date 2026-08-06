@@ -543,8 +543,11 @@ img{max-width:100%;display:block}
 .hero .searchpill:focus-within .divider{background:transparent}
 .hero .searchpill .go{
   width:46px;height:46px;align-self:center;flex:0 0 auto;
-  background:var(--accent);color:#fff;transition:background .15s,transform .12s;
+  /* slate, not accent: the hero search submit is the page's primary action and
+     under the token law a primary CTA is neutral/slate, not a sport hue. */
+  background:var(--slate);color:#fff;transition:background .15s,transform .12s;
 }
+.hero .searchpill .go:hover{background:var(--slate-deep)}
 .hero .searchpill .go:hover{background:var(--accent-ink)}
 .hero .searchpill .go:active{transform:scale(.96)}
 .hero .searchpill .go svg{width:18px;height:18px}
@@ -711,12 +714,24 @@ img{max-width:100%;display:block}
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   height:var(--h-ctl);padding:0 20px;border-radius:var(--r-ctl);
   font-weight:600;font-size:var(--t-small);letter-spacing:-.008em;
-  background:var(--accent);color:#fff;
+  /* Primary CTA is SLATE, not orange. The token system's law is that black +
+     white + slate carry all chrome and sport colour is accent-only, attached
+     to a sport object -- so a generic button cannot wear a sport hue.
+     --accent #C2410C is basketball's #DA5A05 to within a hair, i.e. a sport
+     colour that had been promoted to universal chrome, which is exactly what
+     the law forbids and what made every page read as "too much orange".
+     Orange now survives ONLY as SPORT_COLOR.Basketball on a basketball tag.
+     Slate #475569 carries white text at 7:1. */
+  background:var(--slate);color:#fff;
   transition:background .15s,box-shadow .15s,transform .12s;
 }
-.btn:hover{background:var(--accent-ink)}
+.btn:hover{background:var(--slate-deep)}
 .btn:active{transform:scale(.985)}
-.btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-ring)}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--slate-ring)}
+/* Owner's instruction: leave the black bands alone. A slate fill is 2.77:1 on
+   black, so a filled button there uses the lighter slate that reads on it. */
+.band.dark .btn:not(.ghost){background:#8FA3BC;color:#0B0C0E}
+.band.dark .btn:not(.ghost):hover{background:#A9BACF}
 .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .btn[aria-busy="true"]{opacity:.7;cursor:progress}
 .btn.ghost{background:var(--paper);color:var(--ink);border:1px solid var(--rule-strong)}
@@ -1662,7 +1677,7 @@ h2.ctr{margin-bottom:10px}
   font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.18em;
   color:var(--faint);
 }
-.tick-item em{color:var(--accent);font-style:normal;font-weight:700}
+.tick-item em{color:var(--slate);font-style:normal;font-weight:700}
 
 /* WCAG 2.2.2: both marquees start on their own and run well past five
    seconds. Hover-to-pause is not a mechanism -- a touch user has no hover and
@@ -1692,7 +1707,7 @@ h2.ctr{margin-bottom:10px}
 .lcheck{display:flex;align-items:center;gap:11px;font-size:var(--text-base);color:var(--ink-2)}
 .lcheck i{
   width:21px;height:21px;border-radius:var(--r-pill);flex:0 0 auto;display:grid;place-items:center;
-  background:var(--accent-tint);color:var(--accent);
+  background:var(--slate-tint);color:var(--slate);
 }
 /* Gated behind .js-rev like the reveals are: the undrawn state must only
    exist once JS has confirmed it can draw them. Ungated, a script failure
@@ -1723,7 +1738,7 @@ h2.ctr{margin-bottom:10px}
   font-size:var(--text-sm);color:var(--ink-2);
 }
 .lrow+.lrow{margin-top:8px}
-.lrow em{font-style:normal;font-weight:700;color:var(--accent);white-space:nowrap}
+.lrow em{font-style:normal;font-weight:700;color:var(--slate);white-space:nowrap}
 
 /* ── Dual-path: two journeys side by side. */
 .dual{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:34px}
@@ -1732,12 +1747,12 @@ h2.ctr{margin-bottom:10px}
   padding:28px;display:flex;flex-direction:column;transition:border-color .18s,box-shadow .18s;
 }
 .dpath:hover{border-color:var(--rule-strong);box-shadow:var(--shadow)}
-.dpath>.eyebrow{color:var(--accent)}
+.dpath>.eyebrow{color:var(--slate)}
 .dpath h3{margin-top:10px}
 .dpath>p{color:var(--muted);font-size:var(--text-base);line-height:1.55;margin-top:9px}
 .dlist{margin:18px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
 .dlist li{display:flex;gap:10px;align-items:flex-start;font-size:var(--text-sm);color:var(--ink-2)}
-.dlist svg{flex:0 0 auto;margin-top:2px;color:var(--accent)}
+.dlist svg{flex:0 0 auto;margin-top:2px;color:var(--slate)}
 /* auto, not a fixed 22px: the grid stretches both columns to equal height, so
    with a fixed margin the shorter card's button floated mid-card and the two
    CTAs only lined up by coincidence of copy length. */
@@ -1757,7 +1772,7 @@ h2.ctr{margin-bottom:10px}
    on the only element carrying step order. Solid accent instead. */
 .scard .snum{
   font-family:var(--display);font-weight:800;font-size:var(--text-xl);letter-spacing:-.02em;
-  line-height:1;color:var(--accent);display:block;
+  line-height:1;color:var(--slate);display:block;
 }
 /* Was an unstyled <b>: body face at --text-base, the same size as the copy
    beneath it, while the neighbouring .dpath card titles are Syne uppercase at
@@ -1776,8 +1791,8 @@ h2.ctr{margin-bottom:10px}
   padding:22px 2px;text-align:left;font-size:var(--text-lg);font-weight:700;
   letter-spacing:-.015em;color:var(--ink);transition:color .16s;
 }
-.accq:hover{color:var(--accent)}
-.accitem.on .accq{color:var(--accent)}
+.accq:hover{color:var(--slate)}
+.accitem.on .accq{color:var(--slate)}
 .accplus{position:relative;width:17px;height:17px;flex:0 0 auto;
   transition:transform .26s cubic-bezier(.22,1,.36,1)}
 .accplus::before,.accplus::after{
@@ -2611,7 +2626,7 @@ function landingHTML(){
       <div class="lcard" data-rev data-rev-d="1">
         <div class="lcard-hd">
           <span class="lcard-live"><i></i>Live catalogue</span>
-          <span class="featbadge" style="background:var(--accent-tint);color:var(--accent)">Miami, FL</span>
+          <span class="featbadge" style="background:var(--slate-tint);color:var(--slate)">Miami, FL</span>
         </div>
         <div class="lstats">
           <div class="lstat"><span>Programs</span><b data-count="${f.programs}">0</b></div>
@@ -3300,7 +3315,7 @@ function guestPreviewHTML({eyebrow,title,lede,points,frame}){
         heading here. */""}
   <section class="band" style="padding:56px 0 48px">
     <div class="shell">
-      <div class="eyebrow" style="color:var(--accent)">${esc(eyebrow)}</div>
+      <div class="eyebrow" style="color:var(--slate)">${esc(eyebrow)}</div>
       <h1 style="margin-top:12px;max-width:18ch">${esc(title)}</h1>
       <p class="lede" style="margin:16px 0 0;max-width:56ch;text-align:left">${esc(lede)}</p>
       <div class="ctarow" style="margin-top:26px;justify-content:flex-start">
