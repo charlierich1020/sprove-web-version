@@ -520,7 +520,7 @@ img{max-width:100%;display:block}
   transition:box-shadow .18s;
 }
 .hero .searchpill:hover{box-shadow:var(--shadow-lift)}
-.hero .searchpill:focus-within{box-shadow:var(--shadow-lift),0 0 0 3px var(--accent-ring)}
+.hero .searchpill:focus-within{box-shadow:var(--shadow-lift),0 0 0 3px var(--slate-ring)}
 .sp-seg{
   display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:left;
   flex:1;min-width:0;padding:0 24px;cursor:text;
@@ -548,7 +548,6 @@ img{max-width:100%;display:block}
   background:var(--slate);color:#fff;transition:background .15s,transform .12s;
 }
 .hero .searchpill .go:hover{background:var(--slate-deep)}
-.hero .searchpill .go:hover{background:var(--accent-ink)}
 .hero .searchpill .go:active{transform:scale(.96)}
 .hero .searchpill .go svg{width:18px;height:18px}
 
@@ -1092,8 +1091,8 @@ h2.ctr{margin-bottom:10px}
 }
 
 /* ── coach dashboard ─────────────────────────────────────────────── */
-.coachtop{border-bottom:1px solid var(--rule);background:var(--paper)}
-.coachtop-in{display:flex;justify-content:flex-end;gap:4px;padding:9px 24px}
+.coachtop{position:sticky;top:77px;z-index:45;border-bottom:1px solid var(--rule);background:rgba(255,255,255,.96)}
+.coachtop-in{display:flex;justify-content:flex-end;align-items:center;gap:4px;min-height:48px;padding:5px 24px}
 .viewas{color:var(--slate)}
 .railhead{display:flex!important;gap:11px;align-items:center;padding:11px 12px!important;text-align:left}
 .railhead b{display:block;font-size:var(--text-base);letter-spacing:-.015em;color:var(--ink)}
@@ -1107,41 +1106,72 @@ h2.ctr{margin-bottom:10px}
 .gsbar{display:block;width:100%;height:5px;border-radius:999px;background:var(--raise2);overflow:hidden}
 .gsbar i{display:block;height:100%;background:var(--slate);border-radius:999px}
 .gsbar.big{height:8px}
-.dashwrap{display:flex;flex-direction:column;gap:34px;padding:22px 0 70px}
-.metrics{display:grid;grid-template-columns:repeat(4,1fr) 190px;gap:14px}
-.metric{border:1px solid var(--rule);border-radius:var(--r-l);padding:16px 18px;background:var(--paper)}
+.dash{width:100%;max-width:none;grid-template-columns:236px minmax(0,1fr);gap:0;padding:0;align-items:start}
+.dash>.rail{
+  position:fixed;left:0;top:126px;bottom:0;width:236px;z-index:40;overflow-y:auto;
+  padding:22px 18px 30px;border-right:1px solid var(--rule);background:var(--paper);
+}
+.dash>div{grid-column:2;min-width:0;width:min(1240px,100%);margin:0 auto;padding:0 34px}
+.dashwrap{display:flex;flex-direction:column;gap:52px;padding:28px 0 250px}
+.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border-bottom:1px solid var(--rule)}
+.metric{min-width:0;border:0;border-right:1px solid var(--rule);border-radius:0;padding:8px 20px 18px;background:transparent}
+.metric:first-child{padding-left:0}.metric:last-child{border-right:0;padding-right:0}
 .metric .k{font-size:var(--text-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.metric .v{font-size:var(--text-xl);font-weight:800;letter-spacing:-.02em;margin:5px 0 8px;font-family:var(--display)}
+.metric .v{font-size:var(--text-lg);font-weight:800;letter-spacing:-.02em;margin:5px 0 7px;font-family:var(--sans)}
 .metric .d{font-size:var(--text-sm);color:var(--muted);line-height:1.35;margin-top:4px}
-.spark{width:100%;height:28px;display:block}
+.spark{width:100%;height:22px;display:block}
 .sparkdash{color:var(--rule-strong);font-size:20px}
-.livebox{background:var(--raise)}
-.livecount{display:flex;align-items:center;gap:8px;font-size:var(--text-xl);font-weight:800;letter-spacing:-.02em;font-family:var(--display)}
+.livebox{background:transparent}
+.livecount{display:flex;align-items:center;gap:8px;font-size:var(--text-lg);font-weight:800;letter-spacing:-.02em;font-family:var(--sans)}
 .livecount .dot{
   width:9px;height:9px;border-radius:999px;background:var(--good);flex:0 0 auto;
   animation:livepulse 2.2s infinite cubic-bezier(.4,0,.2,1);
 }
 @keyframes livepulse{0%,70%,100%{opacity:.35}35%{opacity:1}}
-.lastdays{color:var(--faint);font-size:var(--text-sm);margin-top:-24px}
-.greet{font-size:var(--text-2xl);font-weight:700;letter-spacing:-.015em;line-height:1.2}
-.greet span{display:block;color:var(--muted);font-weight:600;font-size:var(--text-lg);margin-top:6px;letter-spacing:-.018em}
-.cmdbar{display:flex;flex-direction:column;gap:12px}
-.cmdchips{display:flex;gap:8px;flex-wrap:wrap}
+.lastdays{color:var(--faint);font-size:var(--text-sm);margin-top:-42px}
+.dashwelcome{text-align:center;max-width:900px;margin:10px auto 4px;padding:42px 24px 34px}
+.dashhello{font-size:var(--text-base);font-weight:700;color:var(--muted);margin-bottom:16px}
+.greet{font-family:var(--sans);font-size:var(--text-hero);font-weight:800;letter-spacing:-.04em;line-height:1.02;text-wrap:balance}
+.greet span{color:var(--slate)}
+.dashcontext{max-width:58ch;margin:18px auto 0;color:var(--muted);font-size:var(--text-base);line-height:1.55}
+.cmdbar{
+  position:fixed;z-index:80;left:calc(236px + (100vw - 236px)/2);bottom:28px;
+  width:min(750px,calc(100vw - 300px));transform:translateX(-50%);
+  display:flex;flex-direction:column;border:1px solid var(--rule-strong);
+  border-radius:26px;background:rgba(255,255,255,.98);overflow:hidden;
+  box-shadow:0 6px 8px rgba(11,12,14,.06),0 18px 48px rgba(11,12,14,.12);
+  transition:border-color .18s,box-shadow .18s,transform .18s;
+}
+.cmdbar:focus-within{border-color:var(--slate);box-shadow:0 0 0 4px var(--slate-ring),0 18px 48px rgba(11,12,14,.14)}
+.cmdchips{display:flex;align-items:center;gap:4px;padding:8px 10px;border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
+.cmdchips::-webkit-scrollbar{display:none}
 .cmdchip{
-  padding:8px 14px;border:1px solid var(--rule-strong);border-radius:999px;
-  font-size:var(--text-sm);font-weight:700;background:var(--paper);transition:.15s;
+  display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 11px;border:0;border-radius:var(--r-ctl);
+  color:var(--muted);font-size:var(--text-sm);font-weight:600;background:transparent;white-space:nowrap;transition:.15s;
 }
-.cmdchip:hover{border-color:var(--ink);background:var(--raise)}
+.cmdchip svg{width:15px;height:15px}.cmdchip:hover{color:var(--ink);background:var(--raise)}
+.cmdchip.on{color:var(--slate-deep);background:var(--slate-tint)}
+.cmdchip:focus-visible{outline:2px solid var(--slate);outline-offset:-2px}
 .cmdinput{
-  display:flex;align-items:center;gap:10px;padding:11px 12px;border:1.5px solid var(--rule-strong);
-  border-radius:var(--r-xl);background:var(--paper);box-shadow:var(--shadow);transition:.16s;
+  display:flex;align-items:center;gap:8px;min-height:68px;padding:10px 12px 10px 16px;border:0;
+  border-radius:0;background:transparent;box-shadow:none;transition:.16s;
 }
-.cmdinput:focus-within{border-color:var(--slate);box-shadow:0 0 0 3px var(--slate-ring)}
-.cmdinput input{flex:1;border:0;background:none;font:inherit;font-size:var(--text-base);color:var(--ink);min-width:0}
+.cmdinput:focus-within{border-color:transparent;box-shadow:none}
+.cmdinput input{flex:1;border:0;background:none;font:inherit;font-size:var(--text-base);color:var(--ink);min-width:0;padding:0 4px}
 .cmdinput input:focus{outline:none}
-.cmdicon{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;color:var(--muted)}
+.cmdicon{width:44px;height:44px;border-radius:var(--r-pill);display:grid;place-items:center;color:var(--muted);flex:0 0 auto;transition:.15s}
 .cmdicon:hover{background:var(--raise2);color:var(--ink)}
-.cmdgo{width:38px;height:38px;border-radius:999px;background:var(--slate);color:#fff;display:grid;place-items:center;flex:0 0 auto}
+.cmdicon:focus-visible,.cmdgo:focus-visible,.cmdmodel:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
+.cmdmodel{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 10px;border-radius:var(--r-ctl);color:var(--muted);font-size:var(--text-sm);font-weight:700;white-space:nowrap}
+.cmdmodel:hover{background:var(--raise);color:var(--ink)}
+.cmdgo{width:44px;height:44px;border-radius:var(--r-pill);background:var(--slate);color:#fff;display:grid;place-items:center;flex:0 0 auto;opacity:0;transform:scale(.82);pointer-events:none;transition:.16s}
+.cmdinput.has-value .cmdgo,.cmdinput.sending .cmdgo{opacity:1;transform:scale(1);pointer-events:auto}
+.cmdgo:hover{background:var(--slate-deep)}
+.cmdgo:disabled,.cmdicon:disabled{opacity:.45;cursor:not-allowed}
+.cmdinput.sending .cmdgo{opacity:.62}
+.cmdspinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.38);border-top-color:#fff;border-radius:var(--r-pill);animation:cmdspin .7s linear infinite}
+@keyframes cmdspin{to{transform:rotate(360deg)}}
+.cmderror{padding:0 18px 12px;color:var(--danger);font-size:var(--text-sm);font-weight:600}
 .cmdlog{border:1px solid var(--rule);border-radius:var(--r-m);padding:13px 15px;background:var(--raise)}
 .cmdlogrow{display:flex;justify-content:space-between;gap:14px;font-size:var(--text-sm);color:var(--ink-2);padding:5px 0}
 .cmdlogrow .num{color:var(--faint);flex:0 0 auto}
@@ -1270,9 +1300,14 @@ h2.ctr{margin-bottom:10px}
 @media(max-width:1020px){
   .detail{grid-template-columns:1fr;gap:30px}
   .bookcard{position:static}
-  .dash{grid-template-columns:1fr;gap:20px}
-  .rail{position:static;flex-direction:row;overflow-x:auto;padding-bottom:6px}
+  .dash{grid-template-columns:1fr;gap:20px;padding:0 24px}
+  .dash>.rail{position:static;width:auto;padding:14px 0;border-right:0;border-bottom:1px solid var(--rule);flex-direction:row;overflow-x:auto}
+  .dash>div{grid-column:1;padding:0;width:100%}
   .rail button{white-space:nowrap}
+  .metrics{grid-template-columns:repeat(3,1fr)}
+  .metric{border-right:0;border-bottom:1px solid var(--rule);padding:12px 16px}
+  .metric:first-child{padding-left:16px}
+  .cmdbar{left:50%;width:min(750px,calc(100vw - 48px));bottom:22px}
   .msg-wrap{grid-template-columns:1fr;height:auto}
   .msg-list{max-height:230px;border-right:0;border-bottom:1px solid var(--rule)}
   .msg-scroll{min-height:300px}
@@ -1288,6 +1323,18 @@ h2.ctr{margin-bottom:10px}
   .gallery .stack{grid-template-columns:1fr 1fr;display:grid}
   .incl{grid-template-columns:1fr}
   .shell{padding:0 16px}
+  .coachtop{top:65px}.coachtop-in{overflow-x:auto;justify-content:flex-start;padding:5px 16px}
+  .dash{padding:0 16px}.dashwrap{gap:40px;padding-bottom:230px}
+  .metrics{display:flex;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none}
+  .metrics::-webkit-scrollbar{display:none}
+  .metric,.metric:first-child{flex:0 0 152px;padding:12px;border-right:1px solid var(--rule);border-bottom:0;scroll-snap-align:start}
+  .metric:last-child{border-right:0}
+  .lastdays{margin-top:-30px}
+  .dashwelcome{padding:28px 0 20px}.greet{font-size:var(--text-2xl);letter-spacing:-.035em;line-height:1.08}
+  .cmdbar{width:calc(100vw - 24px);bottom:12px;border-radius:22px}
+  .cmdchips{padding:7px 8px}.cmdchip{min-width:44px;justify-content:center;padding:0 10px}
+  .cmdchip span{display:none}.cmdinput{min-height:62px;padding:8px 9px}
+  .cmdmodel span{display:none}.cmdmodel{width:38px;padding:0;justify-content:center}
 }
 /* ── PARTS 2+3 · mega-menus ──────────────────────────────────────── */
 .pmgrid4{display:grid;grid-template-columns:1fr 1.15fr 1.15fr 1px 1.1fr;gap:0;padding:30px 24px 26px}
@@ -2116,6 +2163,10 @@ const S={
   mapPick:null,
   chat:[],
   chatThinking:false,
+  cmdAction:"",
+  cmdDraft:"",
+  cmdSending:false,
+  cmdError:"",
   waitlist:[],
   onboardStep:0,
   onboardSports:[],
@@ -3762,9 +3813,13 @@ function dashboardHTML(){
     : [["Profile views","—",[],"var(--slate)"],["Booking requests","—",[],"var(--slate)"],
        ["Sessions completed","—",[],"var(--good)"],["Earnings","—",[],"var(--good)"]];
 
-  const chips=live
-    ? ["Confirm tomorrow's sessions","Fill Saturday's open slot","Message a family","All to-dos"]
-    : ["Build my profile with me","Set my availability","What's left before I go live?"];
+  const cmdActions=[
+    ["Find teams",PICON.users],["Find coaches",PICON.search],["Find camps",PICON.calendar],
+    ["Create an event",PICON.spark],["View all actions",PICON.list]
+  ];
+  const statusLine=live
+    ? `${todays.length} session${todays.length===1?"":"s"} tomorrow, ${q.filter(x=>x.decide).length} awaiting your decision.`
+    : `You're ${gs.total-gs.done} step${gs.total-gs.done===1?"":"s"} from going live.`;
 
   return `
   <div class="dashwrap">
@@ -3787,29 +3842,37 @@ function dashboardHTML(){
     <p class="lastdays num">All channels · Last 30 days${live
       ? ` <span class="pill gold" style="margin-left:8px">Demo data</span>`:""}</p>
 
-    <h1 class="greet">${partOfDay}, ${esc(first)}.
-      <span>${live
-        ? `${todays.length} session${todays.length===1?"":"s"} tomorrow, ${q.filter(x=>x.decide).length} awaiting your decision.`
-        : `You're ${gs.total-gs.done} step${gs.total-gs.done===1?"":"s"} from going live.`}</span></h1>
+    <section class="dashwelcome" aria-labelledby="dashWelcomeTitle">
+      <p class="dashhello">${partOfDay}, ${esc(first)}</p>
+      <h1 class="greet" id="dashWelcomeTitle">Let's build the <span>future of youth sports.</span></h1>
+      <p class="dashcontext">${esc(statusLine)}</p>
+    </section>
 
-    <section class="cmdbar">
-      <div class="cmdchips">
-        ${chips.map(c=>`<button class="cmdchip" data-cmd="${esc(c)}">${esc(c)}</button>`).join("")}
+    <section class="cmdbar" aria-label="Sporve AI command center">
+      <div class="cmdchips" aria-label="AI actions">
+        ${cmdActions.map(([label,icon])=>`<button class="cmdchip ${S.cmdAction===label?"on":""}"
+          type="button" data-cmdmode="${esc(label)}" aria-pressed="${S.cmdAction===label}">
+          ${icon}<span>${esc(label)}</span></button>`).join("")}
       </div>
-      <form class="cmdinput" id="cmdForm">
-        <span class="mark" style="width:26px;height:26px;font-size:14px" aria-hidden="true">S</span>
-        <input id="cmdField" placeholder="Ask anything — reschedule, message a family, fill a slot" aria-label="Ask Sporve">
-        <button type="button" class="cmdicon" data-voice="1" aria-label="Voice input">
+      <form class="cmdinput ${S.cmdDraft?"has-value":""} ${S.cmdSending?"sending":""}" id="cmdForm">
+        <button type="button" class="cmdicon" data-attach="1" aria-label="Attach a file" ${S.cmdSending?"disabled":""}>${PICON.doc}</button>
+        <input id="cmdField" value="${esc(S.cmdDraft||"")}" placeholder="Ask Sporve anything…"
+          aria-label="Ask Sporve anything" aria-describedby="${S.cmdError?"cmdError":""}" autocomplete="off" ${S.cmdSending?"disabled":""}>
+        <button type="button" class="cmdmodel" data-cmdmodel="1" aria-label="AI mode: Sporve AI">
+          ${PICON.spark}<span>Sporve AI</span></button>
+        <button type="button" class="cmdicon" data-voice="1" aria-label="Voice input" ${S.cmdSending?"disabled":""}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M18 12a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.9V22h2v-2.1A8 8 0 0 0 20 12z"/></svg>
         </button>
-        <button class="cmdgo" type="submit" aria-label="Send">${ICON.send}</button>
+        <button class="cmdgo" type="submit" aria-label="${S.cmdSending?"Sending":"Send"}" ${S.cmdSending?"disabled":""}>
+          ${S.cmdSending?`<span class="cmdspinner" aria-hidden="true"></span>`:ICON.send}</button>
       </form>
-      ${S.cmdLog&&S.cmdLog.length?`<div class="cmdlog">
+      ${S.cmdError?`<p class="cmderror" id="cmdError" role="alert">${esc(S.cmdError)}</p>`:""}
+    </section>
+    ${S.cmdLog&&S.cmdLog.length?`<div class="cmdlog" aria-label="Recent Sporve AI activity">
         <div class="eyebrow">Activity log</div>
         ${S.cmdLog.slice(0,4).map(l=>`<div class="cmdlogrow"><span>${esc(l.text)}</span>
           <span class="num">${esc(l.at)}</span></div>`).join("")}
       </div>`:""}
-    </section>
 
     <section>
       <div class="sec-head"><h2>Today</h2>
@@ -4955,7 +5018,14 @@ function wire(){
     toast("Booking link copied");});
   $("[data-notetab]").forEach(b=>b.onclick=()=>{
     S.coachTab=modView("notes")?"notes":"schedule";render();});
-  $("[data-cmd]").forEach(b=>b.onclick=()=>runCommand(b.dataset.cmd));
+  $("[data-cmd]").forEach(b=>b.onclick=()=>submitCommand(b.dataset.cmd));
+  $("[data-cmdmode]").forEach(b=>b.onclick=()=>{
+    S.cmdAction=S.cmdAction===b.dataset.cmdmode?"":b.dataset.cmdmode;
+    S.cmdError="";render();
+    const input=document.getElementById("cmdField");if(input) input.focus();
+  });
+  $("[data-attach]").forEach(b=>b.onclick=()=>toast("Attachments are available when a conversation has a family or session context"));
+  $("[data-cmdmodel]").forEach(b=>b.onclick=()=>toast("Sporve AI uses your live calendar, roster, and listings"));
   $("[data-voice]").forEach(b=>b.onclick=()=>
     toast("Voice input needs a microphone permission this demo doesn't request"));
   $("[data-qact]").forEach(b=>b.onclick=()=>{
@@ -4965,12 +5035,19 @@ function wire(){
     S.portal="coach";S.coachTab=act;render();
   });
   const cmdf=document.getElementById("cmdForm");
-  if(cmdf) cmdf.onsubmit=e=>{
-    e.preventDefault();
+  if(cmdf){
     const i=document.getElementById("cmdField");
-    const v=i.value.trim(); i.value="";
-    if(v) runCommand(v);
-  };
+    if(i) i.oninput=()=>{
+      S.cmdDraft=i.value;S.cmdError="";
+      cmdf.classList.toggle("has-value",!!i.value.trim());
+    };
+    cmdf.onsubmit=e=>{
+      e.preventDefault();
+      if(S.cmdSending)return;
+      const v=(i?i.value:S.cmdDraft||"").trim();
+      if(v)submitCommand(v);
+    };
+  }
   const impf=document.getElementById("importForm");
   if(impf) impf.onsubmit=e=>{
     e.preventDefault();
@@ -5414,17 +5491,29 @@ function wireExtras(){
 
 /* Coach command bar. Every action lands in an activity log — a trust
    requirement for automation that touches schedules and money. */
+function submitCommand(text){
+  if(S.cmdSending||!text||!text.trim())return;
+  S.cmdDraft=text.trim();S.cmdSending=true;S.cmdError="";render();
+  setTimeout(()=>{S.cmdSending=false;runCommand(text.trim());},650);
+}
 function runCommand(text){
   const t=text.toLowerCase();
   let did="";
   if(/confirm/.test(t)&&/session/.test(t)){did="Confirmed tomorrow's sessions";S.coachTab="schedule";}
   else if(/fill|waitlist|open slot/.test(t)){did="Opened the waitlist to fill a slot";S.coachTab="waitlist";}
   else if(/message|family|families/.test(t)){did="Opened your inbox";S.coachTab="inbox";}
+  else if(/find/.test(t)&&/(coach|team|camp)/.test(t)){did="Opened coach search";S.portal="family";S.route={name:"explore",arg:null};}
+  else if(/create/.test(t)&&/event/.test(t)){did="Opened your schedule to create an event";S.coachTab="schedule";}
+  else if(/all action|action queue/.test(t)){did="Opened your action queue";S.coachTab="dashboard";}
   else if(/to-do|todo|left|go live|what's left/.test(t)){did="Listed what's left before you go live";S.coachTab="dashboard";}
   else if(/availability|set my/.test(t)){did="Opened recurring availability";S.coachTab=modView("slots")?"slots":"schedule";}
   else if(/profile|build my/.test(t)){did="Opened your business profile";S.coachTab="profile";}
   else if(/note/.test(t)){did="Opened session notes";S.coachTab=modView("notes")?"notes":"schedule";}
-  else {did=`No action taken for "${text}"`;}
+  else {
+    S.cmdError="I couldn't map that request to a safe action. Try naming a coach, session, family, or schedule task.";
+    S.cmdDraft=text;render();return;
+  }
+  S.cmdDraft="";S.cmdAction="";S.cmdError="";
   S.cmdLog=[{text:did,at:"just now"},...(S.cmdLog||[])].slice(0,8);
   render();
   toast(did);

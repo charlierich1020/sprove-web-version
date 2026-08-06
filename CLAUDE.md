@@ -1,5 +1,20 @@
 # the-sporve-web — standing rules
 
+## 0. Coordinate with Codex before editing
+
+Codex may edit this repository concurrently. Read `.clo-sync/activity.md` when
+it exists, then claim the task and files before writing:
+
+```bash
+python3 .claude/hooks/clo-sync.py begin claude "TASK" FILE...
+```
+
+After verification, close the claim with `end` and include the check performed.
+Claude write tools are also observed automatically by the `PostToolUse` hook.
+If Codex has an unfinished claim on the same file, re-read it immediately before
+editing and narrow or hand off the work. The ledger contains observable actions,
+not private reasoning, and must never contain prompts, secrets, or raw tool output.
+
 Derived from 170 of the owner's own messages across the last 7 days. Each rule
 below is here because he had to say it more than five times.
 
@@ -12,6 +27,13 @@ then make sure it's live updated in vercel"*.
 After any user-visible change: build, commit, push, wait for the Vercel deploy,
 then **verify against the production URL** and end the turn with that URL.
 Never report "done" from a local build.
+
+This is the shared Claude/Codex release contract, enforced through Clo. Use
+`MODE: release` after the implementation and audit are complete. The release
+report must name the pushed commit SHA, successful Vercel production result,
+verification method, and `https://the-sporve-web.vercel.app`. A failed push,
+deployment, or live check means the task is incomplete; never silently leave
+changes local.
 
 **Verify the right way.** This page renders from template literals, so a string
 like `coach-insights` is generated at runtime and **never appears in the served
