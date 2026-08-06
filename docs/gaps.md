@@ -16,8 +16,7 @@ These are where a silent bug costs money, safety, or the company.
 
 | # | Gap | The question that closes it |
 |---|---|---|
-| 1 | **Repo vs production drift.** 29 migrations say `AUTHORED, NOT YET APPLIED`; `reconcile/01_forward_schema.sql` says prod is a 36-table model missing ~30 tables created by migrations carrying no marker. Nothing in the audit is trustworthy until this is resolved. | Which migrations are actually applied to the production Supabase project right now? (`supabase migration list`) |
-| 2 | **The platform fee is charged at a different rate than it is displayed.** DB seeds 1800bps first / 400bps recurring; `resolve_platform_fee_bps()` is never called from any edge function; the charge is a flat `PLATFORM_FEE_BPS ?? 1000` = 10%. The coach's finances screen mirrors 18/4. | On a first booking of $100, what does Stripe deduct, what does the coach see as net, and which is correct? |
+| 1 | **Repo vs production drift** — *live state read 2026-08-06.* The production Supabase project `tseszaprvtvqrkfpditu` is applied only through migration `20260725033343` (18 migrations total). Everything dated after that — the `platform_fees` schedule, RLS availability-gate, capacity, Google-signup fix — is **not in prod**. Now a reconciliation task, not an unknown. | ~~Which migrations are actually applied right now?~~ **Answered: through `20260725033343`.** Remaining: reconcile each authored-not-applied migration before any `db push`. |
 | 3 | **RLS is the only thing between one parent and another parent's child.** One `USING (true)` policy exists (`availability_select_public`) — any logged-in user can read every coach's schedule. Its gated replacement is in the not-applied set. | Which tables can a signed-in parent read that belong to someone else? |
 | 4 | **Google signup cannot create a coach.** Role goes as an OAuth query param; GoTrue drops it; `handle_new_user` falls to `'searcher'`. Unrecoverable because `prevent_profile_role_change` has no service-role exemption. | If a coach signed up with Google yesterday, what is their role and how would you fix it? |
 | 5 | **Capacity is enforced nowhere on the live booking rail.** `enforce_booking_slot_capacity` no-ops when `service_id is null`, which is every booking `addBooking` creates. `enrolled_count` is never incremented. | What stops a session with 12 seats from taking a 13th booking? |
@@ -57,6 +56,7 @@ not a study session.
 | 11. Session partition | **Image session owns imagery across the board**, scoped to whichever site is actively being worked on. | Resolves the collision hazard from HANDOFF.md. Imagery = `assets/`. This session stays out of it. |
 | 12. Waitlist deliverability | **No email has sent.** | Open BUG, not a gap. Moved to Tier 1 below. |
 | 14. Type scale / 64px | **Do not change it arbitrarily — derive the size from evidence.** | Answered by measurement; see `docs/type-evidence.md`. Verdict: keep 52px. |
+| 2. Platform fee rate (was Tier 1) | **Flat 12% of every booking. No first/recurring split, no off-platform rate, no other fees.** | Retires the 18/4/2.5 schedule in code (never was live — prod charges the 10% default, coach UI projects 18/4; both wrong). Reconciliation drafted, not applied: `docs/fee-reconciliation.md`. |
 
 ### A correction worth stating plainly
 
