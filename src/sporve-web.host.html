@@ -3098,12 +3098,67 @@ function detailHTML(id){
   </main>`;
 }
 
+/* ══════════════════ GUEST PREVIEW ══════════════════
+   Three family routes reachable straight from the Product mega-menu --
+   Bookings & receipts, Messaging, Athlete progress -- rendered a bare
+   sign-in wall to anyone not logged in. Measured: ~2,030 characters of
+   page including all the chrome, against 9,302 for explore and 5,796 for
+   the product index. A parent evaluating Sporve clicked a menu row that
+   named a feature and got a login box that described nothing.
+
+   This is the family-side twin of the coach-menu defect: the surfaces a
+   visitor is most likely to click while deciding are the ones that showed
+   them least. It is the same fix -- say what the feature is before asking
+   for an account -- and it deletes nothing: the signed-in path below is
+   untouched.
+
+   Deliberately NOT a fabricated screenshot. The frame is the existing
+   skeleton mock used on the coach landing; inventing a fake inbox with
+   invented coach names on a real pre-launch site is the thing this repo
+   has already had to strip out once. */
+function guestPreviewHTML({eyebrow,title,lede,points,frame}){
+  return `${subnavHTML()}
+  ${/* Plain .shell, not .hero-in -- .hero-in centres an 820px column, which
+        left-aligned reads as a block floating in the middle of the page
+        instead of sitting on the page's own left edge like every other
+        heading here. */""}
+  <section class="band" style="padding:56px 0 48px">
+    <div class="shell">
+      <div class="eyebrow" style="color:var(--accent)">${esc(eyebrow)}</div>
+      <h1 style="margin-top:12px;max-width:18ch">${esc(title)}</h1>
+      <p class="lede" style="margin:16px 0 0;max-width:56ch;text-align:left">${esc(lede)}</p>
+      <div class="ctarow" style="margin-top:26px;justify-content:flex-start">
+        <button class="btn" data-signin="1">Log in or sign up</button>
+        <button class="btn ghost" data-nav="explore">Browse coaches first</button>
+      </div>
+    </div>
+  </section>
+  <section class="band alt">
+    <div class="shell split">
+      <div class="splitcopy">
+        <h2>What you get</h2>
+        <ul class="dlist" style="margin-top:18px">
+          ${points.map(p=>`<li>${TICK(14,3)}<span>${esc(p)}</span></li>`).join("")}
+        </ul>
+      </div>
+      <div class="frame"><div class="fbar"><i></i><i></i><i></i></div>
+        <div class="fbody"><div class="eyebrow">${esc(frame)}</div>
+          <div class="fskel"></div><div class="fskel s"></div>
+          <div class="fskel"></div><div class="fskel s"></div></div></div>
+    </div>
+  </section>`;
+}
+
 /* ── bookings / saved / profile ──────────────────────────────────── */
 function bookingsHTML(){
-  if(!isVerified()) return `${subnavHTML()}<main class="shell"><div class="empty">
-    <div class="big">📅</div><h2>Sign in to see your bookings</h2>
-    <p style="margin-top:8px">Your sessions, receipts, and schedule live here.</p>
-    <button class="btn" data-signin="1" style="margin-top:20px">Log in or sign up</button></div></main>`;
+  if(!isVerified()) return guestPreviewHTML({
+    eyebrow:"Bookings & receipts",
+    title:"Every session and receipt in one place",
+    lede:"Once you book, the session, the receipt, and the cancellation terms that applied at purchase stay together — not scattered across email.",
+    points:["The cancellation policy is copied onto the booking when you pay, so it cannot change under you",
+            "Receipts itemise what you paid and what was refunded",
+            "Sessions, coach contact and directions sit on the same record"],
+    frame:"Bookings"});
   return `${subnavHTML()}<main class="shell">
     <div class="sec-head"><h1>Bookings</h1></div>
     ${S.bookings.length?`<div style="display:flex;flex-direction:column;gap:13px;padding-bottom:60px">
@@ -3202,10 +3257,14 @@ function profileHTML(){
 
 /* ── messages ────────────────────────────────────────────────────── */
 function messagesHTML(){
-  if(!isVerified()) return `${subnavHTML()}<main class="shell"><div class="empty">
-    <div class="big">💬</div><h2>Sign in to message coaches</h2>
-    <p style="margin-top:8px">Ask about sessions, equipment, and schedules.</p>
-    <button class="btn" data-signin="1" style="margin-top:20px">Log in or sign up</button></div></main>`;
+  if(!isVerified()) return guestPreviewHTML({
+    eyebrow:"Messaging",
+    title:"Ask before you commit to anything",
+    lede:"Message a coach about equipment, group size, or experience before you spend a penny. The thread stays attached to the coach and the booking it belongs to.",
+    points:["Ask a coach anything before you book — messaging is free",
+            "Conversations stay attached to the coach and the session",
+            "Every coach you can message has cleared a background check"],
+    frame:"Messages"});
   const conv=S.conversations.find(c=>c.id===S.activeConv)||S.conversations[0];
   const msgs=conv?(S.messages[conv.id]||[]):[];
   return `${subnavHTML()}<main class="shell">

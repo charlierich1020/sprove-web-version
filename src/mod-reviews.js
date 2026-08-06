@@ -355,10 +355,17 @@ function entriesFor(a){
 }
 function timelineView(){
   ensure();
-  if(!isVerified()) return `${nav()}<main class="shell"><div class="empty">
-    <h2>Log in to see athlete progress</h2>
-    <p style="margin-top:8px">Sessions attended, coach updates, and skill milestones for each of your athletes.</p>
-    <button class="btn" data-signin="1" style="margin-top:20px">Log in or sign up</button></div></main>`;
+  /* Was a bare sign-in wall. See guestPreviewHTML() in the host for why --
+     this route is one click from the Product mega-menu, so it is a surface a
+     visitor sees while deciding, not only after signing up. */
+  if(!isVerified()&&typeof guestPreviewHTML==="function") return guestPreviewHTML({
+    eyebrow:"Athlete progress",
+    title:"What your kid actually did, session by session",
+    lede:"Attendance, coach notes and milestones per athlete — written by the coach who ran the session, not summarised by a machine.",
+    points:["A timeline per athlete, however many kids you have",
+            "Coach notes arrive attached to the session they came from",
+            "A child profile cannot exist without recorded parental consent"],
+    frame:"Athlete progress"});
   const athletes=S.athletes||[];
   if(!athletes.length) return `${nav()}<main class="shell"><div class="empty">
     <h2>No athletes yet</h2>
