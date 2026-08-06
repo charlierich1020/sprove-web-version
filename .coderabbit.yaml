@@ -1,0 +1,62 @@
+# CodeRabbit configuration for the-sporve-web
+# Docs: https://docs.coderabbit.ai/guides/configure-coderabbit
+#
+# This repo is one hand-authored source (src/sporve-web.host.html + src/mod-*.js)
+# compiled by python3 src/build.py into a single 1.3MB index.html. Reviewing the
+# generated file or the inlined binaries would bury every real comment in noise,
+# so those are excluded and review is pointed at the sources a human actually edits.
+
+language: en-US
+early_access: false
+
+reviews:
+  # "assertive" surfaces more than the default; this is a solo-owned codebase
+  # where a second set of eyes is the whole point.
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_filters:
+    # Review the sources.
+    - "src/**"
+    - "docs/**"
+    - ".claude/**"
+    # NOT the generated build or the inlined binaries — they are outputs, not code.
+    - "!index.html"
+    - "!assets/fonts/*.woff2"
+    - "!assets/**/*.jpg"
+    - "!assets/**/*.png"
+    - "!**/*.min.*"
+
+  path_instructions:
+    - path: "src/sporve-web.host.html"
+      instructions: >
+        This is a single-file vanilla-JS app: a big <style> block then view
+        functions returning HTML template-literal strings, wired by data-*
+        attributes and one render() that replaces #app wholesale. Flag: a ${...}
+        expression pasted into a plain (non-template) function body (a syntax
+        error that kills the whole script); a called function that is never
+        defined; text on a .band.dark ground using a token that can resolve
+        dark (must be a white/slate literal); a hardcoded px font-size (the
+        scale is 8 tokens, --text-*); an id-level selector silently overriding
+        a class rule; and any --accent used as generic chrome (orange is the
+        basketball sport colour only, CTAs are slate).
+    - path: "src/mod-*.js"
+      instructions: >
+        Feature modules inlined into the host at build. Each is co-prefixed and
+        must not redefine a host global. Flag any new external network request
+        (the built page must survive a CSP blocking all external requests) and
+        any change to a data-* handler, form, or state read that would break
+        live wiring.
+    - path: "docs/security/**"
+      instructions: >
+        Security findings. Do not treat a documented, human-gated vulnerability
+        as something to auto-fix; these are reported, not patched.
+
+chat:
+  auto_reply: true
