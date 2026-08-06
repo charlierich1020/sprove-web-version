@@ -62,7 +62,30 @@ before launching read-only auditors, because editing files while they read
 stalls them; and **tell them to `rg -l` then read line ranges**, because
 pointing an agent at a 208-file repo without that reliably times it out.
 
-## 5. When the owner has to act, give click-level steps
+## 5. Teach as you go — explain every edit
+
+Stated directly: *"Make sure that the agent helps me learn exactly what is
+going on after each edit."*
+
+After each change, say in plain language: **what changed, why, and what it
+means for the page.** Not a diff summary — the reasoning. If a judgement call
+was made (a value held back, a spec item interpreted rather than followed
+literally), say which and why, so the owner can overrule it.
+
+The owner did not write this code. A change he cannot follow is a change he
+cannot review, and an unreviewable change is how the wrong thing ships twice.
+
+## 6. Check a spec's premises before building on them
+
+Pasted briefs have repeatedly asserted things that are not true of this repo —
+fonts that are not embedded, reference files that do not exist, a package
+manager that is not installed, hex values approximating tokens already here.
+Verify every load-bearing claim against the repo BEFORE writing code, and
+report the mismatch rather than silently building on it or silently ignoring
+it. A spec that reverses a decision the owner made earlier is the most
+important case: surface it, do not just pick one.
+
+## 7. When the owner has to act, give click-level steps
 
 ~7 times: *"this still to vauge, tell me exactly where to go, what to click"*.
 Exact URL, exact button label, full copy-paste-ready values. No "navigate to

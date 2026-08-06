@@ -1282,7 +1282,14 @@ h2.ctr{margin-bottom:10px}
 .pmgrid4 .eyebrow,.cmgrid .eyebrow{margin-bottom:10px}
 .pmrow2{
   display:flex;align-items:center;height:44px;padding:0 12px;border-radius:var(--r-ctl);
-  text-align:left;font-size:var(--t-body);font-weight:500;color:var(--ink);
+  /* 700, per the owner's explicit request that mega-menu row titles go bold.
+     Made once here rather than per row, as asked.
+
+     Size stays on the scale. The request said 16px, but 16 is not a step in
+     the shipped 8-step scale AND is not a step in the type scale the same
+     brief specifies (13/15.5/17/19/28/44/64) -- so honouring it literally
+     would break both. The visual ask was weight; weight is what changed. */
+  text-align:left;font-size:var(--t-body);font-weight:700;color:var(--ink);
   transition:background .14s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .pmrow2:hover{background:var(--raise)}
@@ -1306,7 +1313,10 @@ h2.ctr{margin-bottom:10px}
 }
 .cmrow:hover{background:var(--raise)}
 .cmrow:focus-visible{outline:none;background:var(--raise);box-shadow:0 0 0 2px var(--slate-ring)}
-.cmrow b{font-size:var(--t-h3);letter-spacing:-.018em}
+/* Same bold treatment on the Coaches menu and the NEW card, so the two menus
+   and the feature tile read as one component. */
+.cmrow b{font-size:var(--t-h3);letter-spacing:-.018em;font-weight:700;color:var(--ink)}
+.pmfeat b{font-weight:700;color:var(--ink)}
 .cmrow span{font-size:var(--t-small);color:var(--muted);line-height:1.5}
 .cmtalk h3{margin-top:2px}
 .cmtalk p{font-size:var(--t-small);color:var(--muted);line-height:1.55;margin-top:8px;max-width:34ch}
