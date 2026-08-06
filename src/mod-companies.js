@@ -768,7 +768,7 @@ function companyView(){
       </div>
       <div class="co-act">
         <div class="co-px">${usd(p.price)} <span>${t === "team" ? "/mo dues" : t === "camp" ? "/week" : "/session"}</span></div>
-        <button class="btn sm" data-cobook="${esc(p.id)}">${esc(TYPE[t].cta)}</button>
+        <button class="btn ghost sm" data-cobook="${esc(p.id)}">${esc(TYPE[t].cta)}</button>
       </div>
     </div>`;
   }).join("");

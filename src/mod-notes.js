@@ -462,8 +462,8 @@ const CSS = `
    because the rail beside them is part of the workspace and a true
    full-bleed band would run underneath it.
 
-   No register class: the serious register (Hanken) is for `finances`
-   and `media` only, so this tab stays on the default Syne/Jakarta. */
+   No register class: the serious register (Hanken) is for finances and
+   media only, so this tab stays on the default Syne/Jakarta. */
 .nt-lede{color:var(--muted);font-size:var(--text-md);max-width:56ch;margin-top:14px;line-height:1.5}
 .nt-heroact{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:24px}
 .nt-stats{display:flex;gap:40px;flex-wrap:wrap;margin-top:26px;padding-top:20px;border-top:1px solid var(--rule)}
@@ -608,8 +608,8 @@ function notesView(){
     </div>
   </section>
 
-  <section class="band">
-    <div class="shell" data-rev style="padding-top:34px;padding-bottom:10px">
+  <section class="band" style="padding:34px 0 40px">
+    <div class="shell" data-rev>
       <div class="nt-bar">
         <div class="nt-seg" role="tablist" aria-label="Session note panels">
           ${PANELS.map(([k, label]) => `<button class="nt-segbtn ${ui.panel === k ? "on" : ""}" role="tab"

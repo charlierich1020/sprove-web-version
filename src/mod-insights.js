@@ -727,7 +727,7 @@ function insightsView(){
     <div class="shell" data-rev>
       <div class="in-sec"><div>
         <h2>Availability check</h2>
-        <p>Your open slots across the next seven days.</p></div>
+        <p class="sub">Your open slots across the next seven days.</p></div>
         ${DERIVED_PILL}</div>
       ${warningsHTML()}
     </div>
@@ -737,7 +737,7 @@ function insightsView(){
     <div class="shell" data-rev>
       <div class="in-sec"><div>
         <h2>Booking funnel</h2>
-        <p>Four stages over ${esc(state.funnel.windowLabel)}, seeded from a comparable coach — not
+        <p class="sub">Four stages over ${esc(state.funnel.windowLabel)}, seeded from a comparable coach — not
           your account.</p></div>
         ${SAMPLE_PILL}</div>
       <div class="in-card">${funnelHTML()}</div>
@@ -748,7 +748,7 @@ function insightsView(){
     <div class="shell" data-rev>
       <div class="in-sec"><div>
         <h2>Demand near you</h2>
-        <p>Search volume is seeded. Price positioning is computed from the catalogue.</p></div></div>
+        <p class="sub">Search volume is seeded. Price positioning is computed from the catalogue.</p></div></div>
       <div class="in-two">
         ${demandCard()}
         <div class="in-card">
@@ -778,7 +778,7 @@ function insightsView(){
     <div class="shell" data-rev>
       <div class="in-sec"><div>
         <h2>Price positioning</h2>
-        <p>Your price against catalogue listings in the same sport, on the same billing model.</p></div>
+        <p class="sub">Your price against catalogue listings in the same sport, on the same billing model.</p></div>
         ${DERIVED_PILL}</div>
       <div class="panel"><div class="in-plist">${positions.map(priceRowHTML).join("")}</div></div>
       <div class="tblwrap panel" style="padding:18px;margin-top:14px"><table class="tbl">
@@ -801,7 +801,7 @@ function insightsView(){
     <div class="shell" data-rev>
       <div class="in-sec"><div>
         <h2>Client watchlist</h2>
-        <p>Flagged once the silence runs half again as long as a family's own usual gap.</p></div></div>
+        <p class="sub">Flagged once the silence runs half again as long as a family's own usual gap.</p></div></div>
       ${rows.length ? `<div class="tblwrap panel" style="padding:18px"><table class="tbl">
         <thead><tr><th>Athlete</th><th>Family</th><th>Program</th><th>Last session</th>
           <th>Usual gap</th><th>Silent for</th><th>Status</th><th>Source</th><th>Action</th></tr></thead>
@@ -821,7 +821,10 @@ function insightsView(){
             <td>${r.source === "booked"
               ? `<span class="pill slate">Booking history</span>`
               : `<span class="pill gold">Sample family</span>`}</td>
-            <td><button class="btn sm" data-in-checkin="${esc(r.id)}">
+            ${/* ghost, not filled: one row per family means the filled accent
+                  would paint the whole column orange, and the accent is the
+                  page's single primary CTA, not a table control. */""}
+            <td><button class="btn ghost sm" data-in-checkin="${esc(r.id)}">
                 ${checkedIn[r.id] ? "Send another" : "Draft check-in"}</button>
               ${checkedIn[r.id] ? `<div style="color:var(--muted);font-size:var(--text-sm);margin-top:4px">Check-in sent</div>` : ""}</td>
           </tr>`;

@@ -1455,6 +1455,17 @@ h2.ctr{margin-bottom:10px}
    before this: ground still rgba(0,0,0,0). The id has to be in the selector
    for the ground to change at all. */
 #app.reg-serious{background:var(--raise)}
+/* A plain .band declares no ground of its own -- it is transparent and shows
+   whatever #app is painting. On a normal page that resolves white, so
+   `band` vs `band alt` reads as white vs slate. On a serious page #app is
+   ALREADY slate, so both resolve slate and the section rhythm collapses to
+   one flat colour. Giving .band an explicit white ground inside the serious
+   register restores the alternation. Found while restyling the trust page,
+   and it applies to every serious-register page, so it belongs here rather
+   than being re-solved per module. */
+#app.reg-serious .band{background:var(--paper)}
+#app.reg-serious .band.alt{background:var(--raise)}
+#app.reg-serious .band.dark,#app.reg-serious .trustband{background:#000000}
 .reg-serious .panel,.reg-serious .card,.reg-serious .prodcard,
 .reg-serious .sf-card,.reg-serious .co-card{background:var(--paper)}
 .reg-serious h1,.reg-serious h2,.reg-serious h3,.reg-serious h4{
@@ -2408,7 +2419,12 @@ function coachesMenuHTML(){
       <h3>See the coach side first</h3>
       <p>Book a call with the Sporve team — see the coach side end-to-end
          before you commit to anything.</p>
-      <button class="btn" data-modal="bookcall" style="margin-top:16px">Book a call</button>
+      ${/* ghost, not filled. This lives in the Coaches mega-menu, which is in
+            the DOM on every route -- so a filled accent here spent the page's
+            orange budget before the page had painted anything of its own.
+            Measured on /product: 3 painted elements against a cap of 2, and
+            the third was menu chrome. */""}
+      <button class="btn ghost" data-modal="bookcall" style="margin-top:16px">Book a call</button>
     </div>
   </div></div>`;
 }

@@ -306,7 +306,6 @@ const publishedCount = () => state.mediaItems.filter(i => i.published).length;
    out: a library that quietly drops the blocked photos teaches the coach
    nothing, and the refusal is the most useful thing on the page. */
 const heldItems = () => state.mediaItems.filter(i => evaluate(i).blockKind === "consent");
-const blockedCount = () => heldItems().length;
 
 /* ── profile strength: media's contribution, and the next best move ─ */
 function strength(){
@@ -375,16 +374,17 @@ const CSS = `
    own type goes back to the light-ground palette. (0,3,0) beats the host's
    .band.dark p at (0,2,0); without these the caption inside would resolve
    to #AEB8C4 on white, 2.1:1. */
-.md-card{background:var(--paper);border-radius:var(--r-m);padding:17px 18px}
+.md-card{background:var(--paper);border-radius:var(--r-m);padding:17px 18px;
+  display:flex;gap:12px;align-items:flex-start}
+.md-card > .ic{flex:0 0 auto;color:var(--slate);margin-top:1px}
+.md-card > .ic svg{width:19px;height:19px;display:block}
+.md-cardbody{flex:1;min-width:0}
+.md-cardbody > b{font-size:var(--text-base);letter-spacing:-.015em}
 .md-band.dark .md-card{color:var(--ink)}
 .md-band.dark .md-card p{color:var(--ink-2)}
 .md-band.dark .md-card b{color:var(--ink)}
 .md-band.dark .md-card .md-why{color:var(--muted)}
 .md-band.dark .md-card .eyebrow{color:var(--faint)}
-.md-cardhead{display:flex;gap:12px;align-items:flex-start}
-.md-cardhead .ic{flex:0 0 auto;color:var(--slate);margin-top:1px}
-.md-cardhead .ic svg{width:19px;height:19px;display:block}
-.md-cardhead b{font-size:var(--text-base);letter-spacing:-.015em}
 .md-holds{display:flex;flex-direction:column;gap:0;margin-top:13px}
 .md-hold{border-top:1px solid var(--rule);padding:11px 0 0;margin-top:11px}
 .md-hold b{display:block;font-size:var(--text-sm);letter-spacing:-.01em}
@@ -415,23 +415,29 @@ const CSS = `
 .md-secline{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:0 0 18px}
 .md-secline p{color:var(--muted);font-size:var(--text-base);max-width:56ch;margin-top:7px;line-height:1.5}
 
-.md-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+/* 220px, not 250: at the coach dash's ~990px column the wider floor gave
+   three columns for four slots, so Action shots sat alone under a half-empty
+   row. Four fit across, and the four required slots read as one row. */
+.md-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;align-items:start}
 .md-slot{border:1px solid var(--rule);border-radius:var(--r-l);padding:16px;background:var(--paper);
   display:flex;flex-direction:column;gap:11px}
 .md-slothead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .md-slot h4{margin:0;font-size:var(--text-base);letter-spacing:-.015em;font-weight:700}
 .md-why{font-size:var(--text-sm);color:var(--muted);line-height:1.45}
 .md-hint{font-size:var(--text-sm);line-height:1.45;color:var(--faint)}
-.md-hint.todo{color:var(--warn)}
+.md-hint.todo{color:var(--gold-ink)}
 
-.md-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}
+.md-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px;align-items:start}
 .md-tile{border:1px solid var(--rule);border-radius:var(--r-m);background:var(--paper);
   display:flex;flex-direction:column;overflow:hidden;margin:0}
 .md-ph{position:relative;aspect-ratio:4/3;display:grid;place-items:center;
   background:linear-gradient(148deg,color-mix(in srgb,var(--tc) 34%,var(--paper)),
                                     color-mix(in srgb,var(--tc) 9%,var(--paper)));
   border-bottom:1px solid var(--rule)}
-.md-ini{font-size:var(--text-lg);font-weight:700;letter-spacing:-.03em;color:var(--tc)}
+/* Initials in --ink-2, not the sport colour. The sport already reads from the
+   gradient behind them, and --tc on its own 9-34% tint measured 3.35:1 at
+   --text-lg — under the 4.5 bar at the small end of the clamp. */
+.md-ini{font-size:var(--text-lg);font-weight:700;letter-spacing:-.03em;color:var(--ink-2)}
 .md-play{width:34px;height:34px;border-radius:999px;background:var(--paper);display:grid;place-items:center;
   color:var(--ink);box-shadow:0 0 0 1px var(--rule)}
 .md-dur{position:absolute;right:7px;bottom:7px;background:var(--ink);color:var(--paper);
@@ -441,14 +447,21 @@ const CSS = `
 .md-body{padding:11px 12px 13px;display:flex;flex-direction:column;gap:8px;flex:1}
 .md-cap{font-size:var(--text-sm);color:var(--ink-2);line-height:1.45;margin:0}
 .md-tags{display:flex;gap:5px;flex-wrap:wrap}
+/* --warn (#B87800) and --good (#13A240) measure 3.67:1 and 3.35:1 on white,
+   both under the 4.5 bar for 12px body. The refusal keeps its amber but takes
+   the darker --gold-ink (6.1:1); the cleared line goes --muted, which is also
+   the right volume — "nothing is stopping you" is not news. */
 .md-verdict{font-size:var(--text-sm);line-height:1.45;color:var(--muted)}
-.md-verdict.block{color:var(--warn)}
-.md-verdict.ok{color:var(--good)}
+.md-verdict.block{color:var(--gold-ink)}
+.md-verdict.ok{color:var(--muted)}
 .md-sent{font-size:var(--text-sm);color:var(--faint)}
 .md-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:auto;padding-top:4px}
 .md-del{width:28px;height:28px}
 .md-del:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent)}
-.md-add{width:100%;aspect-ratio:4/3;border:1.5px dashed var(--rule-strong);border-radius:var(--r-m);
+/* Was a 4/3 dashed square, which made an empty slot card as tall as a filled
+   one and put a large hole in the middle of the profile grid. A bar states
+   the same affordance in a sixth of the height. */
+.md-add{width:100%;grid-column:1/-1;height:46px;border:1.5px dashed var(--rule-strong);border-radius:var(--r-m);
   display:grid;place-items:center;font-size:var(--text-sm);font-weight:700;color:var(--muted);
   background:var(--paper);transition:border-color .14s,color .14s,background .14s}
 .md-add:hover{border-color:var(--slate);color:var(--slate);background:var(--slate-tint)}
@@ -662,6 +675,10 @@ function athleteGroups(){
   }).join("");
 }
 
+/* Four section blocks, grounds top to bottom: slate → black → white → white.
+   The black block is second, not last, because it is the page's thesis: the
+   library refuses on the family's behalf, and the refusals are listed by name
+   rather than counted and hidden. Everything below it is inventory. */
 function mediaView(){
   const st = strength();
   const photos = profilePhotos().length;
@@ -669,7 +686,8 @@ function mediaView(){
   const cc = consentCounts();
   const sItems = sessionItems();
   const sessionsUsed = SESSIONS.filter(s => itemsForSession(s.id).length).length;
-  const held = blockedCount();
+  const held = heldItems();
+  const shield = (typeof PICON === "object" && PICON.shield) || "";
 
   const tiles = [
     ["Profile photos", String(photos), `guideline is ${RULE.featurePhotos}`],
@@ -678,68 +696,108 @@ function mediaView(){
     ["On your profile", String(publishedCount()), `of ${state.mediaItems.length} in the library`],
   ];
 
-  return `<div class="md-head"><div>
-      <h1>Media</h1>
-      <p class="md-lede">Your library, and the consent that governs it. Every athlete's parent chooses one of
-        three settings, and that choice decides what you may send and what you may publish. Nothing here can
-        change a family's answer — only ask for it.</p></div>
-    <div class="md-actions">
-      <button class="btn ghost" data-modal="consent">Consent roster</button>
-      <button class="btn" data-md-upload="new">+ Add media</button>
-    </div></div>
-
-  <div class="stats" style="margin-top:16px">
-    ${tiles.map(([k, v, d]) => `<div class="stat"><div class="k">${esc(k)}</div>
-      <div class="v num">${esc(v)}</div><div class="d num">${esc(d)}</div></div>`).join("")}
-  </div>
-
-  <div class="md-meter">
-    <div class="md-meterhead">
-      <div class="eyebrow">Profile media strength</div>
-      <div class="md-pct num">${st.pct}%</div>
+  return `
+  <section class="md-band">
+    <div data-rev>
+      <div class="md-head">
+        <div>
+          <div class="eyebrow">Media &amp; consent</div>
+          <h1>Consent decides what leaves.</h1>
+          <p class="md-lede">Photos of an athlete move only where that athlete's parent allowed. You can ask
+            for consent — never grant it.</p>
+        </div>
+        <div class="md-actions">
+          <button class="btn ghost" data-modal="consent">Consent roster</button>
+          <button class="btn" data-md-upload="new">Add media</button>
+        </div>
+      </div>
+      <div class="stats">
+        ${tiles.map(([k, v, d]) => `<div class="stat"><div class="k">${esc(k)}</div>
+          <div class="v num">${esc(v)}</div><div class="d num">${esc(d)}</div></div>`).join("")}
+      </div>
     </div>
-    <div class="md-bar" role="img" aria-label="Profile media is ${st.pct} percent complete">
-      <i style="width:${st.pct}%"></i></div>
-    <p class="md-next"><b>Next:</b> ${esc(st.next)}</p>
-  </div>
+  </section>
 
-  ${held ? `<div class="md-note warn" style="margin-top:14px">
-    <b>${esc(countOf(held, "item"))} held by consent.</b> ${held === 1 ? "It stays" : "They stay"} in your library and
-    ${held === 1 ? "is" : "are"} visible only to you until the ${plural(held, "family grants", "families grant")}
-    permission. Nothing was deleted.</div>` : ""}
+  <section class="md-band band dark">
+    <div data-rev>
+      <div class="eyebrow">What the library enforces</div>
+      <h2>Consent is per athlete, and revocable.</h2>
+      <p class="md-sub">A parent sets it in their own app. Nothing in this tab can write to it.</p>
 
-  <div class="md-secline"><div>
-      <h3>Profile media</h3>
-      <p>What appears on your public listing. Sporve's listing guideline asks for ${RULE.featurePhotos} or more
-        profile photos — you have <span class="num">${photos}</span>${shortPhotos
-          ? `, so add <span class="num">${shortPhotos}</span> more.`
-          : `, which meets it.`}</p>
-    </div></div>
-  <div class="md-slots">${SLOTS.map(slotCard).join("")}</div>
+      <div class="md-card" style="margin-top:22px">
+        <span class="ic">${shield}</span>
+        <div class="md-cardbody">
+          ${held.length
+            ? `<b>${esc(countOf(held.length, "item"))} held by consent.</b>
+               <p class="md-why">${held.length === 1 ? "It stays" : "They stay"} in your library, visible
+                 only to you. Nothing was deleted.</p>`
+            : `<b>Nothing is held right now.</b>
+               <p class="md-why">Every item clears the consent on file for the athletes in it.</p>`}
+          ${held.length ? `<div class="md-holds">${held.map(it => {
+            const v = evaluate(it);
+            return `<div class="md-hold">
+              <b>${esc(it.caption)}</b>
+              <p class="md-why">${esc(v.canShare ? v.publishReason : v.shareReason)}</p>
+            </div>`;
+          }).join("")}</div>` : ""}
+        </div>
+      </div>
 
-  <div class="md-secline"><div>
-      <h3>Session media</h3>
-      <p>Clips and photos captured at a specific session. Every one is attached to the athletes in it, which is
-        what makes the consent gate enforceable.</p>
+      <div class="md-tally">
+        <div><b class="num">${cc.public_profile}</b><span>Profile + private</span></div>
+        <div><b class="num">${cc.private_share}</b><span>Private only</span></div>
+        <div><b class="num">${cc.none}</b><span>No media</span></div>
+      </div>
+      <p class="md-foot">Across ${esc(countOf(ROSTER.length, "athlete"))}. A withdrawal pulls the media
+        down immediately.</p>
     </div>
-    <div class="md-seg" role="group" aria-label="Group session media by">
-      <button class="${grouping === "session" ? "on" : ""}" data-md-group="session"
-        aria-pressed="${grouping === "session"}">By session</button>
-      <button class="${grouping === "athlete" ? "on" : ""}" data-md-group="athlete"
-        aria-pressed="${grouping === "athlete"}">By athlete</button>
-    </div></div>
+  </section>
 
-  ${grouping === "session" ? sessionGroups() : athleteGroups()}
-  ${grouping === "athlete"
-    ? `<p class="md-hint" style="margin-top:12px">Media with more than one athlete in it appears under each of them.</p>`
-    : ""}
+  <section class="md-band paper">
+    <div data-rev>
+      <div class="md-secline"><div>
+        <h2>Profile media</h2>
+        <p>What families see on your listing. Sporve asks for ${RULE.featurePhotos} photos; you have
+          <span class="num">${photos}</span>${shortPhotos
+            ? `, so add <span class="num">${shortPhotos}</span> more.`
+            : `, which meets it.`}</p>
+      </div></div>
 
-  <div class="md-strip">
-    <span>Consent on file: <span class="num">${cc.public_profile}</span> profile + private ·
-      <span class="num">${cc.private_share}</span> private only ·
-      <span class="num">${cc.none}</span> no media, across ${esc(countOf(ROSTER.length, "athlete"))}.
-      Parents change this in their own app at any time, and a withdrawal pulls the media immediately.</span>
-  </div>`;
+      <div class="md-meter">
+        <div class="md-meterhead">
+          <div class="eyebrow">Profile media strength</div>
+          <div class="md-pct num">${st.pct}%</div>
+        </div>
+        <div class="md-bar" role="img" aria-label="Profile media is ${st.pct} percent complete">
+          <i style="width:${st.pct}%"></i></div>
+        <p class="md-next"><b>Next:</b> ${esc(st.next)}</p>
+      </div>
+
+      <div class="md-slots">${SLOTS.map(slotCard).join("")}</div>
+    </div>
+  </section>
+
+  <section class="md-band paper">
+    <div data-rev>
+      <div class="md-secline">
+        <div>
+          <h2>Session media</h2>
+          <p>Attached to the athletes in it — which is what makes the gate enforceable.</p>
+        </div>
+        <div class="md-seg" role="group" aria-label="Group session media by">
+          <button class="${grouping === "session" ? "on" : ""}" data-md-group="session"
+            aria-pressed="${grouping === "session"}">By session</button>
+          <button class="${grouping === "athlete" ? "on" : ""}" data-md-group="athlete"
+            aria-pressed="${grouping === "athlete"}">By athlete</button>
+        </div>
+      </div>
+
+      <div class="md-groups">${grouping === "session" ? sessionGroups() : athleteGroups()}</div>
+      ${grouping === "athlete"
+        ? `<p class="md-hint" style="margin-top:14px">Media with two athletes appears under each of them.</p>`
+        : ""}
+    </div>
+  </section>`;
 }
 
 /* ═══════════════════ MODALS ═══════════════════ */
