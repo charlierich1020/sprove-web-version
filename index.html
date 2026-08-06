@@ -1446,6 +1446,18 @@ h2.ctr{margin-bottom:10px}
      Plus Jakarta. */
   font-family:var(--sans);
 }
+/* The serious register also carries a grey-slate ground, not white. Money,
+   safety and consent pages read as documents rather than marketing, and the
+   cool grey does that without adding a colour -- it is --raise, already the
+   page's second ground. White cards float on it, which is the same figure/
+   ground relationship the reference site uses for its editorial blocks. */
+/* #app.reg-serious, not .reg-serious: #app carries a background GRADIENT
+   declared on an id (1,0,0), which beats a bare class (0,1,0). Measured
+   before this: ground still rgba(0,0,0,0). The id has to be in the selector
+   for the ground to change at all. */
+#app.reg-serious{background:var(--raise)}
+.reg-serious .panel,.reg-serious .card,.reg-serious .prodcard,
+.reg-serious .sf-card,.reg-serious .co-card{background:var(--paper)}
 .reg-serious h1,.reg-serious h2,.reg-serious h3,.reg-serious h4{
   font-weight:800;letter-spacing:-.02em;
 }
@@ -1547,15 +1559,6 @@ h2.ctr{margin-bottom:10px}
 .card .shot img{filter:brightness(.88) contrast(1.03)}
 .card:hover .shot img{filter:brightness(.97) contrast(1.02)}
 
-/* ── Sport rail. Six marks from the sport ramp under a page eyebrow.
-   This is the "orange, blue and green in short places" the reference site
-   uses -- and on that site those accents ARE the ramp: #DA5A05 Basketball,
-   #2EA136 Soccer, #2384FB Baseball. So the accent system needs no new hue,
-   only permission to appear as a MARK. Never as text: the ramp is tuned for
-   marks and measures 3.35-3.95:1 as label type, which is why .amq-tag uses
-   sportInk() instead. */
-.sportrail{display:flex;gap:6px;margin-top:14px}
-.sportrail i{width:26px;height:4px;border-radius:var(--r-pill);flex:0 0 auto}
 /* The card keeps its own white ground inside a dark band, so its text stays
    dark -- it is a white card ON black, not text on black. Scoped to the card
    only: an earlier attempt also set `.prodsec .sub` to inherit, which at
@@ -3057,13 +3060,10 @@ function productHTML(){
      #2384FB Baseball). Short places only: a rule under the eyebrow, the emoji
      already on the cards. Never as body text -- the ramp is tuned to read as
      a mark and fails AA as type. */
-  const rail=["Basketball","Soccer","Swimming","Tennis","Baseball","Boxing"]
-    .map(s=>`<i style="background:${sportColor(s)}" title="${esc(s)}"></i>`).join("");
   return `${subnavHTML()}
   <section class="band alt" style="padding:64px 0 56px">
     <div class="shell">
       <div class="eyebrow" data-rev>The product</div>
-      <div class="sportrail" aria-hidden="true" data-rev>${rail}</div>
       <h1 style="margin-top:16px;max-width:16ch" data-rev>Everything Sporve does.</h1>
       <p class="lede" style="margin:16px 0 0;max-width:58ch;text-align:left" data-rev>One product, two
         sides. The platform families book on is the same one coaches run their week on — and the
