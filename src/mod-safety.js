@@ -320,7 +320,25 @@
       </form>`);
   }
 
-  /* ═══════════════════ VIEW · TRUST &amp; SAFETY ═══════════════════ */
+  /* ═══════════════════ VIEW · TRUST &amp; SAFETY ═══════════════════
+     Page-level content, in the order a reader needs it. The per-person check
+     policy is the proof behind the product's central claim, so it leads the
+     page instead of sitting in the third panel down. */
+  const POLICY = [
+    ["shield", "Each person clears their own", "Identity and criminal-record check before any booking."],
+    ["check",  "Sporve sets the badge",        "An organization cannot verify its own staff."],
+    ["doc",    "Pending is shown",             "Uncleared listings read Verification pending, and stay bookable."],
+    ["clock",  "Checks are re-run",            "A badge that stops being true stops showing."],
+  ];
+  const RULES = [
+    ["Reports reach a person", "Filed untriaged, read by Sporve's safety team. Identity concerns first."],
+    ["Refunds are reviewed",   "Full refund, partial refund, or a written denial."],
+    ["Deletion is a case",     "Payment and safety records stay under legal hold. We write back."],
+  ];
+  /* PICON is the host's stroke-icon set (never emoji); guarded so a module
+     loaded against an older host degrades to no icon rather than throwing. */
+  const picon = k => (typeof PICON === "object" && PICON[k]) || "";
+
   function trustView() {
     const s = bag();
     const sub = typeof subnavHTML === "function" ? subnavHTML() : "";
@@ -357,91 +375,123 @@
            <tbody>${rows}</tbody></table></div>`
       : `<p class="sf-none">${esc(empty)}</p>`;
 
-    return `${sub}<main class="shell sf-wrap">
-      <div class="sec-head"><div>
-        <p class="eyebrow">Trust &amp; Safety</p>
-        <h1>Who is checked, and what to do when something goes wrong</h1>
-        <p class="sf-lede">Every request you file here is tracked with a reference and a status you can
-          follow. Nothing is closed silently.</p>
-      </div></div>
+    /* Five full-width bands: slate → white → black → slate → white.
+       The page is the same content, in the same order of importance, re-ground
+       so the eye can tell the claim from the record while scrolling. Two rules
+       specific to this page:
 
-      <div class="sf-note sf-note-warn sf-emergency" role="note">
-        <h3>If someone is in immediate danger, call local emergency services first</h3>
-        <p>Reporting to Sporve is not a substitute for the police, a hospital, or a child-protection
-          hotline. Report here afterwards so we can suspend accounts, preserve messages and payment
-          records, and cooperate with the authorities handling it.</p>
+       · The serious register paints #app with --raise, so a bare `.band` is
+         TRANSPARENT and would resolve slate, not white — `.band.alt` and
+         `.band` would be one ground and the rhythm would not exist. `.sf-w`
+         re-asserts --paper on the white bands. Token, not a new colour, and
+         the same declaration `.band.alt` already makes for its own ground.
+       · The black band carries WHITE CARDS, not text on black — the two badge
+         states are exactly what a card is for, and the host's
+         `.band.dark .prodcard` rules already invert their type correctly. */
+    return `${sub}
+    <section class="band alt sf-hero">
+      <div class="shell" data-rev>
+        <p class="eyebrow">Trust &amp; safety</p>
+        <h1>Every coach clears their own check.</h1>
+        <p class="lede">A check belongs to a person, not a logo.</p>
+
+        <div class="sf-actions">
+          <button class="btn" data-sf-open="report">Report a safety concern</button>
+          <button class="btn ghost" data-sf-open="refund">Request a refund</button>
+          <button class="btn ghost" data-sf-open="privacy">Make a privacy request</button>
+          <span class="sf-meta num sf-push">${left} of ${REPORT_DAILY_QUOTA} safety reports left today</span>
+        </div>
+
+        <div class="sf-note sf-note-warn sf-emergency" role="note">
+          <h3>If anyone is in danger, call emergency services first</h3>
+          <p>Report here afterwards. We suspend accounts and preserve records.</p>
+        </div>
       </div>
+    </section>
 
-      <div class="sf-actions">
-        <button class="btn" data-sf-open="report">Report a safety concern</button>
-        <button class="btn ghost" data-sf-open="refund">Request a refund</button>
-        <button class="btn ghost" data-sf-open="privacy">Make a privacy request</button>
-        <span class="sf-meta num sf-push">${left} of ${REPORT_DAILY_QUOTA} safety reports left today</span>
+    <section class="band sf-w">
+      <div class="shell">
+        <div class="prodsec" data-rev>
+          <h2>The check is per person.</h2>
+          <p class="sub">Approving a business says nothing about who coaches your child.</p>
+        </div>
+        <div class="prodgrid" data-rev>
+          ${POLICY.map(([ic, t, d]) => `<div class="prodcard sf-static">
+            <span class="ic" aria-hidden="true">${picon(ic)}</span>
+            <b>${esc(t)}</b><span>${esc(d)}</span></div>`).join("")}
+        </div>
       </div>
+    </section>
 
-      <section class="panel sf-panel">
-        <h2>The background check is per person</h2>
-        <p class="sf-body-copy">A check belongs to a human being, never to a logo. Approving
-          <b>Apex Performance Club</b> as a business says the business exists, is insured, and has agreed
-          to our terms. It says nothing about the person who will actually stand on the field with your
-          child.</p>
-        <ul class="sf-list">
-          <li><span class="sf-tick">${ICON.check}</span>
-            <span>Each coach, trainer, and assistant clears their <b>own</b> identity and criminal-record
-              check before they can be booked.</span></li>
-          <li><span class="sf-tick">${ICON.check}</span>
-            <span>An approved organization <b>cannot</b> mark its own staff as verified. Only Sporve sets
-              that flag, and only after the individual check clears.</span></li>
-          <li><span class="sf-tick">${ICON.check}</span>
-            <span>A listing whose person hasn't cleared yet shows <b>Verification pending</b> — it stays
-              bookable, but the badge is withheld, not implied.</span></li>
-          <li><span class="sf-tick">${ICON.check}</span>
-            <span>Checks are re-run on a schedule. A badge that stops being true stops being shown.</span></li>
-        </ul>
-        <p class="sf-fine">If a coach's identity or credentials don't match what the listing claims,
-          file a report under <b>Identity or credential concern</b> — that category is triaged first.</p>
-      </section>
+    <section class="band dark">
+      <div class="shell">
+        <div class="prodsec" data-rev>
+          <p class="eyebrow">The badge</p>
+          <h2>Withheld, never implied.</h2>
+        </div>
+        <div class="sf-states" data-rev>
+          <div class="prodcard sf-static">
+            <span class="pill gold">${ICON.shield} Background-checked</span>
+            <span>Check passed, and re-run on schedule.</span>
+          </div>
+          <div class="prodcard sf-static">
+            <span class="pill warn">${ICON.shield} Verification pending</span>
+            <span>The badge waits for that person's check.</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-      <section class="panel sf-panel">
-        <div class="sf-sec"><h2>Safety reports</h2>
-          <span class="sf-meta num">${s.reports.length} filed</span></div>
-        ${table(["Reference", "Filed", "Category", "About", "Priority", "Status"], reportRows,
-                "You haven't filed a safety report. That's the outcome we want.", "Your safety reports")}
-      </section>
+    <section class="band alt">
+      <div class="shell" data-rev>
+        <div class="prodsec"><h2>Every request is tracked.</h2></div>
+        <div class="sf-rules">
+          ${RULES.map(([t, d]) => `<div class="sf-rule"><b>${esc(t)}</b><p>${esc(d)}</p></div>`).join("")}
+        </div>
+      </div>
+    </section>
 
-      <section class="panel sf-panel">
-        <div class="sf-sec"><h2>Refund requests</h2>
-          <span class="sf-meta num">${s.refunds.length} filed</span></div>
-        ${table(["Reference", "Filed", "Booking", "Paid", "Status"], refundRows,
-                "No refund requests. Refunds apply to bookings that are paid or partially refunded.",
-                "Your refund requests")}
-        ${paid.length ? `<div class="sf-mini">
-          <p class="eyebrow">Eligible bookings</p>
-          ${paid.map(b => {
-            const open = openRefundFor(b.id);
-            return `<div class="sf-row">
-              <div class="sf-row-in">
-                <b>${esc(b.program)}</b>
-                <span class="sf-meta num">${esc(b.athlete)} · ${esc(fmtDate(b.date))} · ${money(b.price)} · ${esc(b.paymentStatus)}</span>
-              </div>
-              ${open
-                ? `<span class="sf-meta num">Request ${esc(open.ref)} open</span>${statusPill(open.status)}`
-                : `<button class="btn ghost sm" data-sf-open="refund" data-sf-booking="${esc(b.id)}">Request a refund</button>`}
-            </div>`;
-          }).join("")}
-        </div>` : ""}
-      </section>
+    <section class="band sf-w sf-records">
+      <div class="shell" data-rev>
+        <div class="prodsec"><h2>Your requests.</h2></div>
 
-      <section class="panel sf-panel">
-        <div class="sf-sec"><h2>Privacy requests</h2>
-          <span class="sf-meta num">${s.privacy.length} filed</span></div>
-        ${table(["Reference", "Filed", "Type", "Status"], privacyRows,
-                "No privacy requests. You can ask for access, an export, a correction, or a deletion case.",
-                "Your privacy requests")}
-        <p class="sf-fine">Deletion is a reviewed case. Payment and safety records stay under legal hold
-          even when the rest of your data is removed — we tell you in writing what was kept.</p>
-      </section>
-    </main>`;
+        <div class="sf-block">
+          <div class="sf-sec"><h3>Safety reports</h3>
+            <span class="sf-meta num">${s.reports.length} filed</span></div>
+          ${table(["Reference", "Filed", "Category", "About", "Priority", "Status"], reportRows,
+                  "No reports filed. Good.", "Your safety reports")}
+        </div>
+
+        <div class="sf-block">
+          <div class="sf-sec"><h3>Refund requests</h3>
+            <span class="sf-meta num">${s.refunds.length} filed</span></div>
+          ${table(["Reference", "Filed", "Booking", "Paid", "Status"], refundRows,
+                  "No refund requests.", "Your refund requests")}
+          ${paid.length ? `<div class="sf-mini">
+            <p class="eyebrow">Eligible bookings</p>
+            ${paid.map(b => {
+              const open = openRefundFor(b.id);
+              return `<div class="sf-row">
+                <div class="sf-row-in">
+                  <b>${esc(b.program)}</b>
+                  <span class="sf-meta num">${esc(b.athlete)} · ${esc(fmtDate(b.date))} · ${money(b.price)} · ${esc(b.paymentStatus)}</span>
+                </div>
+                ${open
+                  ? `<span class="sf-meta num">Request ${esc(open.ref)} open</span>${statusPill(open.status)}`
+                  : `<button class="btn ghost sm" data-sf-open="refund" data-sf-booking="${esc(b.id)}">Request a refund</button>`}
+              </div>`;
+            }).join("")}
+          </div>` : ""}
+        </div>
+
+        <div class="sf-block">
+          <div class="sf-sec"><h3>Privacy requests</h3>
+            <span class="sf-meta num">${s.privacy.length} filed</span></div>
+          ${table(["Reference", "Filed", "Type", "Status"], privacyRows,
+                  "No privacy requests.", "Your privacy requests")}
+        </div>
+      </div>
+    </section>`;
   }
 
   /* ═══════════════════ WIRING ═══════════════════ */
@@ -613,10 +663,7 @@
 
   /* ═══════════════════ CSS ═══════════════════ */
   const css = `
-.sf-wrap{padding-bottom:80px}
-.sf-wrap .sec-head{align-items:flex-start;margin:30px 0 18px}
 .sf-lede{color:var(--muted);margin-top:9px;max-width:62ch;font-size:var(--text-md)}
-.sf-body-copy{color:var(--ink-2);margin-top:9px;max-width:66ch}
 .sf-fine{color:var(--faint);font-size:var(--text-sm);margin-top:12px;line-height:1.5}
 .sf-meta{color:var(--muted);font-size:var(--text-sm)}
 .sf-optional{text-transform:none;letter-spacing:0;font-weight:600;color:var(--faint)}
@@ -629,21 +676,45 @@
 .sf-note-warn{background:var(--warn-tint);border-color:transparent}
 .sf-note-warn h3,.sf-note-warn b{color:var(--warn)}
 .sf-note-warn p{color:var(--ink-2)}
-.sf-emergency{margin-bottom:20px}
 
-.sf-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:26px}
+/* ── page bands ─────────────────────────────────────────────────────
+   #app.reg-serious paints the whole app --raise, and .band declares no
+   ground of its own, so an unqualified .band inherits the slate and the
+   white step of the rhythm disappears. This restores it with the same
+   token .band.alt uses for its own ground -- no new colour. */
+.band.sf-w{background:var(--paper)}
+.sf-hero h1{margin-top:15px;max-width:20ch}
+.sf-hero .lede{margin:14px 0 0;max-width:52ch;text-align:left}
+.sf-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:26px}
+.sf-emergency{margin-top:24px;max-width:70ch}
 
-.sf-panel{margin-bottom:18px}
-.sf-panel h2{font-size:var(--text-lg)}
+/* Non-interactive cards. .prodcard is shared with the product page, where it
+   is a <button>; here it states a policy, so the hover lift comes off rather
+   than promising a click that does not exist. */
+.sf-static{cursor:default}
+.sf-static:hover{border-color:var(--rule);transform:none;box-shadow:none}
+.sf-static .pill{align-self:flex-start;margin-bottom:3px}
+.sf-states{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));
+  gap:18px;padding:6px 0 12px;max-width:840px;
+}
+
+/* The rules read as a document's own rows, not as cards: a lead column and a
+   clause column separated by the page's rule. */
+.sf-rules{border-bottom:1px solid var(--rule);margin-top:20px}
+.sf-rule{
+  display:grid;grid-template-columns:minmax(0,24ch) minmax(0,1fr);
+  gap:5px 34px;padding:17px 0;border-top:1px solid var(--rule);align-items:baseline;
+}
+.sf-rule b{font-size:var(--text-base);letter-spacing:-.018em}
+.sf-rule p{color:var(--ink-2);font-size:var(--text-base);line-height:1.55;max-width:58ch}
+
+.sf-block+.sf-block{margin-top:34px;padding-top:26px;border-top:1px solid var(--rule)}
 .sf-sec{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:14px}
-
-.sf-list{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:11px}
-.sf-list li{display:flex;gap:10px;align-items:flex-start;font-size:var(--text-base);color:var(--ink-2);line-height:1.5;max-width:70ch}
-.sf-list b{color:var(--ink)}
-.sf-tick{color:var(--good);flex:0 0 auto;margin-top:4px;display:block}
+.sf-sec h3{font-size:var(--text-lg)}
 
 .sf-none{color:var(--muted);font-size:var(--text-base);padding:6px 0 2px}
-.sf-wrap table.tbl td b{font-weight:700}
+.sf-records table.tbl td b{font-weight:700}
 
 .sf-mini{margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)}
 .sf-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--rule)}
@@ -678,6 +749,8 @@
 @media(max-width:760px){
   .sf-push{margin-left:0;flex-basis:100%}
   .sf-actions .btn{flex:1 1 auto}
+  /* The lead column stops earning its width once it wraps to two lines. */
+  .sf-rule{grid-template-columns:1fr;gap:4px}
 }`;
 
   /* ═══════════════════ EXPORT ═══════════════════ */

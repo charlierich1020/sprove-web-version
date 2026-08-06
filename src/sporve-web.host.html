@@ -3343,14 +3343,27 @@ function bookingsHTML(){
 
 function savedHTML(){
   const list=PROGRAMS.filter(p=>S.favorites.includes(p.id));
-  return `${subnavHTML()}<main class="shell">
-    <div class="sec-head"><h1>Saved</h1>
-      ${!isVerified()&&S.favorites.length?`<span class="pill warn">${3-S.guestSaves} free saves left as a guest</span>`:""}</div>
-    ${list.length?`<div class="grid">${list.map(cardHTML).join("")}</div>`
-      :`<div class="empty"><div class="big">♡</div><h3>Nothing saved yet</h3>
-        <p style="margin-top:6px">Tap the heart on any program to keep it here.</p>
-        <button class="btn" data-nav="explore" style="margin-top:18px">Explore programs</button></div>`}
-  </main>`;
+  const left=3-S.guestSaves;
+  return `${subnavHTML()}
+  <section class="band alt" style="padding:56px 0 44px">
+    <div class="shell">
+      <div class="eyebrow" data-rev>For families</div>
+      <h1 style="margin-top:12px" data-rev>Keep the shortlist.</h1>
+      <p class="lede" style="margin:14px 0 0;max-width:52ch;text-align:left" data-rev>Save a coach
+        while you are still deciding. Guests get three before signing in.</p>
+      ${!isVerified()&&S.favorites.length?`<div style="margin-top:18px" data-rev>
+        <span class="pill warn">${left} free save${left===1?"":"s"} left as a guest</span></div>`:""}
+    </div>
+  </section>
+  <section class="band">
+    <div class="shell" data-rev>
+      ${list.length?`<div class="grid">${list.map(cardHTML).join("")}</div>`
+        :`<div class="empty"><span class="ic" aria-hidden="true">${PICON.heart}</span>
+          <h3 style="margin-top:12px">Nothing saved yet</h3>
+          <p style="margin-top:6px">Tap the heart on any program to keep it here.</p>
+          <button class="btn" data-nav="explore" style="margin-top:18px">Find a coach</button></div>`}
+    </div>
+  </section>`;
 }
 
 function profileHTML(){
@@ -3505,10 +3518,23 @@ function mapHTML(){
 
 /* ── AI Coach concierge — grounded: only ever cites seeded listings ── */
 function assistantHTML(){
-  return `${subnavHTML()}<main class="shell">
-    <div class="sec-head"><div><h1>AI Coach</h1>
-      <p style="color:var(--muted);margin-top:4px">Describe your athlete's goal. Every suggestion is a real, background-checked listing.</p>
-    </div>${S.chat.length?`<button class="btn ghost sm" data-chatclear="1">Clear</button>`:""}</div>
+  /* The chat itself stays exactly as it is -- turning a scrolling thread into
+     stacked bands would break its layout and its scroll anchoring. What it
+     gets is the page architecture ABOVE it: a slate hero that says what the
+     thing is and what it will not do, then the working surface on white. */
+  return `${subnavHTML()}
+  <section class="band alt" style="padding:52px 0 40px">
+    <div class="shell">
+      <div class="eyebrow" data-rev>For families</div>
+      <h1 style="margin-top:12px" data-rev>Describe the goal. Get real coaches.</h1>
+      <p class="lede" style="margin:14px 0 0;max-width:56ch;text-align:left" data-rev>Say what your
+        athlete needs in plain words. Every suggestion is a real listing, and only ever one that has
+        cleared a background check.</p>
+    </div>
+  </section>
+  <main class="shell">
+    ${S.chat.length?`<div class="sec-head" style="justify-content:flex-end">
+      <button class="btn ghost sm" data-chatclear="1">Clear</button></div>`:""}
     <div class="chatwrap">
       <div class="chatscroll" id="chatscroll">
         ${S.chat.length?S.chat.map(m=>m.role==="user"

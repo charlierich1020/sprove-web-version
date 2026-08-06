@@ -421,17 +421,47 @@ function sendCheckin(row, text){
 
 /* ═══════════════════ CSS ═══════════════════ */
 const CSS = `
-.in-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:18px 0 6px;flex-wrap:wrap}
-.in-lede{color:var(--muted);font-size:var(--text-base);max-width:66ch;margin-top:5px}
-.in-banner{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--rule-strong);
-  border-radius:var(--r-m);padding:13px 15px;background:var(--raise);margin-top:14px}
-.in-banner p{font-size:var(--text-sm);color:var(--ink-2);line-height:1.5;max-width:78ch}
+/* ── band architecture ───────────────────────────────────────────────
+   The page is a vertical stack of full-width <section class="band"> blocks,
+   same as the marketing surfaces. This tab renders inside the coach chrome
+   (main.shell.dash > div), so each band spans the dashboard column rather
+   than the viewport — the ground still changes under the whole block, which
+   is the point. Band padding is retuned: 74px is a landing-page rhythm and
+   inside a column it reads as a hole. */
+.in-band{padding:34px 0}
+.in-band:first-child{padding-top:24px}
+.in-sec{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  flex-wrap:wrap;margin:0 0 18px}
+.in-sec h2{max-width:22ch}
+/* Section subs are the host's .sub, not a private class: .sub already carries
+   muted / --text-base / 60ch AND the host's dark-ground repaint, so the black
+   bands need no colour of their own here. */
+.in-sec .sub{margin-top:7px;max-width:62ch}
+.in-sec>.pill{flex:0 0 auto;margin-top:7px}
+.in-lede{color:var(--ink-2);font-size:var(--text-md);max-width:52ch;margin-top:14px;line-height:1.5}
+.in-prov{font-size:var(--text-base);color:var(--muted);line-height:1.55;max-width:64ch;margin-top:14px}
+.in-tagtxt{font-size:var(--text-sm);color:var(--muted)}
 .in-tags{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+/* Dark ground. Headings and section prose are the host's own dark-layer
+   values (white / #AEB8C4 via .band.dark h2 and .band.dark .sub). What needs
+   saying here is the opposite: nothing may leak INTO the white cards sitting
+   on the black. Those are cards, not text on black, so they keep ink on
+   paper — but .band.dark p and .band.dark .eyebrow are (0,2,0) and would
+   otherwise repaint every card paragraph to slate-on-white. */
+.band.dark .in-card p,.band.dark .in-card .in-big{color:var(--ink-2)}
+.band.dark .in-card h2,.band.dark .in-card h3,.band.dark .in-card h4{color:var(--ink)}
+.band.dark .in-card .in-sub{color:var(--muted)}
+.band.dark .in-card .in-note,.band.dark .in-card .in-fnote,
+.band.dark .in-card .eyebrow{color:var(--faint)}
+/* Same trap for controls: the host paints ghost buttons white-on-transparent
+   inside a dark band, which is invisible on a white card. */
+.band.dark .in-card .btn.ghost{background:var(--paper);color:var(--ink);border-color:var(--rule-strong)}
+.band.dark .in-card .btn.ghost:hover{background:var(--raise);border-color:var(--ink)}
 .in-note{font-size:var(--text-sm);color:var(--faint);margin-top:10px;line-height:1.5;max-width:78ch}
 .in-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px}
 .in-card{border:1px solid var(--rule);border-radius:var(--r-l);padding:20px;background:var(--paper)}
 /* wrap + don't shrink the pill: without these the "Sample data" badge was
-   squeezed past the card's padding at narrow widths (.in-head already wraps) */
+   squeezed past the card's padding at narrow widths (.in-sec already wraps) */
 .in-cardhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .in-cardhead>.pill{flex:0 0 auto}
 .in-big{font-size:var(--text-base);color:var(--ink);line-height:1.5;letter-spacing:-.012em}
@@ -523,13 +553,12 @@ function funnelHTML(){
 
   const last = st[st.length - 1];
   return `<div class="in-funnel">${bars}</div>
-    <p class="in-note">Bars are drawn to scale against ${esc(st[0].label.toLowerCase())}, so the later
-      stages are deliberately short — that is the shape of a real search funnel. End to end,
-      <span class="num">${esc(pct1(last.n, top))}</span> of appearances became a paid booking.</p>
+    <p class="in-note">Bars scale against ${esc(st[0].label.toLowerCase())}. End to end,
+      <span class="num">${esc(pct1(last.n, top))}</span> became a paid booking.</p>
 
     <div class="tblwrap" style="margin-top:14px"><table class="tbl">
       <caption style="text-align:left;font-size:var(--text-sm);color:var(--faint);padding-bottom:8px">
-        The same figures as numbers, for reading without the bars.</caption>
+        The same figures as numbers.</caption>
       <thead><tr><th>Stage</th><th>Count</th><th>Of previous stage</th><th>Of ${esc(st[0].label.toLowerCase())}</th></tr></thead>
       <tbody>${st.map((s, i) => `<tr>
         <td><b style="font-weight:600">${esc(s.label)}</b>
@@ -674,117 +703,135 @@ function insightsView(){
   const d = state.demand;
   const sports = mySports();
 
-  return `<div class="in-head"><div>
-      <h1>Insights</h1>
-      <p class="in-lede">Where families find you, where they drop off, and which of them have stopped
-        coming back. Each block says plainly whether its numbers were measured from your own data
-        or seeded as a sample.</p></div></div>
-
-  <div class="in-banner">
-    <div style="min-width:0">
-      <div class="in-tags">${SAMPLE_PILL}<span style="font-size:var(--text-sm);color:var(--muted)">funnel and search volume</span>
-        ${DERIVED_PILL}<span style="font-size:var(--text-sm);color:var(--muted)">pricing, availability, cadence</span></div>
-      <p>This account has not launched, so no search impressions, profile views, or booking requests have
-        been recorded for it. The funnel below is a seeded illustration of what those stages look like for
-        a comparable Miami coach — it is not a measurement of your account and will be replaced by real
-        counts at launch. Everything badged <b>Derived</b> is computed from your listings, your calendar,
-        and your bookings as they stand right now.</p>
+  /* Six full-width bands, slate → white → black → black → slate → white.
+     The two blacks are one chapter, not a checkerboard beat: the seeded
+     funnel and the seeded demand figures are the two blocks on this page
+     that are NOT measurements, and they belong together under one ground.
+     Every metric inside them sits on a white card, so no figure is ever
+     grey text on black, and both keep their "Sample data" badge. */
+  return `
+  <section class="band alt in-band">
+    <div class="shell" data-rev>
+      <div class="eyebrow">Insights</div>
+      <h1 style="margin-top:12px;max-width:20ch">Where families find you.</h1>
+      <p class="in-lede">Demand, funnel, pricing, and the families who stopped coming back.</p>
+      <div class="in-tags" style="margin-top:16px">
+        ${SAMPLE_PILL}<span class="in-tagtxt">funnel and search volume</span>
+        ${DERIVED_PILL}<span class="in-tagtxt">pricing, availability, cadence</span></div>
+      <p class="in-prov">This account has not launched, so nothing here is measured. Sample blocks are
+        seeded. Derived blocks are computed from your listings, calendar and bookings.</p>
     </div>
-  </div>
+  </section>
 
-  <div class="sec-head" style="margin:26px 0 12px"><div>
-      <h3>Availability check</h3>
-      <p class="in-sub">Computed from your listings' open slots for the next 7 days.</p></div>
-    ${DERIVED_PILL}</div>
-  ${warningsHTML()}
+  <section class="band in-band">
+    <div class="shell" data-rev>
+      <div class="in-sec"><div>
+        <h2>Availability check</h2>
+        <p>Your open slots across the next seven days.</p></div>
+        ${DERIVED_PILL}</div>
+      ${warningsHTML()}
+    </div>
+  </section>
 
-  <div class="sec-head" style="margin:26px 0 12px"><div>
-      <h3>Booking funnel</h3>
-      <p class="in-sub">Four stages over ${esc(state.funnel.windowLabel)}, top of funnel to paid booking.</p></div>
-    ${SAMPLE_PILL}</div>
-  <div class="panel">${funnelHTML()}</div>
+  <section class="band dark in-band">
+    <div class="shell" data-rev>
+      <div class="in-sec"><div>
+        <h2>Booking funnel</h2>
+        <p>Four stages over ${esc(state.funnel.windowLabel)}, seeded from a comparable coach — not
+          your account.</p></div>
+        ${SAMPLE_PILL}</div>
+      <div class="in-card">${funnelHTML()}</div>
+    </div>
+  </section>
 
-  <div class="sec-head" style="margin:26px 0 12px"><div>
-      <h3>Demand near you</h3>
-      <p class="in-sub">Search volume is sample data. Price positioning is computed from the live catalogue.</p></div></div>
-  <div class="in-two">
-    ${demandCard()}
-    <div class="in-card">
-      <div class="in-cardhead">
-        <div><div class="eyebrow">Searches by sport</div>
-          <div class="in-sub">Your ${esc(String(sports.length))} sport${sports.length === 1 ? "" : "s"},
-            within ${esc(String(d.radiusMiles))} miles</div></div>
-        ${SAMPLE_PILL}
+  <section class="band dark in-band">
+    <div class="shell" data-rev>
+      <div class="in-sec"><div>
+        <h2>Demand near you</h2>
+        <p>Search volume is seeded. Price positioning is computed from the catalogue.</p></div></div>
+      <div class="in-two">
+        ${demandCard()}
+        <div class="in-card">
+          <div class="in-cardhead">
+            <div><div class="eyebrow">Searches by sport</div>
+              <div class="in-sub">Your ${esc(String(sports.length))} sport${sports.length === 1 ? "" : "s"},
+                within ${esc(String(d.radiusMiles))} miles</div></div>
+            ${SAMPLE_PILL}
+          </div>
+          <div class="tblwrap"><table class="tbl">
+            <thead><tr><th>Sport</th><th>Your listings</th><th>Searches (sample)</th></tr></thead>
+            <tbody>${sports.map(s => {
+              const n = Object.prototype.hasOwnProperty.call(d.searches, s) ? d.searches[s] : null;
+              const mine = myListings().filter(p => p.sport === s);
+              return `<tr>
+                <td>${sportDot(s)}<b style="font-weight:600">${esc(s)}</b></td>
+                <td class="num">${mine.length}</td>
+                <td class="num">${n == null ? "—" : esc(n0(n))}</td></tr>`;
+            }).join("")}</tbody></table></div>
+          <p class="in-note">A dash means no sample figure was seeded — not zero searches.</p>
+        </div>
       </div>
-      <div class="tblwrap"><table class="tbl">
-        <thead><tr><th>Sport</th><th>Your listings</th><th>Searches (sample)</th></tr></thead>
-        <tbody>${sports.map(s => {
-          const n = Object.prototype.hasOwnProperty.call(d.searches, s) ? d.searches[s] : null;
-          const mine = myListings().filter(p => p.sport === s);
-          return `<tr>
-            <td>${sportDot(s)}<b style="font-weight:600">${esc(s)}</b></td>
-            <td class="num">${mine.length}</td>
-            <td class="num">${n == null ? "—" : esc(n0(n))}</td></tr>`;
-        }).join("")}</tbody></table></div>
-      <p class="in-note">A dash means no sample figure was seeded for that sport. It does not mean zero
-        searches — it means this build has nothing to show.</p>
     </div>
-  </div>
+  </section>
 
-  <div class="sec-head" style="margin:26px 0 12px"><div>
-      <h3>Price positioning</h3>
-      <p class="in-sub">Your price against every catalogue listing in the same sport on the same billing
-        model. Comparing a monthly price to a per-session price would not mean anything, so those are
-        never mixed.</p></div>
-    ${DERIVED_PILL}</div>
-  <div class="panel"><div class="in-plist">${positions.map(priceRowHTML).join("")}</div></div>
-  <div class="tblwrap panel" style="padding:18px;margin-top:14px"><table class="tbl">
-    <thead><tr><th>Listing</th><th>Sport</th><th>Billed</th><th>Your price</th>
-      <th>Lowest</th><th>Median</th><th>Highest</th><th>Comparable listings</th></tr></thead>
-    <tbody>${positions.map(pp => `<tr>
-      <td><b style="font-weight:600">${esc(pp.listing.title)}</b></td>
-      <td>${sportDot(pp.listing.sport)}${esc(pp.listing.sport)}</td>
-      <td>${esc(modelLabel(pp.listing.model))}</td>
-      <td class="num"><b>${esc(money(pp.listing.price))}</b></td>
-      <td class="num">${pp.comparable ? esc(money(pp.min)) : "—"}</td>
-      <td class="num">${pp.comparable ? esc(money2(pp.median)) : "—"}</td>
-      <td class="num">${pp.comparable ? esc(money(pp.max)) : "—"}</td>
-      <td class="num">${pp.others}</td></tr>`).join("")}
-    </tbody></table></div>
+  <section class="band alt in-band">
+    <div class="shell" data-rev>
+      <div class="in-sec"><div>
+        <h2>Price positioning</h2>
+        <p>Your price against catalogue listings in the same sport, on the same billing model.</p></div>
+        ${DERIVED_PILL}</div>
+      <div class="panel"><div class="in-plist">${positions.map(priceRowHTML).join("")}</div></div>
+      <div class="tblwrap panel" style="padding:18px;margin-top:14px"><table class="tbl">
+        <thead><tr><th>Listing</th><th>Sport</th><th>Billed</th><th>Your price</th>
+          <th>Lowest</th><th>Median</th><th>Highest</th><th>Comparable listings</th></tr></thead>
+        <tbody>${positions.map(pp => `<tr>
+          <td><b style="font-weight:600">${esc(pp.listing.title)}</b></td>
+          <td>${sportDot(pp.listing.sport)}${esc(pp.listing.sport)}</td>
+          <td>${esc(modelLabel(pp.listing.model))}</td>
+          <td class="num"><b>${esc(money(pp.listing.price))}</b></td>
+          <td class="num">${pp.comparable ? esc(money(pp.min)) : "—"}</td>
+          <td class="num">${pp.comparable ? esc(money2(pp.median)) : "—"}</td>
+          <td class="num">${pp.comparable ? esc(money(pp.max)) : "—"}</td>
+          <td class="num">${pp.others}</td></tr>`).join("")}
+        </tbody></table></div>
+    </div>
+  </section>
 
-  <div class="sec-head" style="margin:26px 0 12px"><div>
-      <h3>Client watchlist</h3>
-      <p class="in-sub">Cadence is each family's own median gap between sessions. A row is flagged once
-        the silence runs half again as long as their usual gap.</p></div></div>
-  ${rows.length ? `<div class="tblwrap panel" style="padding:18px"><table class="tbl">
-    <thead><tr><th>Athlete</th><th>Family</th><th>Program</th><th>Last session</th>
-      <th>Usual gap</th><th>Silent for</th><th>Status</th><th>Source</th><th>Action</th></tr></thead>
-    <tbody>${rows.map(r => {
-      const p = prog(r.programId);
-      return `<tr>
-        <td><b>${esc(r.athlete)}</b>
-          <div style="color:var(--muted);font-size:var(--text-sm)">${esc(r.why)}</div></td>
-        <td>${esc(r.family)}</td>
-        <td>${p ? `${sportDot(p.sport)}<b style="font-weight:600">${esc(p.title)}</b>` : esc(r.programId)}</td>
-        <td class="num">${esc(fmtDate(r.lastSessionDate))}</td>
-        <td class="num">${r.typicalGapDays ? esc(r.typicalGapDays + " days") : "—"}
-          ${r.typicalGapDays ? `<div style="color:var(--muted);font-size:var(--text-sm)">${esc(cadenceShort(r.typicalGapDays))}</div>` : ""}</td>
-        <td class="num">${esc(String(r.gap))} days
-          ${r.ratio ? `<div style="color:var(--muted);font-size:var(--text-sm)">${esc(r.ratio.toFixed(1))}× usual</div>` : ""}</td>
-        <td><span class="pill ${esc(r.statusTone)}">${esc(r.statusLabel)}</span></td>
-        <td>${r.source === "booked"
-          ? `<span class="pill slate">Booking history</span>`
-          : `<span class="pill gold">Sample family</span>`}</td>
-        <td><button class="btn sm" data-in-checkin="${esc(r.id)}">
-            ${checkedIn[r.id] ? "Send another" : "Draft check-in"}</button>
-          ${checkedIn[r.id] ? `<div style="color:var(--muted);font-size:var(--text-sm);margin-top:4px">Check-in sent</div>` : ""}</td>
-      </tr>`;
-    }).join("")}</tbody></table></div>`
-  : `<div class="empty" style="border:1px solid var(--rule);border-radius:var(--r-l)">
-      <p>No families on the books yet. The watchlist fills itself from booking dates.</p></div>`}
-  <p class="in-note">Rows marked <b>Booking history</b> are measured from real session dates in this
-    account. Rows marked <b>Sample family</b> are seeded so the flow can be demonstrated before launch —
-    they never raise an alert on the dashboard.</p>`;
+  <section class="band in-band">
+    <div class="shell" data-rev>
+      <div class="in-sec"><div>
+        <h2>Client watchlist</h2>
+        <p>Flagged once the silence runs half again as long as a family's own usual gap.</p></div></div>
+      ${rows.length ? `<div class="tblwrap panel" style="padding:18px"><table class="tbl">
+        <thead><tr><th>Athlete</th><th>Family</th><th>Program</th><th>Last session</th>
+          <th>Usual gap</th><th>Silent for</th><th>Status</th><th>Source</th><th>Action</th></tr></thead>
+        <tbody>${rows.map(r => {
+          const p = prog(r.programId);
+          return `<tr>
+            <td><b>${esc(r.athlete)}</b>
+              <div style="color:var(--muted);font-size:var(--text-sm)">${esc(r.why)}</div></td>
+            <td>${esc(r.family)}</td>
+            <td>${p ? `${sportDot(p.sport)}<b style="font-weight:600">${esc(p.title)}</b>` : esc(r.programId)}</td>
+            <td class="num">${esc(fmtDate(r.lastSessionDate))}</td>
+            <td class="num">${r.typicalGapDays ? esc(r.typicalGapDays + " days") : "—"}
+              ${r.typicalGapDays ? `<div style="color:var(--muted);font-size:var(--text-sm)">${esc(cadenceShort(r.typicalGapDays))}</div>` : ""}</td>
+            <td class="num">${esc(String(r.gap))} days
+              ${r.ratio ? `<div style="color:var(--muted);font-size:var(--text-sm)">${esc(r.ratio.toFixed(1))}× usual</div>` : ""}</td>
+            <td><span class="pill ${esc(r.statusTone)}">${esc(r.statusLabel)}</span></td>
+            <td>${r.source === "booked"
+              ? `<span class="pill slate">Booking history</span>`
+              : `<span class="pill gold">Sample family</span>`}</td>
+            <td><button class="btn sm" data-in-checkin="${esc(r.id)}">
+                ${checkedIn[r.id] ? "Send another" : "Draft check-in"}</button>
+              ${checkedIn[r.id] ? `<div style="color:var(--muted);font-size:var(--text-sm);margin-top:4px">Check-in sent</div>` : ""}</td>
+          </tr>`;
+        }).join("")}</tbody></table></div>`
+      : `<div class="empty" style="border:1px solid var(--rule);border-radius:var(--r-l)">
+          <p>No families on the books yet. The watchlist fills itself from booking dates.</p></div>`}
+      <p class="in-note"><b>Booking history</b> rows come from real session dates. <b>Sample family</b>
+        rows are seeded and never raise an alert.</p>
+    </div>
+  </section>`;
 }
 
 /* ═══════════════════ MODAL ═══════════════════ */

@@ -95,7 +95,41 @@ before launching read-only auditors, because editing files while they read
 stalls them; and **tell them to `rg -l` then read line ranges**, because
 pointing an agent at a 208-file repo without that reliably times it out.
 
-## 7. Teach as you go — explain every edit
+## 7. Owner comprehension protocol
+
+The owner is a business-side founder learning engineering through this
+codebase. He is the only person accountable for it. Assume he knows the
+product cold and the implementation not at all — explain at that level,
+neither talking down nor assuming.
+
+**After every single change, give a five-sentence technical reading.** Not a
+diff summary. Five sentences, in CS/engineering language, covering: what
+changed, the mechanism (why it works), what it touches downstream, what would
+break it, and how it was verified. Short and dense beats long and gentle. Use
+the real names — selector specificity, cascade, custom property inheritance,
+render cycle, RLS policy, idempotency key.
+
+**Predict-then-correct on anything non-trivial.** Before showing a diff on a
+CRITICAL-PATH change, ask him to state what he thinks it requires — which
+files, which tables, which failure modes — then correct the prediction
+explicitly. Prediction error is where the learning happens; a clean summary
+read cold produces the feeling of understanding without the thing itself.
+
+**Mark `[CRITICAL-PATH]`** on any change touching RLS, Stripe, auth, booking
+capacity, or consent. Those are the surfaces where a silent bug costs money,
+safety, or the company.
+
+**Log gaps.** `docs/gaps.md` holds what he has not closed, tiered by blast
+radius. Reference it, weave those topics into explanations, and when a debrief
+exposes a new gap, add a row. When he answers one cold, move it to Closed with
+the date.
+
+**Do not let this slow shipping.** The five-sentence reading costs seconds.
+The predict step costs two minutes and only applies to critical-path work.
+If pressure forces a cut, keep the readings — they run inside the existing
+workflow rather than beside it.
+
+## 8. Teach as you go — explain every edit
 
 Stated directly: *"Make sure that the agent helps me learn exactly what is
 going on after each edit."*
@@ -108,7 +142,7 @@ literally), say which and why, so the owner can overrule it.
 The owner did not write this code. A change he cannot follow is a change he
 cannot review, and an unreviewable change is how the wrong thing ships twice.
 
-## 8. Check a spec's premises before building on them
+## 9. Check a spec's premises before building on them
 
 Pasted briefs have repeatedly asserted things that are not true of this repo —
 fonts that are not embedded, reference files that do not exist, a package
@@ -118,7 +152,7 @@ report the mismatch rather than silently building on it or silently ignoring
 it. A spec that reverses a decision the owner made earlier is the most
 important case: surface it, do not just pick one.
 
-## 9. When the owner has to act, give click-level steps
+## 10. When the owner has to act, give click-level steps
 
 ~7 times: *"this still to vauge, tell me exactly where to go, what to click"*.
 Exact URL, exact button label, full copy-paste-ready values. No "navigate to

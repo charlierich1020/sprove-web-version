@@ -16,7 +16,9 @@
 
    Contract: registers window.MOD_COMPANIES and never redefines a host
    symbol. Every class is co-prefixed. Reads PROGRAMS / S / sportColor /
-   sportGlyph from the host, writes nothing outside its own state keys.
+   PICON from the host, writes nothing outside its own state keys. The two
+   public views are stacks of full-width `.band` sections, matching
+   productHTML(); nothing here owns a page-level ground of its own.
    ═══════════════════════════════════════════════════════════════════ */
 (function(){
 "use strict";
@@ -25,7 +27,10 @@
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g,
   c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const sc  = s => (typeof sportColor === "function" ? sportColor(s) : "#475569");
-const sg  = s => (typeof sportGlyph === "function" ? sportGlyph(s) : "🏅");
+/* The host's stroke icon set, read the same defensive way as ICON. Nothing in
+   this module draws an emoji any more; a missing PICON renders nothing rather
+   than falling back to a colour-font glyph on a different optical baseline. */
+const pic = k => (typeof PICON !== "undefined" && PICON[k]) || "";
 const H   = () => S;
 const CAT = () => (typeof PROGRAMS !== "undefined" && PROGRAMS ? PROGRAMS : []);
 const $$  = sel => Array.prototype.slice.call(document.querySelectorAll(sel));
@@ -447,11 +452,16 @@ const CSS = `
 :root[data-theme="dark"] .co-badge.camp{background:#2C1D0D;color:#EBA45C}
 :root[data-theme="dark"] .co-badge.team{background:#1D1533;color:#B49CF0}
 
-/* ── company index ──────────────────────────────────────────────── */
-.co-head{padding:44px 0 6px}
-.co-head h1{font-size:var(--text-hero);letter-spacing:.005em;line-height:1.04}
-.co-head p{color:var(--muted);font-size:var(--text-md);max-width:56ch;margin-top:14px}
-.co-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:20px;padding:30px 0 60px}
+/* ── company index ──────────────────────────────────────────────────
+   Both views are now stacks of full-width .band sections, so the vertical
+   rhythm belongs to the band (74px) and these blocks carry only their own
+   internal gaps. Nothing below sets a font-size for a heading: the hero uses
+   the host's bare h1 + .lede and the section heads use h2 + .co-sub, which
+   are already on the locked scale. .co-head is gone for the same reason --
+   it existed to hand-size an h1 that the host already sizes correctly.
+
+   NB: this whole block is a template literal. No backticks in these comments. */
+.co-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:20px;margin-top:30px}
 .co-card{
   text-align:left;display:flex;flex-direction:column;border:1px solid var(--rule);
   border-radius:var(--r-l);overflow:hidden;background:var(--paper);transition:.17s;
@@ -474,9 +484,31 @@ const CSS = `
 .co-trust.ok{color:var(--gold-ink)}
 .co-trust.no{color:var(--warn)}
 
+/* ── figures on the dark ground ─────────────────────────────────────
+   White cards on black, not text on black. Everything inside a card is
+   --ink / --muted, which is the same construction the host already uses for
+   .band.dark .prodcard -- nothing here paints type directly onto #000. */
+.co-figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px;margin-top:30px}
+.co-fig{
+  display:flex;flex-direction:column;gap:3px;padding:20px;background:var(--paper);
+  color:var(--ink);border:1px solid var(--rule);border-radius:var(--r-l);
+}
+.co-fig .v{font-size:var(--text-xl);font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.co-fig .k{font-size:var(--text-xs);font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.band.dark .co-fig{border-color:#232A34;box-shadow:0 24px 60px -24px rgba(0,0,0,.9)}
+
+/* ── trust rows on the slate ground ─────────────────────────────── */
+.co-trows{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:20px 30px;margin-top:28px}
+.co-trow{display:flex;gap:12px;align-items:flex-start}
+.co-trow .ic{
+  width:34px;height:34px;border-radius:var(--r-m);flex:0 0 auto;display:grid;place-items:center;
+  background:var(--paper);border:1px solid var(--rule);color:var(--slate);
+}
+.co-trow b{display:block;font-size:var(--text-base);letter-spacing:-.022em}
+.co-trow span{display:block;color:var(--muted);font-size:var(--text-base);line-height:1.5;margin-top:3px}
+
 /* ── company profile ────────────────────────────────────────────── */
-.co-hero{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:44px;padding:34px 0 8px;align-items:start}
-.co-hero h1{font-size:var(--text-hero);letter-spacing:.005em;line-height:1.04}
+.co-hero{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:44px;align-items:start}
 /* --text-base, not --text-md: md is reserved for a one-line lead under a
    headline. This is a 60ch operator bio at line-height 1.6 -- body copy that
    happens to sit under an h1. */
@@ -487,13 +519,12 @@ const CSS = `
 .co-fact .k{font-size:var(--text-xs);font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
 .co-fact .v{font-size:var(--text-lg);font-weight:700;letter-spacing:-.025em;margin-top:3px;font-variant-numeric:tabular-nums}
 
-.co-sec{padding:38px 0 0}
 /* No font-size/letter-spacing override here: an h2 takes the scale's h2 step
    and the display face's tracking from the host base rule. The old -.03em was
    tuned for a face this page no longer loads. */
-.co-sec .co-sub{color:var(--muted);font-size:var(--text-base);margin-top:7px;max-width:62ch}
+.co-sub{color:var(--muted);font-size:var(--text-base);margin-top:8px;max-width:62ch;line-height:1.55}
 
-.co-list{display:flex;flex-direction:column;gap:12px;padding:22px 0 60px}
+.co-list{display:flex;flex-direction:column;gap:12px;margin-top:26px}
 .co-row{
   display:grid;grid-template-columns:132px minmax(0,1fr) auto;gap:20px;align-items:center;
   border:1px solid var(--rule);border-radius:var(--r-l);padding:14px;background:var(--paper);transition:.15s;
@@ -631,14 +662,88 @@ function companiesView(){
       </div></button>`;
   }).join("");
 
-  return `<div class="shell">
-    <div class="co-head">
-      <h1>Six businesses in Miami</h1>
-      <p>Every listing on Sporve belongs to an operator. Background checks are held per person,
-         never per business — an approved organisation vouches for nobody on its roster.</p>
+  /* Every figure below is COUNTED, never asserted. If a business is added to
+     COMPANIES or a programme to the catalogue, the hero line and the stat
+     block move with it rather than going quietly stale. */
+  const nBiz     = COMPANIES.length;
+  const nProg    = COMPANIES.reduce((a, c) => a + progsOf(c).length, 0);
+  const nSport   = new Set(COMPANIES.reduce((a, c) => a.concat(sportsOf(c)), [])).size;
+  const nChecked = COMPANIES.filter(c => c.verified).length;
+  const nCoach   = COMPANIES.reduce((a, c) => a + c.coaches, 0);
+
+  const figs = [
+    [String(nBiz),             "Businesses"],
+    [String(nProg),            "Programmes"],
+    [String(nSport),           "Sports"],
+    [String(nCoach),           "Coaches"],
+    [nChecked + " of " + nBiz, "Checked"],
+  ];
+
+  const rows = [
+    [pic("shield"), "Checks are per person", "An approved business vouches for nobody on its roster."],
+    [pic("list"),   "Three things to book",  "A roster spot, a camp week and a coach's hour differ."],
+    [pic("search"), "Pending stays visible", "An unverified operator is listed, unbadged, and never quietly dropped."],
+  ];
+
+  /* Rhythm: slate -> white -> black -> slate -> white. Same construction as
+     productHTML(): a slate hero, the readable grid on white, one black proof
+     block, the rules back on slate, a white close. The black band carries the
+     verification split because that is the page's actual claim -- the honest
+     4-of-6 is the proof, so it gets the one dark ground. */
+  return `
+  <section class="band alt" style="padding:64px 0 56px">
+    <div class="shell">
+      <div class="eyebrow" data-rev>Examples</div>
+      <h1 style="margin-top:16px;max-width:18ch" data-rev>Six real businesses in Miami.</h1>
+      <p class="lede" style="margin:16px 0 0;max-width:56ch;text-align:left" data-rev>${nProg} programmes,
+        ${nSport} sports, ${nBiz} operators — ${nChecked} background-checked, ${nBiz - nChecked} still pending.</p>
     </div>
-    <div class="co-grid">${cards}</div>
-  </div>`;
+  </section>
+
+  <section class="band">
+    <div class="shell">
+      <div data-rev>
+        <h2>Every listing belongs to an operator</h2>
+        <p class="co-sub">Open one to see its programmes and how each is booked.</p>
+      </div>
+      <div class="co-grid" data-rev>${cards}</div>
+    </div>
+  </section>
+
+  <section class="band dark">
+    <div class="shell">
+      <div data-rev>
+        <div class="eyebrow">Verification</div>
+        <h2 style="margin-top:10px">${nChecked} of ${nBiz} have cleared.</h2>
+        <p class="sub" style="margin-top:8px">Checks are held per person, never per business.
+          The other ${nBiz - nChecked} stay listed, and stay unbadged.</p>
+      </div>
+      <div class="co-figs" data-rev>
+        ${figs.map(([v, k]) => `<div class="co-fig"><span class="v">${esc(v)}</span><span class="k">${esc(k)}</span></div>`).join("")}
+      </div>
+    </div>
+  </section>
+
+  <section class="band alt">
+    <div class="shell">
+      <div class="eyebrow" data-rev>What the six prove</div>
+      <div class="co-trows" data-rev>
+        ${rows.map(([ic, t, d]) => `<div class="co-trow">
+          <span class="ic" aria-hidden="true">${ic}</span>
+          <div><b>${esc(t)}</b><span>${esc(d)}</span></div></div>`).join("")}
+      </div>
+    </div>
+  </section>
+
+  <section class="band finalcta">
+    <div class="shell ctr">
+      <h2 data-rev>Browse the whole catalogue</h2>
+      <div class="ctarow" data-rev>
+        <button class="btn" data-nav="explore">Find a coach</button>
+        <button class="btn ghost" data-nav="map">See the map</button>
+      </div>
+    </div>
+  </section>`;
 }
 
 /* — one company — */
@@ -655,7 +760,8 @@ function companyView(){
       <div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <span class="co-badge ${t}">${esc(TYPE[t].label)}</span>
-          <span style="font-size:var(--text-sm);color:var(--faint)">${sg(p.sport)} ${esc(p.sport)}</span>
+          <span style="font-size:var(--text-sm);color:var(--faint);display:inline-flex;align-items:center;gap:6px">
+            <i class="co-dot" style="background:${sc(p.sport)}"></i>${esc(p.sport)}</span>
         </div>
         <h3>${esc(p.title)}</h3>
         <div class="co-meta">Ages ${p.minAge}–${p.maxAge} · ${esc(p.skill)} · ${p.rating} ★ (${p.reviews})</div>
@@ -667,36 +773,65 @@ function companyView(){
     </div>`;
   }).join("");
 
-  return `<div class="shell">
-    <button class="btn ghost sm" data-nav="companies" style="margin-top:22px">← All businesses</button>
-    <div class="co-hero">
-      <div>
-        <h1>${esc(c.name)}</h1>
-        <div style="margin-top:12px">${trustLine(c)}</div>
-        <p class="co-bio">${esc(c.bio)}</p>
-        <div class="co-facts">
-          <div class="co-fact"><div class="k">Programmes</div><div class="v">${ps.length}</div></div>
-          <div class="co-fact"><div class="k">Sports</div><div class="v">${sports.length}</div></div>
-          <div class="co-fact"><div class="k">Coaches</div><div class="v">${c.coaches}</div></div>
-          <div class="co-fact"><div class="k">Rating</div><div class="v">${avg}</div></div>
-          <div class="co-fact"><div class="k">Reviews</div><div class="v">${reviews}</div></div>
-          <div class="co-fact"><div class="k">Since</div><div class="v">${c.founded}</div></div>
+  /* The offering axis, stated once on the dark ground before the listing rows
+     use it. Only the types this operator actually runs are shown -- an empty
+     "0 Camps" card would be a claim about a product they do not sell. */
+  const axis = ["team","camp","private"].filter(t => mix[t]).map(t =>
+    `<div class="prodcard" style="cursor:default">
+      <span class="ic" aria-hidden="true">${pic(t === "team" ? "users" : t === "camp" ? "calendar" : "clock")}</span>
+      <b>${esc(TYPE[t].label)} · ${mix[t]}</b>
+      <span>${esc(TYPE[t].unit)}. ${esc(TYPE[t].verb)} to take one.</span>
+    </div>`).join("");
+
+  /* Rhythm: slate -> black -> white. The identity block leads on slate, the
+     one dark band states how this operator sells, and the listing rows -- the
+     readable, scannable content -- land on white where they belong. */
+  return `
+  <section class="band alt" style="padding:40px 0 56px">
+    <div class="shell">
+      <button class="btn ghost sm" data-nav="companies" style="margin-bottom:26px">← All businesses</button>
+      <div class="co-hero" data-rev>
+        <div>
+          <h1>${esc(c.name)}</h1>
+          <div style="margin-top:12px">${trustLine(c)}</div>
+          <p class="co-bio">${esc(c.bio)}</p>
+          <div class="co-facts">
+            <div class="co-fact"><div class="k">Programmes</div><div class="v">${ps.length}</div></div>
+            <div class="co-fact"><div class="k">Sports</div><div class="v">${sports.length}</div></div>
+            <div class="co-fact"><div class="k">Coaches</div><div class="v">${c.coaches}</div></div>
+            <div class="co-fact"><div class="k">Rating</div><div class="v">${avg}</div></div>
+            <div class="co-fact"><div class="k">Reviews</div><div class="v">${reviews}</div></div>
+            <div class="co-fact"><div class="k">Since</div><div class="v">${c.founded}</div></div>
+          </div>
+          ${c.verified ? "" : `<div class="co-note"><b>Verification pending.</b>
+            No coach here carries a trust badge until their own check clears.</div>`}
         </div>
+        <div class="co-heroshot">${imgTag(ASSET.company(c.id, "hero"), shot(c.seed + "-hero", 900, 700), c.name)}</div>
       </div>
-      <div class="co-heroshot">${imgTag(ASSET.company(c.id, "hero"), shot(c.seed + "-hero", 900, 700), c.name)}</div>
     </div>
+  </section>
 
-    ${c.verified ? "" : `<div class="co-note" style="margin-top:24px"><b>Verification pending.</b>
-      ${esc(c.name)}'s background checks have not cleared. You can browse and message,
-      but no coach here carries a trust badge until their own check completes.</div>`}
-
-    <div class="co-sec">
-      <h2>What they run</h2>
-      <p class="co-sub">${mix.private} private, ${mix.camp} camp${mix.camp === 1 ? "" : "s"},
-         ${mix.team} team${mix.team === 1 ? "" : "s"} — three different things to book, three different flows.</p>
+  <section class="band dark">
+    <div class="shell">
+      <div data-rev>
+        <div class="eyebrow">How they sell</div>
+        <h2 style="margin-top:10px">Three things to book.</h2>
+        <p class="sub" style="margin-top:8px">A roster spot, a camp week and a coach's hour
+          price and cancel differently.</p>
+      </div>
+      <div class="prodgrid" data-rev style="margin-top:30px">${axis}</div>
     </div>
-    <div class="co-list">${rows}</div>
-  </div>`;
+  </section>
+
+  <section class="band">
+    <div class="shell">
+      <div data-rev>
+        <h2>Everything they run</h2>
+        <p class="co-sub">${ps.length} programmes, each priced the way its type is sold.</p>
+      </div>
+      <div class="co-list" data-rev>${rows}</div>
+    </div>
+  </section>`;
 }
 
 /* ═══════════════════ BOOKING SHEET ═══════════════════

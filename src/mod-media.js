@@ -75,13 +75,13 @@ const consentPill = k => consentRow(k)[2];
 /* ═══════════════════ PROFILE SLOTS ═══════════════════ */
 const SLOTS = [
   { key: "headshot", label: "Headshot", need: 1, format: "photo",
-    why: "One clear photo of you, shoulders up. It is the first thing a family sees in search results." },
+    why: "Shoulders up, one clear photo. The first thing a family sees." },
   { key: "intro_video", label: "Intro video", need: 1, format: "video",
-    why: "Between " + RULE.introMin + " and " + RULE.introMax + " seconds, filmed on a phone. Say who you coach and how a session runs." },
+    why: RULE.introMin + "–" + RULE.introMax + " seconds on a phone: who you coach, how a session runs." },
   { key: "facility", label: "Facility & courts", need: RULE.facilityMin, format: "photo",
-    why: "Where you train. Parents look for parking, fencing, and shade before they book." },
+    why: "Where you train. Parents look for parking, fencing, and shade." },
   { key: "action", label: "Action shots", need: RULE.actionMin, format: "photo",
-    why: "Athletes mid-session. Every athlete in an action shot needs profile consent before it can go public." },
+    why: "Athletes mid-session. Each one needs profile consent to go public." },
 ];
 const slotRow = k => SLOTS.find(s => s.key === k) || SLOTS[0];
 
@@ -261,7 +261,7 @@ function evaluate(item){
      the frame do not outvote the child who said no. */
   if (noneIds.length){
     const why = subject(noneIds.length, noun) + " " + hasnt(noneIds.length) +
-      " granted any media consent — this " + noun + " can't be sent to a family or published.";
+      " granted media consent. This " + noun + " can't be sent or published.";
     v.canShare = false; v.shareReason = why;
     v.canPublish = false; v.publishReason = why;
     v.blockKind = "consent";
@@ -270,14 +270,14 @@ function evaluate(item){
   if (privIds.length){
     v.canPublish = false;
     v.publishReason = subject(privIds.length, noun) + " " + hasnt(privIds.length) +
-      " granted profile consent — you can send this to their family, but it can't appear on your public profile.";
+      " granted profile consent. Send it to their family; it can't go public.";
     v.blockKind = "consent";
   }
   /* Nothing to send when nobody is in the frame: not a consent block,
      just an empty recipient list. */
   if (!ids.length){
     v.canShare = false;
-    v.shareReason = "No athlete is tagged, so there is no family thread to send this to.";
+    v.shareReason = "No athlete is tagged, so there is no family thread to send to.";
     if (!v.blockKind) v.blockKind = "untagged";
   }
   return v;
@@ -302,7 +302,11 @@ function consentCounts(){
   return c;
 }
 const publishedCount = () => state.mediaItems.filter(i => i.published).length;
-const blockedCount = () => state.mediaItems.filter(i => evaluate(i).blockKind === "consent").length;
+/* Every item the gate is currently refusing. These are SHOWN, never filtered
+   out: a library that quietly drops the blocked photos teaches the coach
+   nothing, and the refusal is the most useful thing on the page. */
+const heldItems = () => state.mediaItems.filter(i => evaluate(i).blockKind === "consent");
+const blockedCount = () => heldItems().length;
 
 /* ── profile strength: media's contribution, and the next best move ─ */
 function strength(){
@@ -338,21 +342,78 @@ function strength(){
 
 /* ═══════════════════ CSS ═══════════════════ */
 const CSS = `
-.md-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:18px 0 6px;flex-wrap:wrap}
-.md-lede{color:var(--muted);font-size:var(--text-base);max-width:66ch;margin-top:5px;line-height:1.5}
+/* ── SECTION GROUNDS ──────────────────────────────────────────────
+   The page is a vertical stack of section blocks, top to bottom:
+
+       slate  →  black  →  white  →  white
+
+   It cannot use full-bleed <section class="band"> the way the
+   marketing pages do: this view renders inside the coach dash's
+   216px-rail grid column, so nothing here can reach the viewport
+   edge. It does not need to. The serious register already paints
+   the whole page slate (#app.reg-serious sets --raise), so an
+   UNPAINTED section is the slate ground, and the painted ones are
+   white and black panels floating on it — the same figure/ground
+   relationship the register was built for.
+
+   The black block carries the .band.dark class as well, so it
+   inherits the host's dark-ground invariant (headings #FFFFFF,
+   body #AEB8C4, eyebrows #8B97A5, focus ring #E8EDF3) rather than
+   re-deriving it. Everything the invariant does NOT cover — bare
+   <b>, <span>, and any white card dropped onto the black — is
+   pinned explicitly below, because an unset colour inherits
+   var(--ink) and would land black on black. */
+.md-band{margin:0 0 18px}
+.md-band:last-child{margin-bottom:0}
+.md-band.paper,.md-band.dark{padding:26px 26px 30px;border-radius:var(--r-l)}
+.md-band.paper{background:var(--paper);border:1px solid var(--rule)}
+.md-band.dark{color:#AEB8C4;border:0}
+.md-band .stat{background:var(--paper)}
+.md-sub{font-size:var(--text-base);line-height:1.5;max-width:60ch;margin-top:9px;color:var(--muted)}
+.md-band.dark .md-sub{color:#AEB8C4}
+/* A white card on the black ground is a card, not text on black — so its
+   own type goes back to the light-ground palette. (0,3,0) beats the host's
+   .band.dark p at (0,2,0); without these the caption inside would resolve
+   to #AEB8C4 on white, 2.1:1. */
+.md-card{background:var(--paper);border-radius:var(--r-m);padding:17px 18px}
+.md-band.dark .md-card{color:var(--ink)}
+.md-band.dark .md-card p{color:var(--ink-2)}
+.md-band.dark .md-card b{color:var(--ink)}
+.md-band.dark .md-card .md-why{color:var(--muted)}
+.md-band.dark .md-card .eyebrow{color:var(--faint)}
+.md-cardhead{display:flex;gap:12px;align-items:flex-start}
+.md-cardhead .ic{flex:0 0 auto;color:var(--slate);margin-top:1px}
+.md-cardhead .ic svg{width:19px;height:19px;display:block}
+.md-cardhead b{font-size:var(--text-base);letter-spacing:-.015em}
+.md-holds{display:flex;flex-direction:column;gap:0;margin-top:13px}
+.md-hold{border-top:1px solid var(--rule);padding:11px 0 0;margin-top:11px}
+.md-hold b{display:block;font-size:var(--text-sm);letter-spacing:-.01em}
+.md-tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:16px;margin-top:22px}
+.md-tally div{border-top:1px solid #242B35;padding-top:11px}
+.md-tally b{display:block;font-size:var(--text-xl);font-weight:800;letter-spacing:-.03em;color:#FFFFFF}
+.md-tally span{display:block;font-size:var(--text-sm);margin-top:2px;color:#8B97A5}
+.md-foot{font-size:var(--text-sm);margin-top:16px;line-height:1.5}
+.md-band.dark .md-foot{color:#8B97A5}
+
+.md-band .eyebrow + h1,.md-band .eyebrow + h2{margin-top:13px}
+.md-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin:0 0 22px;flex-wrap:wrap}
+.md-lede{color:var(--ink-2);font-size:var(--text-md);max-width:52ch;margin-top:12px;line-height:1.5}
+.md-head h1{max-width:18ch}
 .md-actions{display:flex;gap:8px;flex-wrap:wrap}
 .md-note{background:var(--raise);border-radius:var(--r-m);padding:13px 15px;font-size:var(--text-sm);
   color:var(--ink-2);line-height:1.5}
 .md-note.warn{background:var(--warn-tint)}
 .md-note b{color:var(--ink)}
-.md-meter{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px;margin-top:16px;background:var(--paper)}
+/* Slate inset inside the white band: the meter is a read-out on the section,
+   not another card floating beside it. */
+.md-meter{border:0;border-radius:var(--r-m);padding:16px 18px;margin:0 0 22px;background:var(--raise)}
 .md-meterhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .md-pct{font-size:var(--text-xl);font-weight:700;letter-spacing:-.03em}
 .md-bar{height:8px;border-radius:999px;background:var(--raise2);overflow:hidden;margin:12px 0 10px}
 .md-bar i{display:block;height:100%;border-radius:999px;background:var(--slate)}
 .md-next{font-size:var(--text-base);color:var(--ink-2);line-height:1.5}
-.md-secline{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:32px 0 14px}
-.md-secline p{color:var(--muted);font-size:var(--text-sm);max-width:62ch;margin-top:4px;line-height:1.5}
+.md-secline{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:0 0 18px}
+.md-secline p{color:var(--muted);font-size:var(--text-base);max-width:56ch;margin-top:7px;line-height:1.5}
 
 .md-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
 .md-slot{border:1px solid var(--rule);border-radius:var(--r-l);padding:16px;background:var(--paper);
@@ -395,7 +456,12 @@ const CSS = `
 .md-seg{display:inline-flex;background:var(--raise2);border-radius:999px;padding:3px;gap:2px}
 .md-seg button{padding:7px 14px;border-radius:999px;font-size:var(--text-sm);font-weight:700;color:var(--muted);transition:.14s}
 .md-seg button.on{background:var(--paper);color:var(--ink)}
-.md-group{border:1px solid var(--rule);border-radius:var(--r-l);padding:18px;margin-top:14px;background:var(--paper)}
+/* Inside the white session band a group is a chapter, not a card — a rule
+   above it does the separating, so the page does not stack white on white. */
+.md-groups{margin-top:4px}
+.md-group{border:0;border-radius:0;background:transparent;padding:20px 0 0;margin-top:20px;
+  border-top:1px solid var(--rule)}
+.md-group:first-child{border-top:0;padding-top:0;margin-top:0}
 .md-grouphead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}
 .md-grouphead b{font-size:var(--text-base);letter-spacing:-.02em}
 .md-groupmeta{font-size:var(--text-sm);color:var(--muted);margin-top:3px}
@@ -485,9 +551,12 @@ function verdictLine(v){
   if (!v.canShare && v.shareReason){
     return `<p class="md-verdict">${esc(v.shareReason)}</p>`;
   }
-  return `<p class="md-verdict ok">Cleared to send to the family and to publish.</p>`;
+  return `<p class="md-verdict ok">Cleared to send and publish.</p>`;
 }
 
+/* Publish is a ghost button, not a filled one. The accent is reserved for the
+   page's single primary CTA (Add media); a grid of eleven filled orange
+   buttons read as an advertisement for publishing children's photographs. */
 function itemTile(it){
   const v = evaluate(it);
   const sent = it.sharedWith.length;
@@ -503,7 +572,7 @@ function itemTile(it){
           title="${esc(v.canShare ? "Send to the family thread" : v.shareReason)}">Send to family</button>
         ${it.published
           ? `<button class="btn ghost sm" data-md-unpublish="${esc(it.id)}">Remove from profile</button>`
-          : `<button class="btn sm" data-md-publish="${esc(it.id)}" ${v.canPublish ? "" : `disabled aria-disabled="true"`}
+          : `<button class="btn ghost sm" data-md-publish="${esc(it.id)}" ${v.canPublish ? "" : `disabled aria-disabled="true"`}
               title="${esc(v.canPublish ? "Publish to your public profile" : v.publishReason)}">Publish</button>`}
         <button class="x md-del" data-md-del="${esc(it.id)}"
           aria-label="Delete ${esc(it.caption)}">${ICON.x}</button>

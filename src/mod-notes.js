@@ -451,9 +451,27 @@ const MIN = 3, MAX = 500;
 
 /* ═══════════════════ CSS ═══════════════════ */
 const CSS = `
-.nt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:18px 0 6px;flex-wrap:wrap}
-.nt-lede{color:var(--muted);font-size:var(--text-base);max-width:64ch;margin-top:5px}
-.nt-bar{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin:18px 0 4px}
+/* ── Page architecture ────────────────────────────────────────────
+   This tab is a short page, not one flat panel. Three grounds, top to
+   bottom: a slate hero that states what the surface is for, a white
+   workspace holding the three panels, and one dark block at the foot
+   carrying the three limits the module enforces in code.
+
+   Same band vocabulary as productHTML(), scoped to the coach column —
+   the bands run the width of the content column rather than the window,
+   because the rail beside them is part of the workspace and a true
+   full-bleed band would run underneath it.
+
+   No register class: the serious register (Hanken) is for `finances`
+   and `media` only, so this tab stays on the default Syne/Jakarta. */
+.nt-lede{color:var(--muted);font-size:var(--text-md);max-width:56ch;margin-top:14px;line-height:1.5}
+.nt-heroact{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:24px}
+.nt-stats{display:flex;gap:40px;flex-wrap:wrap;margin-top:26px;padding-top:20px;border-top:1px solid var(--rule)}
+.nt-stat span{display:block;font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint)}
+.nt-stat b{display:block;margin-top:7px;font-family:var(--display);font-weight:800;
+  font-size:var(--text-xl);letter-spacing:-.02em;line-height:1;color:var(--ink)}
+.nt-bar{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin:0 0 18px}
 .nt-seg{display:flex;background:var(--raise2);border-radius:999px;padding:4px;gap:3px;flex-wrap:wrap}
 .nt-segbtn{padding:8px 15px;border-radius:999px;font-size:var(--text-sm);font-weight:700;color:var(--muted);transition:.15s}
 .nt-segbtn:hover{color:var(--ink)}
@@ -546,41 +564,89 @@ function athleteOptions(sel){
 const passesFilter = id => ui.athlete === "all" || ui.athlete === id;
 
 /* ═══════════════════ VIEW: SESSION NOTES ═══════════════════ */
+/* The three limits below are statements about this file, not marketing:
+   shareNote() returns false on an already-shared note, the voice button
+   inserts EXAMPLE and validate() refuses to save it, and cadence()/
+   longestGap() only subtract dates. Nothing here is aspirational. */
+const LIMITS = [
+  ["check", "A note is sent once",
+   "Sharing posts one message into the family thread. A second click cannot post again."],
+  ["note", "Nothing is transcribed",
+   "The draft button inserts a labelled example. No audio is captured in this build."],
+  ["chart", "No score is invented",
+   "Cadence and gaps are counted off your note dates. Nothing is modelled."],
+];
+
 function notesView(){
   if (athleteIds().indexOf(ui.athlete) < 0 && ui.athlete !== "all") ui.athlete = "all";
-  const pending = pendingNotes();
+  const queue = pendingList();
+  const pending = queue.length;
   const written = notes().length;
+  const sent = notes().filter(n => n.shared).length;
+  /* pendingList() inherits the ledger's newest-first order, so the last row is
+     the session that has been waiting longest. The hero button is a shortcut
+     onto the existing [data-nt-write] handler — same composer, same session. */
+  const oldest = queue.length ? queue[queue.length - 1] : null;
+  const stat = (label, value) => `<div class="nt-stat"><span>${label}</span><b class="num">${value}</b></div>`;
 
-  return `<div class="nt-head"><div>
-      <h1>Session notes</h1>
-      <p class="nt-lede">Thirty seconds after the whistle: what you worked on, one win, the next focus.
-        A note only reaches a family when you share it — until then it is yours.</p></div>
-    <span class="pill ${pending ? "warn" : "good"} num">${pending} to write</span></div>
-
-  <div class="nt-bar">
-    <div class="nt-seg" role="tablist" aria-label="Session note panels">
-      ${PANELS.map(([k, label]) => `<button class="nt-segbtn ${ui.panel === k ? "on" : ""}" role="tab"
-        aria-selected="${ui.panel === k}" data-nt-panel="${k}">${esc(label)}${
-          k === "queue" && pending ? `<span class="nt-badge num">${pending}</span>` : ""}</button>`).join("")}
+  return `
+  <section class="band alt" style="padding:40px 0 36px">
+    <div class="shell" data-rev>
+      <div class="eyebrow">Session notes</div>
+      <h1 style="margin-top:14px;max-width:20ch">Write it once. The parent gets it.</h1>
+      <p class="nt-lede">Each note is attached to the session it came from, and stays private
+        until you send it.</p>
+      <div class="nt-heroact">
+        ${oldest ? `<button class="btn" data-nt-write="${esc(oldest.id)}">Write the oldest note</button>` : ""}
+        <span class="pill ${pending ? "warn" : "good"} num">${pending} waiting</span>
+      </div>
+      <div class="nt-stats">
+        ${stat("Notes written", written)}
+        ${stat("Sent to families", sent)}
+        ${stat("Sessions on record", completed().length)}
+      </div>
     </div>
-    <div class="nt-filter">
-      <label for="ntAthlete">Filter by athlete</label>
-      <select id="ntAthlete">${athleteOptions(ui.athlete)}</select>
+  </section>
+
+  <section class="band">
+    <div class="shell" data-rev style="padding-top:34px;padding-bottom:10px">
+      <div class="nt-bar">
+        <div class="nt-seg" role="tablist" aria-label="Session note panels">
+          ${PANELS.map(([k, label]) => `<button class="nt-segbtn ${ui.panel === k ? "on" : ""}" role="tab"
+            aria-selected="${ui.panel === k}" data-nt-panel="${k}">${esc(label)}${
+              k === "queue" && pending ? `<span class="nt-badge num">${pending}</span>` : ""}</button>`).join("")}
+        </div>
+        <div class="nt-filter">
+          <label for="ntAthlete">Filter by athlete</label>
+          <select id="ntAthlete">${athleteOptions(ui.athlete)}</select>
+        </div>
+      </div>
+      ${ui.panel === "queue" ? queuePanel() : ui.panel === "written" ? writtenPanel() : progressPanel()}
     </div>
-  </div>
+  </section>
 
-  <p class="nt-hint" style="margin:10px 0 18px">
-    <span class="num">${written}</span> note${written === 1 ? "" : "s"} written across
-    <span class="num">${athleteIds().length}</span> athlete${athleteIds().length === 1 ? "" : "s"} ·
-    <span class="num">${completed().length}</span> completed session${completed().length === 1 ? "" : "s"} on record.</p>
-
-  ${ui.panel === "queue" ? queuePanel() : ui.panel === "written" ? writtenPanel() : progressPanel()}`;
+  ${/* One dark block per page, at the foot. White cards on black rather than
+        text on black — the ground invariant holds either way, and the card is
+        the same component the product page uses for the platform rules. */""}
+  <section class="band dark" style="padding:44px 0 48px">
+    <div class="shell" data-rev>
+      <div class="prodsec" style="padding:0 0 6px">
+        <h2>What this page will not do</h2>
+        <p class="sub">Held in the code, not in a policy.</p>
+      </div>
+      <div class="prodgrid">
+        ${LIMITS.map(([icon, t, d]) => `<div class="prodcard" style="cursor:default">
+          <span class="ic" aria-hidden="true">${PICON[icon]}</span>
+          <b>${esc(t)}</b><span>${esc(d)}</span></div>`).join("")}
+      </div>
+    </div>
+  </section>`;
 }
 
 function queuePanel(){
   const rows = pendingList().filter(s => passesFilter(s.athleteId));
   if (!rows.length) return `<div class="nt-blank">
-    Nothing waiting. Every completed session${ui.athlete === "all" ? "" : " for this athlete"} has a note against it.</div>`;
+    Nothing waiting. Every completed session${ui.athlete === "all" ? "" : " for this athlete"} has a note.</div>`;
   return `<div class="tblwrap panel" style="padding:18px"><table class="tbl">
     <thead><tr><th>Date</th><th>Athlete</th><th>Sport</th><th>Program</th><th>Waiting</th><th></th></tr></thead>
     <tbody>${rows.map(s => {
@@ -593,16 +659,18 @@ function queuePanel(){
         <td>${sportTag(s.programId)}</td>
         <td>${p ? esc(p.title) : `<span style="color:var(--muted)">${esc(s.programId)}</span>`}</td>
         <td class="num">${age} day${age === 1 ? "" : "s"}</td>
-        <td><button class="btn sm" data-nt-write="${esc(s.id)}">Write note</button></td>
+        ${/* Ghost, not filled: the accent is the page's single primary CTA, and a
+             column of ten filled buttons would have spent it ten times over. */""}
+        <td><button class="btn ghost sm" data-nt-write="${esc(s.id)}">Write note</button></td>
       </tr>`;
     }).join("")}</tbody></table></div>
-  <p class="nt-hint" style="margin-top:14px">A session counts as complete once its date has passed.
-    Nothing here is scored or ranked — it is simply every past session with an empty note.</p>`;
+  <p class="nt-hint" style="margin-top:14px">Every past session with an empty note.
+    Nothing here is ranked or scored.</p>`;
 }
 
 function writtenPanel(){
   const ids = athleteIds().filter(passesFilter).filter(id => notesFor(id).length);
-  if (!ids.length) return `<div class="nt-blank">No notes written yet${
+  if (!ids.length) return `<div class="nt-blank">No notes yet${
     ui.athlete === "all" ? "" : " for this athlete"}. Start from the “Needs a note” panel.</div>`;
   return ids.map(id => {
     const list = notesFor(id).slice().reverse();
@@ -636,8 +704,8 @@ function noteCard(n){
     <div class="nt-acts">
       <button class="btn ghost sm" data-nt-edit="${esc(n.id)}">Edit</button>
       ${n.shared
-        ? `<span class="nt-sub" style="align-self:center">Sent ${esc(fmtDate(String(n.sharedAt || n.date).slice(0, 10)))} — a note is only sent once.</span>`
-        : `<button class="btn sm" data-nt-share="${esc(n.id)}">${ICON.send} Share to parent</button>`}
+        ? `<span class="nt-sub" style="align-self:center">Sent ${esc(fmtDate(String(n.sharedAt || n.date).slice(0, 10)))}</span>`
+        : `<button class="btn ghost sm" data-nt-share="${esc(n.id)}">${ICON.send} Share to parent</button>`}
     </div>
   </div>`;
 }
@@ -671,8 +739,7 @@ function progressPanel(){
           ${gap.pair ? `<span class="num">Longest gap ${gap.days} days (${esc(fmtDate(gap.pair[0]))} to ${esc(fmtDate(gap.pair[1]))})</span>` : ""}
           ${list.length < sessions ? `<span class="num">${sessions - list.length} completed session${sessions - list.length === 1 ? "" : "s"} still unwritten</span>` : ""}
         </div>
-        <div class="nt-sub" style="margin-top:8px">Counted straight off the note dates above. No progress
-          score is calculated here, because nothing in this record measures one.</div>
+        <div class="nt-sub" style="margin-top:8px">Counted off your note dates. Nothing here is scored.</div>
       </div>
 
       ${skills.length ? `<div class="nt-flabel">Skills worked across all notes</div>${skillChips(skills, athleteProgramId(id))}` : ""}
@@ -684,7 +751,7 @@ function progressPanel(){
           <div class="nt-tlline"><span>Win</span>${esc(n.win)}</div>
           <div class="nt-tlline"><span>Next focus</span>${esc(n.next)}</div>
         </div>`).join("")}
-      </div>` : `<div class="nt-blank">No notes yet, so there is no development record to show.</div>`}
+      </div>` : `<div class="nt-blank">No notes yet, so there is no record to show.</div>`}
     </div>`;
   }).join("");
 }
