@@ -48,4 +48,33 @@ not a study session.
 
 ## Closed
 
-*(move rows here with the date and the answer, so the file shows progress)*
+**2026-08-06 — the five open decisions, answered by the owner.**
+
+| was | answer | what it changes |
+|---|---|---|
+| 10. Which URL is production | **`the-sporve-web.vercel.app`.** | Confirms what has been deployed to all session. The other two are not production; nothing should be pushed to them without a decision. |
+| 9. Stack identity | **Moving to Next.js.** | The largest open decision in the repo, now settled in direction. See the note below — it is a migration, not a switch, and nothing about it is started. |
+| 11. Session partition | **Image session owns imagery across the board**, scoped to whichever site is actively being worked on. | Resolves the collision hazard from HANDOFF.md. Imagery = `assets/`. This session stays out of it. |
+| 12. Waitlist deliverability | **No email has sent.** | Open BUG, not a gap. Moved to Tier 1 below. |
+| 14. Type scale / 64px | **Do not change it arbitrarily — derive the size from evidence.** | Answered by measurement; see `docs/type-evidence.md`. Verdict: keep 52px. |
+
+### A correction worth stating plainly
+
+Next.js was described as "a type of JavaScript notation/language". It is
+neither. JavaScript is the language. **React** is a library for building
+interfaces in it, and **Next.js is a framework built on React** that adds
+routing, server rendering and a build pipeline. TypeScript is the thing that
+is "JavaScript with notation" — a superset that adds type annotations.
+
+This matters practically, not pedantically: the cost of the migration is
+almost entirely *React*, not Next.js. Moving to Next.js means rewriting every
+one of these template-literal view functions as React components with state
+and props. Next.js on top of that is mostly configuration.
+
+---
+
+## Tier 1 additions
+
+| # | Gap | The question that closes it |
+|---|---|---|
+| 15 | **The waitlist has never delivered an email.** Confirmed by the owner. A signup form that silently drops the signup is worse than no form — the visitor believes they are on the list. | Where does a waitlist submission go, and what is the last hop that succeeds? |
