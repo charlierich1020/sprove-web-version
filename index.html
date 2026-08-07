@@ -3741,7 +3741,7 @@ function profileHTML(){
         </div>
         <div style="margin-top:18px"><div class="eyebrow">Preferred sports</div>
           <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
-            ${(u.preferredSports||[]).map(s=>`<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</span>`).join("")||'<span style="color:var(--muted)">None yet</span>'}</div></div>
+            ${(u.preferredSports||[]).map(s=>`<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${esc(s)}</span>`).join("")||'<span style="color:var(--muted)">None yet</span>'}</div></div>
       </div>
       <div class="panel">
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -4531,7 +4531,7 @@ function coachBody(t){
         <input id="bizLoc" name="location" value="${esc(pp.location)}"></div>
       <div class="field"><label>Sports offered</label>
         <div style="display:flex;gap:7px;flex-wrap:wrap;padding-top:3px">
-          ${pp.sports.map(s=>`<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</span>`).join("")}</div></div>
+          ${pp.sports.map(s=>`<span class="pill" style="background:${sportColor(s)}1A;color:${sportColor(s)}">${esc(s)}</span>`).join("")}</div></div>
       <div class="panel" style="background:var(--raise);border:0;margin-top:6px">
         <div class="eyebrow">Server-controlled</div>
         <p style="font-size:var(--text-base);color:var(--ink-2);margin-top:7px">
@@ -4817,7 +4817,7 @@ function modalHTML(){
         Select as many as apply.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px;max-height:280px;overflow:auto;padding:2px">
         ${sports.map(s=>`<button class="sportpick ${S.onboardSports.includes(s)?"on":""}" data-pick="${esc(s)}"
-          style="--sc:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</button>`).join("")}
+          style="--sc:${sportColor(s)}">${esc(s)}</button>`).join("")}
       </div>
       <p class="num" style="color:var(--faint);font-size:var(--text-sm);margin-top:12px">${S.onboardSports.length} selected</p>
       <button class="btn wide" data-onbnext="1" style="margin-top:14px" ${S.onboardSports.length?"":"disabled"}>Continue</button>
@@ -4897,7 +4897,7 @@ Marcus Chen, marcus@example.com"></textarea></div>
         <div class="field"><label>Preferred sports</label>
           <div style="display:flex;flex-wrap:wrap;gap:8px;max-height:180px;overflow:auto;padding:2px">
             ${sports.map(s=>`<button type="button" class="sportpick ${(u.preferredSports||[]).includes(s)?"on":""}"
-              data-psport="${esc(s)}" style="--sc:${sportColor(s)}">${sportGlyph(s)} ${esc(s)}</button>`).join("")}
+              data-psport="${esc(s)}" style="--sc:${sportColor(s)}">${esc(s)}</button>`).join("")}
           </div></div>
         <div id="profileErr" class="err hide" style="margin:8px 0"></div>
         <button class="btn wide" type="submit" style="margin-top:8px">Save changes</button>
@@ -16570,9 +16570,12 @@ const ASSET = {
   listing:(id, slot) => "assets/listings/" + id + "-" + slot + ".jpg",
   company:(id, slot) => "assets/companies/" + id + "-" + slot + ".jpg",
 };
-/* <img> that tries the real asset first and falls back on error. */
+/* No real photo assets ship in this repo (assets/listings/* do not exist), so
+   the src is the self-contained placeholder directly — trying the .jpg first
+   only produced a guaranteed net::ERR_FILE_NOT_FOUND before falling back. When
+   real assets land, restore the real-first src + data-cofb fallback. */
 function imgTag(real, fallback, alt){
-  return `<img src="${esc(real)}" data-cofb="${esc(fallback)}" alt="${esc(alt || "")}" loading="lazy">`;
+  return `<img src="${esc(fallback)}" alt="${esc(alt || "")}" loading="lazy">`;
 }
 function imagesFor(p){
   const spec = IMG_SPEC[typeOf(p)];

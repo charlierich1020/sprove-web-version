@@ -66,7 +66,43 @@ for r in $ROUTES; do
   [ "$res" -eq 0 ] || { printf "  \033[33mWARN\033[0m  %s\n" "route '$r': $res external resource(s) failed to load"; RESWARN=$((RESWARN+res)); }
 done
 [ "$FAIL" -eq 0 ] && pass "no JS errors across $(echo $ROUTES | wc -w | tr -d ' ') routes"
-[ "$RESWARN" -gt 0 ] && printf "  \033[33mWARN\033[0m  %s\n" "$RESWARN external image request(s) — see picsum.photos in mod-companies.js; the single-file/CSP design says nothing should be fetched externally"
+[ "$RESWARN" -gt 0 ] && printf "  \033[33mWARN\033[0m  %s\n" "$RESWARN external resource(s) failed — the single-file/CSP design says nothing should be fetched externally"
+
+# ── §9 sweep — permanent bans, enforced so they cannot silently regress ──
+# Any rule that is only an instruction eventually gets undone by a helpful edit;
+# these are the tripwires. picsum is a URL, not documentation, so a static grep
+# is right; the banned hues are checked on the RENDERED DOM (a dormant token or a
+# colour-law comment mentioning #C2410C must not trip this, only a painted use).
+c=$(grep -oc "picsum" index.html 2>/dev/null); c=${c:-0}
+[ "$c" -eq 0 ] && pass "built index free of 'picsum'" || fail "'picsum' present in built index ($c)"
+# Per marketing page: zero emoji codepoints, zero decorative svg inside a band
+# (svg is allowed only in functional chrome), zero scaffolds, and no painted
+# #C2410C (rgb 194,65,12) or #38BDF8 (rgb 56,189,248).
+PAGES="what-is background-checks examples search map-search instant-booking messaging bookings-receipts saved athlete-progress scheduling payments roster session-notes media-consent insights ai-coach"
+$B goto "file://$(pwd)/index.html" >/dev/null 2>&1
+sweep=$($B js "
+(()=>{const em=/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu;const bad=[];
+const banned=c=>c.includes('194, 65, 12')||c.includes('56, 189, 248');
+'$PAGES'.split(' ').forEach(id=>{S.route={name:'page',arg:id};render();const a=document.querySelector('#app');if(!a)return;
+ const e=(a.innerText.match(em)||[]).length;
+ const svg=[...a.querySelectorAll('.pgband svg')].filter(s=>!s.closest('button,a,nav,input,select,label')).length;
+ const scaf=a.textContent.includes('This page is being built')?1:0;
+ let orange=0;a.querySelectorAll('*').forEach(el=>{const st=getComputedStyle(el);if(banned(st.color)||banned(st.backgroundColor))orange++});
+ if(e>0||svg>0||scaf>0||orange>0)bad.push(id+'(emoji='+e+' svg='+svg+' scaffold='+scaf+' orange='+orange+')')});
+return bad.length?bad.join(' '):'CLEAN'})()" 2>/dev/null)
+sweepc=${sweep//\"/}; sweepc=$(printf '%s' "$sweepc" | tr -d '\r')
+if [ "$(printf '%s' "$sweepc" | tr -d '[:space:]')" = "CLEAN" ]; then
+  pass "17 pages: zero emoji, zero decorative in-band svg, zero scaffolds"
+elif [ -z "$(printf '%s' "$sweepc" | tr -d '[:space:]')" ]; then
+  printf "  \033[33mWARN\033[0m  %s\n" "§9 sweep did not return — re-run"
+else fail "§9 sweep: $sweep"; fi
+# Home + explore: zero emoji, no rails.
+he=$($B js "
+(()=>{const em=/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu;const o=[];
+['home','explore'].forEach(r=>{S.route={name:r,arg:null};render();const a=document.querySelector('#app');
+ const e=(a.innerText.match(em)||[]).length;const rails=a.querySelectorAll('.rail-track').length;
+ if(e>0||rails>0)o.push(r+'(emoji='+e+' rails='+rails+')')});return o.length?o.join(' '):'CLEAN'})()" 2>/dev/null)
+[ "$(printf '%s' "${he//\"/}" | tr -d '[:space:]')" = "CLEAN" ] && pass "home + explore: zero emoji, zero rails" || fail "home/explore sweep: $he"
 
 # The dark-ground invariant. Resolves the PAINTED background through
 # transparent ancestors -- both historic contrast failures were inherited.

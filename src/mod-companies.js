@@ -164,9 +164,12 @@ const ASSET = {
   listing:(id, slot) => "assets/listings/" + id + "-" + slot + ".jpg",
   company:(id, slot) => "assets/companies/" + id + "-" + slot + ".jpg",
 };
-/* <img> that tries the real asset first and falls back on error. */
+/* No real photo assets ship in this repo (assets/listings/* do not exist), so
+   the src is the self-contained placeholder directly — trying the .jpg first
+   only produced a guaranteed net::ERR_FILE_NOT_FOUND before falling back. When
+   real assets land, restore the real-first src + data-cofb fallback. */
 function imgTag(real, fallback, alt){
-  return `<img src="${esc(real)}" data-cofb="${esc(fallback)}" alt="${esc(alt || "")}" loading="lazy">`;
+  return `<img src="${esc(fallback)}" alt="${esc(alt || "")}" loading="lazy">`;
 }
 function imagesFor(p){
   const spec = IMG_SPEC[typeOf(p)];
