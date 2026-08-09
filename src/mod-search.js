@@ -622,7 +622,9 @@ function repaintGrid(bar){
   const main=bar.parentElement;
   const grid=main.querySelector(".grid");
   if(!grid) return {kept:0,base:0};
-  injectCompareButtons(grid);
+  /* T3/§5: cards carry no per-card Compare button — their actions are the
+     whole-card link + View slots. (Compare feature dormant, not removed.) */
+  // injectCompareButtons(grid);
 
   const cards=Array.prototype.slice.call(grid.querySelectorAll(".card"));
   const byId=new Map(),order=[];
@@ -663,7 +665,11 @@ function paintLive(counts){
   const el=document.getElementById("seLive");
   if(!el) return;
   const a=adv(),n=activeCount();
-  el.textContent=`${counts.kept} of ${counts.base} shown · sorted by ${SORT_LABEL[a.sort]||a.sort}`+
+  /* T4 kind-band layout has no single .grid, so applyFilters returns 0/0;
+     fall back to the catalogue total so the line stays truthful. */
+  const base=counts.base||catalogue().length;
+  const kept=counts.base?counts.kept:base;
+  el.textContent=`${kept} of ${base} shown · sorted by ${SORT_LABEL[a.sort]||a.sort}`+
     (n?` · ${n} advanced filter${n===1?"":"s"}`:"");
 }
 
