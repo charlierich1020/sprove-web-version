@@ -75,12 +75,24 @@ and every chromatic colour on it is a sport token. Briefs proposing
 
 ## 4. Two typographic registers, chosen by subject
 
-- **Expressive — Syne (display) + Plus Jakarta Sans (body).** The default.
-  Landing, dashboard, and ~75% of the product-toggle pages.
+- **Expressive (default) — Instrument Serif (display) + Inter (body).** Landing,
+  dashboard, and most product-toggle pages. Instrument Serif carries the editorial
+  hero voice; Inter carries all body/UI text; JetBrains Mono is **numerals only**.
+- **Per-page product accents.** Product-toggle pages may set a distinct display
+  face via the `--pg-display` custom property keyed off their `pg-<id>` root class:
+  **Archivo** for data/AI/ops pages (ai-coach, insights, scheduling, roster,
+  payments, instant-booking), **Syne** for discovery/aspiration pages (search,
+  map-search, saved, athlete-progress). Trust/consent/money/human pages keep the
+  Instrument Serif default.
 - **Serious — Hanken Grotesk alone**, weight doing all the work (800 headline /
   700 label / 400 body). For pages whose subject is **money, safety, consent or
   law**, where a quirky display face reads as levity about something the reader
   is being asked to trust.
+
+_Updated 2026-08-09 (owner decision): the earlier Syne + Plus-Jakarta default was
+superseded by Instrument Serif + Inter, and the per-page Archivo/Syne accents are
+blessed. Embedded, CSP-safe families: Instrument Serif, Inter, Archivo, Syne, Hanken
+Grotesk, JetBrains Mono (numerals), and Plus Jakarta Sans (legacy)._
 
 Currently serious: `trust`, `bookings`, `pricing`, `info`, `wallet`, and the
 coach `finances` and `media` tabs. Four of the sixteen product-toggle pages —
