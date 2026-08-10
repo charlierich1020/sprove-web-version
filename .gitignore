@@ -10,3 +10,11 @@ backup/
 .agents/
 skills-lock.json
 .claude/skills/
+
+# Internal security/roadmap docs — never in this PUBLIC repo
+docs/security/
+docs/gaps.md
+docs/fee-reconciliation.md
+docs/audit-2026-08-09.md
+docs/coach-portal-spec.md
+.claude/autonomous-runs/
