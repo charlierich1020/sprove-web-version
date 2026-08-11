@@ -1356,7 +1356,61 @@ h2.ctr{margin-bottom:10px}
 }
 
 /* ── coach dashboard ─────────────────────────────────────────────── */
+/* ── coach dashboard: dark ground ────────────────────────────────────
+   Scoped token re-declaration, same mechanism as `reg-serious`: the class
+   re-declares the surface and ink tokens AND sets background/color on itself.
+   The second part is required — a custom property only changes an element that
+   actually evaluates it, and most text here inherits its colour from <body>,
+   which sits outside this wrapper.
+
+   Every value is a LITERAL, never a token that can itself resolve dark. That is
+   the near-black-on-black failure this repo has already shipped once.
+
+   --accent is re-pointed at --accent-on-dark (#F08A62, 8.52:1) because the light
+   --accent #C2410C measures 4.06:1 on black and is banned there for anything but
+   large display type. Slate #8FA3BC carries the cool accent; sport colours stay
+   accent-only (tag, glyph, dot, 3px bar) and never become chrome or body text. */
+/* #app carries only the ground, so the black runs full-bleed behind the centred
+   .shell column. The TOKENS are scoped to the coach surfaces below — putting
+   them on #app leaked light --muted into the footer and topbar, which keep
+   their own light backgrounds, and produced 2.2:1 near-white-on-white. Same
+   failure as near-black-on-black, mirrored. */
+#app.coachdark{background:#0B0C0E}
+#app.coachdark .coachtop,
+#app.coachdark .dash{
+  --paper:#0B0C0E; --raise:#131519; --raise2:#1B1F26;
+  /* --faint lifted from #7A8794 to #8B98A6: the stock value lands at 4.40:1 on
+     --raise here, just under the 4.5 body-text floor. */
+  --ink:#F5F7F9; --ink-2:#C3CBD4; --muted:#9AA6B2; --faint:#8B98A6;
+  --rule:#242932; --rule-strong:#333A45;
+  --slate:#8FA3BC; --slate-deep:#A9BACF; --slate-tint:#1A212B;
+  --slate-ring:rgba(143,163,188,.34);
+  --gold-ink:#E3C275; --gold-tint:#241E10;
+  --good-tint:#10251A; --warn-tint:#251C0C;
+  --accent:#F08A62; --accent-ink:#F08A62; --accent-tint:#2A1710;
+  --danger:#F08A8A;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px -12px rgba(0,0,0,.7);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.55),0 18px 48px -18px rgba(0,0,0,.8);
+  background:#0B0C0E;
+  color:#F5F7F9;
+}
+/* Slate is lighter on this ground (#8FA3BC), so anything sitting ON slate takes
+   dark ink, not white — white measures 2.58:1 there. Same resolution the dark
+   bands already use at `.band.dark .btn:not(.ghost)`. */
+#app.coachdark .btn:not(.ghost){background:#8FA3BC;color:#0B0C0E}
+#app.coachdark .btn:not(.ghost):hover{background:#A9BACF;color:#0B0C0E}
+#app.coachdark .avatar,
+#app.coachdark .rbadge,
+#app.coachdark .cal-num.today,
+#app.coachdark .bub.me{color:#0B0C0E}
+/* Hardcoded light values inside the coach shell that tokens cannot reach. */
+#app.coachdark .cmdgo{color:#0B0C0E}
+#app.coachdark .cmdspinner{border-color:rgba(11,12,14,.38);border-top-color:#0B0C0E}
+/* Orange earns one job on this ground: the live send affordance. */
+#app.coachdark .cmdinput.has-value .cmdgo{background:#F08A62}
+#app.coachdark .cmdinput.has-value .cmdgo:hover{background:#F5A183}
 .coachtop{position:sticky;top:77px;z-index:45;border-bottom:1px solid var(--rule);background:rgba(255,255,255,.96)}
+#app.coachdark .coachtop{background:rgba(11,12,14,.96)}
 .coachtop-in{display:flex;justify-content:flex-end;align-items:center;gap:4px;min-height:48px;padding:5px 24px}
 .viewas{color:var(--slate)}
 .railhead{display:flex!important;gap:11px;align-items:center;padding:11px 12px!important;text-align:left}
@@ -2915,7 +2969,16 @@ function phAvatar(){
    while clearing AA. The undarkened value stays correct for marks. */
 const sportInk = s => {
   const h = sportColor(s).slice(1);
-  const d = n => Math.round(parseInt(h.substr(n,2),16) * 0.66).toString(16).padStart(2,"0");
+  /* Direction depends on the ground. Darkening clears 4.5:1 on white; on the
+     coach dashboard's black it does the opposite, so the same hue is lifted
+     toward white instead. Applied here rather than in CSS because callers write
+     the value into an inline style, which no stylesheet rule can outrank. */
+  const onDark = typeof S !== "undefined" && S.portal === "coach" && isVerified();
+  const d = n => {
+    const v = parseInt(h.substr(n, 2), 16);
+    return Math.round(onDark ? v + (255 - v) * 0.45 : v * 0.66)
+      .toString(16).padStart(2, "0");
+  };
   return "#" + d(0) + d(2) + d(4);
 };
 const sportGlyph = s => SPORT_GLYPH[s] || "🏅";
@@ -7556,6 +7619,13 @@ function render(){
   const seriousTab=S.portal==="coach"&&["finances","media"].includes(S.coachTab);
   const app=document.getElementById("app");
   app.classList.toggle("reg-serious",seriousRoute||seriousTab);
+  /* The coach dashboard runs on a dark ground. Scoped to a signed-in coach on
+     the dashboard itself — the guest pitch and the sign-in gate stay light, so
+     a visitor never lands on a half-inverted page. On #app rather than on the
+     inner .dash because .shell is a centred max-width column; painting the
+     grid alone would leave white gutters either side of the black. */
+  app.classList.toggle("coachdark",
+    S.portal==="coach"&&isVerified()&&r.name!=="coachgate");
 
   /* T5 — the landing (explore) ends in its own .close-zone footer, so the
      global footerHTML() is suppressed there to keep exactly one footer. */
