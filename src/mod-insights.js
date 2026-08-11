@@ -713,7 +713,7 @@ function insightsView(){
   <section class="band alt in-band">
     <div class="shell" data-rev>
       <div class="eyebrow">Insights</div>
-      <h1 style="margin-top:12px;max-width:20ch">Where families find you.</h1>
+      <h2 style="margin-top:12px;max-width:20ch">Where families find you.</h2>
       <p class="in-lede">Demand, funnel, pricing, and the families who stopped coming back.</p>
       <div class="in-tags" style="margin-top:16px">
         ${SAMPLE_PILL}<span class="in-tagtxt">funnel and search volume</span>
@@ -884,7 +884,7 @@ function wire(){
   const q = s => document.querySelectorAll(s);
 
   q("[data-in-goto]").forEach(b => b.onclick = () => {
-    S.coachTab = "insights";
+    setCoachTab("insights");
     window.scrollTo(0, 0);
     render();
   });
@@ -926,7 +926,8 @@ function wire(){
 /* ═══════════════════ EXPORT ═══════════════════ */
 window.MOD_INSIGHTS = {
   css: CSS,
-  tabs: { insights: "Insights" },
+  /* Rendered as a sub-tab of the host Operations tab; no rail entry of its own. */
+  tabs: {},
   views: { insights: insightsView },
   modals: { checkin: checkinModal },
   wire: wire,
