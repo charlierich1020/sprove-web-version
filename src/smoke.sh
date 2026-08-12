@@ -329,14 +329,23 @@ if curl -sI "http://127.0.0.1:$CSPPORT/index.html" | grep -qi "^content-security
   # title can never turn this build red. Structure is asserted against live
   # data; content is asserted against the seed.
 
-  # A default page load must NOT go live. This is the switch, and a switch that
-  # silently flips is worse than no switch.
-  offbydefault=$($B js "window.SporveCatalog.ready.then(live=>'OK:'+live+':'+document.documentElement.getAttribute('data-catalog')+':'+PROGRAMS.length).catch(e=>'THREW:'+e.message)" 2>/dev/null | tr -d '\r')
-  case "$(printf '%s' "$offbydefault" | tr -d '[:space:]')" in
-    OK:false:seed:30) pass "catalog: a default load stays on the seeded catalogue" ;;
-    OK:true:*)        fail "catalog: hydrated without being asked — DEFAULT_LIVE flipped on unnoticed" ;;
-    THREW:*)          fail "catalog: hydration threw — $offbydefault" ;;
-    *)                fail "catalog: unexpected default state ($offbydefault)" ;;
+  # A default page load now goes live — that is the product. An ordinary
+  # visitor on the real origin must get real, bookable inventory.
+  bydefault=$($B js "window.SporveCatalog.ready.then(live=>'OK:'+live+':'+document.documentElement.getAttribute('data-catalog')+':'+PROGRAMS.length).catch(e=>'THREW:'+e.message)" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$bydefault" | tr -d '[:space:]')" in
+    OK:true:live:*) pass "catalog: a default load serves the live catalogue ($(printf '%s' "$bydefault" | cut -d: -f4) listings)" ;;
+    OK:false:seed:*) fail "catalog: a default load fell back to sample data — the marketplace is showing listings nobody can book" ;;
+    THREW:*)        fail "catalog: hydration threw — $bydefault" ;;
+    *)              fail "catalog: unexpected default state ($bydefault)" ;;
+  esac
+
+  # The escape hatch must keep working: ?live=0 is how you get a deterministic
+  # page for a screenshot or a side-by-side comparison.
+  $B goto "http://127.0.0.1:$CSPPORT/index.html?live=0" >/dev/null 2>&1
+  forced=$($B js "window.SporveCatalog.ready.then(live=>'OK:'+live+':'+document.documentElement.getAttribute('data-catalog')+':'+PROGRAMS.length)" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$forced" | tr -d '[:space:]')" in
+    OK:false:seed:30) pass "catalog: ?live=0 forces the seeded catalogue" ;;
+    *)                fail "catalog: ?live=0 did not pin the seed ($forced)" ;;
   esac
 
   # ?live=1 must reach production data and REPLACE the array in place. Array
@@ -422,13 +431,171 @@ if curl -sI "http://127.0.0.1:$CSPPORT/index.html" | grep -qi "^content-security
     *)        fail "catalog: coach-listing probe returned nothing ($coachpin)" ;;
   esac
 
-  # Nothing above is worth anything if the live render throws.
-  $B console --clear >/dev/null 2>&1
-  $B js "S.route='explore';render();S.route='home';render();1" >/dev/null 2>&1
-  liveerr=$($B console 2>/dev/null | grep -c "error" || true)
-  [ "$liveerr" = "0" ] \
-    && pass "catalog: home and explore render clean against live data" \
-    || fail "catalog: $liveerr console error(s) rendering live data"
+  # Every map pin must land ON the canvas. The bbox was hardcoded to Miami
+  # under a comment claiming Chicago; real coordinates projected to
+  # left:-3154%, top:-7456% and the map rendered empty under a header counting
+  # ten programs. Bounds are derived now, so this asserts the derivation.
+  # Measure the RENDERED pins, not the formula. The first version of this check
+  # recomputed the projection with the same arithmetic the page uses, so it
+  # agreed with itself by construction and would have passed against the old
+  # hardcoded Miami box. Read the actual geometry the browser laid out.
+  mappins=$($B js "(function(){try{
+    S.route={name:'map',arg:null}; render();
+    var canvas=document.querySelector('.mapcanvas');
+    if(!canvas) return 'NOCANVAS';
+    var cb=canvas.getBoundingClientRect();
+    var pins=[].slice.call(canvas.querySelectorAll('.pin'));
+    if(!pins.length) return 'NOPINS';
+    var off=pins.filter(function(el){
+      var r=el.getBoundingClientRect();
+      return r.left<cb.left-1||r.right>cb.right+1||r.top<cb.top-1||r.bottom>cb.bottom+1;
+    });
+    return off.length?'OFFCANVAS:'+off.length+'of'+pins.length:'OK:'+pins.length;
+  }catch(e){return 'THREW:'+e.message;}})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$mappins" | tr -d '[:space:]')" in
+    OK:*)         pass "catalog: all $(printf '%s' "$mappins" | cut -d: -f2) rendered map pins sit inside the canvas" ;;
+    OFFCANVAS:*)  fail "catalog: $(printf '%s' "$mappins" | cut -d: -f2) map pins laid out OFF the canvas — the bbox does not match the data" ;;
+    NOPINS)       fail "catalog: the map rendered no pins at all for a catalogue that has listings" ;;
+    NOCANVAS)     fail "catalog: the map canvas did not render" ;;
+    THREW:*)      fail "catalog: map projection threw — $mappins" ;;
+    *)            fail "catalog: map probe returned nothing ($mappins)" ;;
+  esac
+
+  # No band may render a heading over a permanent empty state. Production has
+  # only solo providers, so camps and teams must not appear at all — a promise
+  # the inventory cannot keep is worse than an honest single band.
+  deadband=$($B js "(function(){try{
+    S.route={name:'explore',arg:null}; render();
+    var empties=document.querySelectorAll('.kindrow-empty').length;
+    var bands=document.querySelectorAll('.kind-band').length;
+    if(!bands) return 'NOBANDS';
+    return empties?'DEAD:'+empties:'OK:'+bands;
+  }catch(e){return 'THREW:'+e.message;}})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$deadband" | tr -d '[:space:]')" in
+    OK:*)    pass "catalog: browse renders $(printf '%s' "$deadband" | cut -d: -f2) band(s), none of them empty" ;;
+    DEAD:*)  fail "catalog: $(printf '%s' "$deadband" | cut -d: -f2) band(s) render a heading over 'No matching programs' — a category the catalogue cannot fill" ;;
+    NOBANDS) fail "catalog: browse rendered no bands at all — the grid is empty" ;;
+    *)       fail "catalog: band probe returned nothing ($deadband)" ;;
+  esac
+
+  # Real listings must not be labelled as samples.
+  provenance=$($B js "(function(){S.route={name:'explore',arg:null};render();
+    return 'live='+catalogueIsLive()+' pills='+document.querySelectorAll('.kind-band .demo-pill').length;})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$provenance" | tr -d '[:space:]')" in
+    live=truepills=0) pass "catalog: live listings carry no 'Demo data' label" ;;
+    *)                fail "catalog: provenance label disagrees with the data source ($provenance)" ;;
+  esac
+
+  # The trust badge must not be inverted. Seven sites rendered a GOLD pill —
+  # the positive styling — carrying the words "Verification pending", so every
+  # background-checked provider was labelled unverified, on every card on the
+  # marketplace and on the very page that explains what the badge means. Both
+  # branches of the ternary had been given the same string; only the class
+  # differed. This is the product's core claim, so it gets an assertion.
+  badge=$($B js "(function(){S.route={name:'explore',arg:null};render();
+    var gold=[].slice.call(document.querySelectorAll('.verifline,.pill.gold'));
+    var wrong=gold.filter(function(e){return /Verification pending/i.test(e.textContent);}).length;
+    var right=gold.filter(function(e){return /Background-checked/i.test(e.textContent);}).length;
+    return wrong?'INVERTED:'+wrong:'OK:'+right;})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$badge" | tr -d '[:space:]')" in
+    OK:0)       fail "catalog: no verified badge rendered at all — 10 background-checked providers and not one shield" ;;
+    OK:*)       pass "catalog: $(printf '%s' "$badge" | cut -d: -f2) verified listings badged 'Background-checked', none inverted" ;;
+    INVERTED:*) fail "catalog: $(printf '%s' "$badge" | cut -d: -f2) verified provider(s) labelled 'Verification pending' — the trust badge is inverted" ;;
+    *)          fail "catalog: badge probe returned nothing ($badge)" ;;
+  esac
+
+  # THE FAILURE MODE THAT SURVIVES A GREEN RUN. Seven coach surfaces filtered
+  # the LIVE catalogue by S.listings — seeded ids that no live row matches — and
+  # got back an empty array. Nothing threw. The tabs simply rendered confident,
+  # false copy: "Everything is full — Every live listing is at capacity" over
+  # zero listings, and an approved provider told he was N steps from going live.
+  # An empty array is a valid input, so only asserting on the words catches it.
+  coachcopy=$($B js "(function(){try{
+    S.auth={status:'verified'};S.portal='coach';
+    var bad=[];
+    ['listings','dashboard','reviews','schedule'].forEach(function(t){
+      S.coachTab=t;S.route={name:'dashboard',arg:null};render();
+      var txt=document.getElementById('app').innerText;
+      /* The claim is false when NOTHING is actually at capacity — which is
+         exactly what an empty listing array produces, since 'none of zero
+         listings has a free slot' is vacuously true. */
+      if(/Everything is full/i.test(txt)&&!coachListings().some(function(p){return p.enrolled>=p.cap;})) bad.push(t+':falsely-full');
+      if(/steps from going live/i.test(txt)) bad.push(t+':launch-mode');
+      if(/Listings reviewed 0 of 0/i.test(txt)) bad.push(t+':zero-of-zero');
+    });
+    return bad.length?'WRONG:'+bad.join(','):'OK:'+coachListings().length;
+  }catch(e){return 'THREW:'+e.message;}})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$coachcopy" | tr -d '[:space:]')" in
+    OK:0)     fail "catalog: the coach owns zero listings — the portal will render launch-mode copy to an approved provider" ;;
+    OK:*)     pass "catalog: coach surfaces read their own $(printf '%s' "$coachcopy" | cut -d: -f2) listings, no false empty-state copy" ;;
+    WRONG:*)  fail "catalog: coach surfaces render false copy against live data (${coachcopy#*WRONG:})" ;;
+    THREW:*)  fail "catalog: coach copy probe threw — $coachcopy" ;;
+    *)        fail "catalog: coach copy probe returned nothing ($coachcopy)" ;;
+  esac
+
+  # No filter chip may be a dead end. Tap it, get an empty grid, learn only
+  # that the site is broken. "Monthly" and "Under \$50" were both unmatched by
+  # every live row.
+  chips=$($B js "(function(){try{
+    S.auth={status:'guest'};S.portal='family';S.filters={maxPrice:null,verifiedOnly:false,model:null};
+    S.route={name:'explore',arg:null};render();
+    var dead=[].slice.call(document.querySelectorAll('[data-filter]')).filter(function(el){
+      var f=el.getAttribute('data-filter');
+      if(f==='under50') return !PROGRAMS.some(function(p){return p.price<50;});
+      if(f==='single')  return !PROGRAMS.some(function(p){return p.model==='single_session';});
+      if(f==='monthly') return !PROGRAMS.some(function(p){return p.model==='monthly';});
+      return false;
+    }).map(function(el){return el.getAttribute('data-filter');});
+    return dead.length?'DEAD:'+dead.join(','):'OK';
+  }catch(e){return 'THREW:'+e.message;}})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$chips" | tr -d '[:space:]')" in
+    OK)      pass "catalog: every filter chip on browse can actually match something" ;;
+    DEAD:*)  fail "catalog: filter chip(s) ${chips#*DEAD:} match nothing in the catalogue — tapping one empties the grid for no reason" ;;
+    THREW:*) fail "catalog: chip probe threw — $chips" ;;
+    *)       fail "catalog: chip probe returned nothing ($chips)" ;;
+  esac
+
+  # Seeded records outlive the catalogue swap and keep their seeded ids:
+  # S.bookings, S.conversations, chat picks, waitlist entries. They resolve
+  # through programById(), which falls back to the demo catalogue. The failure
+  # here is SILENT, not loud — an <img src=""> (which the browser resolves
+  # against the document URL and re-requests the whole page), an empty
+  # conversation header, a "View program" that repaints the page it is on. So
+  # assert on the rendered artefacts, since nothing throws.
+  dangling=$($B js "(function(){try{
+    var bad=[];
+    ['bookings','messages','timeline','saved'].forEach(function(r){
+      S.auth={status:'verified'};S.portal='family';S.route={name:r,arg:null};render();
+      var app=document.getElementById('app');
+      if(app.querySelectorAll('img[src=\"\"],img:not([src])').length) bad.push(r+':empty-img');
+      if(/undefined|\[object Object\]|NaN/.test(app.innerText)) bad.push(r+':undefined-text');
+    });
+    var unresolved=(S.bookings||[]).filter(function(b){return !programById(b.programId);}).length;
+    if(unresolved) bad.push('bookings:'+unresolved+'-unresolvable');
+    return bad.length?'BROKEN:'+bad.join(','):'OK';
+  }catch(e){return 'THREW:'+e.message;}})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$dangling" | tr -d '[:space:]')" in
+    OK)       pass "catalog: seeded bookings and threads still resolve under a live catalogue" ;;
+    BROKEN:*) fail "catalog: dangling references render as nothing (${dangling#*BROKEN:})" ;;
+    THREW:*)  fail "catalog: dangling-reference probe threw — $dangling" ;;
+    *)        fail "catalog: dangling-reference probe returned nothing ($dangling)" ;;
+  esac
+
+  # Nothing above is worth anything if the live render throws. The 13-route
+  # sweep near the top of this file runs on file://, which never hydrates — so
+  # without this, eleven of the thirteen visitor-reachable routes had never
+  # been rendered against a real row. A uuid where a "prog_N" was expected, a
+  # null the seed always filled, a business name twice as long as any sample:
+  # none of those are visible to a seeded run.
+  LIVEFAIL=0
+  for r in $ROUTES; do
+    $B console --clear >/dev/null 2>&1
+    $B js "S.auth={status:'guest'};S.portal='family';S.route={name:'$r',arg:null};render();'ok'" >/dev/null 2>&1
+    n=$($B console --errors 2>&1 | grep "\[error\]" | grep -vc "Failed to load resource")
+    [ "$n" -eq 0 ] || { fail "catalog: JS error(s) on route '$r' against LIVE data ($n)"; LIVEFAIL=$((LIVEFAIL+1)); }
+  done
+  [ "$LIVEFAIL" -eq 0 ] \
+    && pass "catalog: all $(echo $ROUTES | wc -w | tr -d ' ') visitor routes render clean against live data"
 
   # Leave the harness on a file:// page so later checks are unaffected.
   $B goto "file://$(pwd)/index.html" >/dev/null 2>&1
