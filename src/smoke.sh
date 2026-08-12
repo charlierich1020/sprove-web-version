@@ -321,6 +321,115 @@ if curl -sI "http://127.0.0.1:$CSPPORT/index.html" | grep -qi "^content-security
     *)     fail "api: liveness probe returned nothing (harness or network problem)" ;;
   esac
 
+  # ── PHASE C1 · the live catalogue ─────────────────────────────────────────
+  # These run HERE, on the CSP-serving origin, and nowhere else. Every content
+  # assertion in this file (no emoji, no exclamation marks, the 8-step type
+  # scale, the contrast ratchet) measures a file:// page, where mod-catalog.js
+  # deliberately never hydrates — so a coach writing "Let's go!" in a listing
+  # title can never turn this build red. Structure is asserted against live
+  # data; content is asserted against the seed.
+
+  # A default page load must NOT go live. This is the switch, and a switch that
+  # silently flips is worse than no switch.
+  offbydefault=$($B js "window.SporveCatalog.ready.then(live=>'OK:'+live+':'+document.documentElement.getAttribute('data-catalog')+':'+PROGRAMS.length).catch(e=>'THREW:'+e.message)" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$offbydefault" | tr -d '[:space:]')" in
+    OK:false:seed:30) pass "catalog: a default load stays on the seeded catalogue" ;;
+    OK:true:*)        fail "catalog: hydrated without being asked — DEFAULT_LIVE flipped on unnoticed" ;;
+    THREW:*)          fail "catalog: hydration threw — $offbydefault" ;;
+    *)                fail "catalog: unexpected default state ($offbydefault)" ;;
+  esac
+
+  # ?live=1 must reach production data and REPLACE the array in place. Array
+  # identity is the whole migration strategy: ten modules captured this object,
+  # so a reassignment would leave half the page reading a catalogue that no
+  # longer updates. Captured before, compared after.
+  $B goto "http://127.0.0.1:$CSPPORT/index.html?live=1" >/dev/null 2>&1
+  livecat=$($B js "(function(){var before=PROGRAMS;return window.SporveCatalog.ready.then(function(live){
+    if(!live) return 'FELLBACK:'+document.documentElement.getAttribute('data-catalog');
+    if(PROGRAMS!==before) return 'REASSIGNED';
+    if(!PROGRAMS.length) return 'EMPTY';
+    var bad=PROGRAMS.filter(function(p){return !p.id||!p.title||!p.sport||typeof p.price!=='number'||!p.biz;});
+    if(bad.length) return 'MALFORMED:'+bad.length;
+    if(PROGRAMS.some(function(p){return !p.live;})) return 'MIXED';
+    return 'OK:'+PROGRAMS.length;
+  });})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$livecat" | tr -d '[:space:]')" in
+    OK:*)        pass "catalog: ?live=1 replaced the catalogue in place with ${livecat#*OK:} live listings" ;;
+    REASSIGNED)  fail "catalog: PROGRAMS was REASSIGNED, not mutated — every module that captured it is now stale" ;;
+    EMPTY)       fail "catalog: hydrated to an empty catalogue — the grid would render nothing" ;;
+    MALFORMED:*) fail "catalog: ${livecat#*MALFORMED:} live rows are missing a field the renderer reads" ;;
+    MIXED)       fail "catalog: seed and live rows are both present — the page has two realities" ;;
+    FELLBACK:*)  fail "catalog: ?live=1 could not reach the backend and fell back ($livecat)" ;;
+    *)           fail "catalog: live hydration returned nothing ($livecat)" ;;
+  esac
+
+  # A live listing must resolve REAL session slots. The seeded fallback derives
+  # its dates by parsing an integer out of "prog_7"; a uuid parses to NaN and
+  # toISOString() throws RangeError, so this is the assertion standing between
+  # a live catalogue and every card rendering Invalid Date.
+  # EVERY live listing, not just the first, and every slot must be a real row.
+  # A slot without live:true came from the generated fallback — three
+  # plausible, bookable-looking dates for sessions that do not exist, which
+  # fail at the insert after the family has picked a time and reached checkout.
+  liveslots=$($B js "(function(){try{
+    /* Shape is not enough: /^\d{4}-\d{2}-\d{2}\$/ accepts 2026-02-30 and
+       2026-13-01, and Date() silently normalises both to a DIFFERENT day — so
+       the check would pass while a card showed the wrong date. Round-trip
+       through UTC and require the components to come back unchanged. */
+    var validDate=function(v){
+      var m=/^(\d{4})-(\d{2})-(\d{2})\$/.exec(String(v));
+      if(!m) return false;
+      var d=new Date(v+'T00:00:00Z');
+      return d.getUTCFullYear()===+m[1] && d.getUTCMonth()+1===+m[2] && d.getUTCDate()===+m[3];
+    };
+    if(validDate('2026-02-30')||validDate('2026-13-01')||!validDate('2026-02-28')) return 'SELFTEST';
+    var total=0, empty=0;
+    for(var i=0;i<PROGRAMS.length;i++){
+      var s=slotsFor(PROGRAMS[i].id);
+      if(!s||!s.length){ empty++; continue; }
+      if(s.some(function(x){return !x.live;})) return 'FABRICATED:'+PROGRAMS[i].id;
+      if(s.some(function(x){return !validDate(x.date);})) return 'BADDATE:'+PROGRAMS[i].id;
+      total+=s.length;
+    }
+    if(empty===PROGRAMS.length) return 'NOSLOTS';
+    return 'OK:'+total+':'+empty;
+  }catch(e){return 'THREW:'+e.name+':'+e.message;}})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$liveslots" | tr -d '[:space:]')" in
+    OK:*:0)      pass "catalog: every live listing resolves real sessions ($(printf '%s' "$liveslots" | cut -d: -f2) in total)" ;;
+    OK:*)        pass "catalog: live sessions resolve; $(printf '%s' "$liveslots" | cut -d: -f3) listing(s) correctly show no openings" ;;
+    NOSLOTS)     fail "catalog: no live listing has a bookable session — nothing on the page can be booked" ;;
+    FABRICATED:*) fail "catalog: a live listing was given INVENTED session dates (${liveslots#*FABRICATED:}) — it would fail at checkout" ;;
+    BADDATE:*)   fail "catalog: a live slot carries an impossible or unparseable date (${liveslots#*BADDATE:})" ;;
+    SELFTEST)    fail "catalog: the date validator itself is wrong — it accepted 2026-02-30 or rejected a real date" ;;
+    THREW:*)     fail "catalog: slotsFor threw on a live listing — $liveslots" ;;
+    *)           fail "catalog: slot probe returned nothing ($liveslots)" ;;
+  esac
+
+  # The coach portal is still sample data and must stay pinned to it. Without
+  # DEMO_CATALOGUE this returns [] and the modules' fallbacks hand the demo
+  # coach a real provider's listing to manage.
+  coachpin=$($B js "(function(){try{
+    var mine=DEMO_CATALOGUE.filter(function(p){return S.listings.indexOf(p.id)>=0;});
+    if(!mine.length) return 'ORPHANED';
+    if(PROGRAMS.some(function(p){return S.listings.indexOf(p.id)>=0;})) return 'LEAKED';
+    return 'OK:'+mine.length;
+  }catch(e){return 'THREW:'+e.name;}})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$coachpin" | tr -d '[:space:]')" in
+    OK:*)     pass "catalog: the coach portal stays on its own ${coachpin#*OK:} demo listings" ;;
+    ORPHANED) fail "catalog: the coach's listings resolve to nothing — the whole portal empties out" ;;
+    LEAKED)   fail "catalog: a live listing matched S.listings — the demo coach is being shown a real provider's business" ;;
+    THREW:*)  fail "catalog: coach-listing probe threw — $coachpin" ;;
+    *)        fail "catalog: coach-listing probe returned nothing ($coachpin)" ;;
+  esac
+
+  # Nothing above is worth anything if the live render throws.
+  $B console --clear >/dev/null 2>&1
+  $B js "S.route='explore';render();S.route='home';render();1" >/dev/null 2>&1
+  liveerr=$($B console 2>/dev/null | grep -c "error" || true)
+  [ "$liveerr" = "0" ] \
+    && pass "catalog: home and explore render clean against live data" \
+    || fail "catalog: $liveerr console error(s) rendering live data"
+
   # Leave the harness on a file:// page so later checks are unaffected.
   $B goto "file://$(pwd)/index.html" >/dev/null 2>&1
 else
