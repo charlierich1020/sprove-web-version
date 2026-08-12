@@ -21,7 +21,7 @@
 <meta name="twitter:description" content="Find coaches, trainers, camps and teams across 20+ sports in Chicagoland.">
 <meta name="twitter:image" content="https://the-sporve-web.vercel.app/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%2309090B'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='6'%20fill='white'/%3E%3C/svg%3E">
-<meta name="sporve-build" content="5b86509b86bb4957">
+<meta name="sporve-build" content="19b119e7d3eb3fd9">
 </head>
 <body>
 <noscript><h1>Sporve — Every sport. One app.</h1><p>Sporve connects families and athletes with coaches, trainers, camps, and teams across more than 20 sports. Please enable JavaScript to use the app.</p></noscript>
@@ -81,6 +81,13 @@
      premise is that sport colour means sport. #C2410C sits darker and redder
      than every sport token. */
   --accent:#C2410C; --accent-ink:#9A3412; --accent-tint:#FDF0E9;
+  /* Baby blue — owner decision 2026-08-12, the second non-frozen colour.
+     #89CFF0 measures 12.5:1 against the #0B0C0E coach ground as a FILL, and
+     carries near-black text at ~14:1, so the S mark stays legible without
+     inverting. Deliberately NOT used for body text on white: it measures
+     1.7:1 there, which is why it appears only as a filled shape or on black.
+     --baby-ink is what sits ON baby blue; never white, which fails at 1.5:1. */
+  --baby:#89CFF0; --baby-ink:#0B0C0E; --baby-deep:#5FB8E6;
   --accent-ring:rgba(194,65,12,.30);
 
   /* ── TYPE SCALE: eight steps, no ninth. Carried verbatim from the marketing
@@ -1065,16 +1072,38 @@ img{max-width:100%;display:block}
   transition:transform .18s,box-shadow .18s,background .18s}
 .aidock-fab:hover{transform:translateY(-2px);background:var(--accent-ink);
   box-shadow:0 8px 12px rgba(11,12,14,.18),0 22px 56px rgba(194,65,12,.38)}
-#app.coachdark + #layer .aidock-fab{background:var(--accent-on-dark);color:#0B0C0E;
-  box-shadow:0 6px 8px rgba(0,0,0,.34),0 18px 48px rgba(240,138,98,.26)}
-#app.coachdark + #layer .aidock-fab:hover{background:#F7A583}
+/* Coach portal: the S is BABY BLUE, not the salmon accent (owner, 2026-08-12).
+   The mark stays near-black rather than white — white on #89CFF0 is 1.5:1 and
+   would be unreadable, which is the same mistake §3 records for accent-on-black
+   in the other direction. */
+#app.coachdark + #layer .aidock-fab{background:var(--baby);color:var(--baby-ink);
+  box-shadow:0 6px 8px rgba(0,0,0,.34),0 18px 48px rgba(137,207,240,.26)}
+#app.coachdark + #layer .aidock-fab:hover{background:var(--baby-deep)}
 .aidock-fab-mark{font-family:var(--display);font-weight:700;font-size:var(--text-xl);line-height:1;letter-spacing:-.04em}
+/* THE CHAT DOCK IS BLACK. Owner spec 2026-08-12: black ground, white text, a
+   grey-slate glow around it, sitting at the bottom of the screen — the shape
+   Claude and Ambora use.
+
+   Literals, not tokens, for the ground and the text. --paper INVERTS under
+   data-theme="dark", so a panel painted with it would flip to near-white in
+   dark mode while its children stayed light-on-dark. §3 records that exact
+   defect ("--paper has produced near-black-on-black"), so a surface that is
+   ALWAYS dark must say so in hex. */
 .aidock-panel{width:min(380px,calc(100vw - 32px));height:min(520px,calc(100vh - 130px));
-  display:flex;flex-direction:column;background:var(--paper);
-  border:1px solid var(--rule-strong);border-radius:18px;overflow:hidden;
-  box-shadow:0 10px 16px rgba(11,12,14,.08),0 28px 64px rgba(11,12,14,.22)}
+  display:flex;flex-direction:column;background:#0B0C0E;color:#F5F7F9;
+  border:1px solid #333A45;border-radius:18px;overflow:hidden;
+  /* The glow: slate, not black — a black shadow on a black panel is invisible
+     and the panel would read as a hole. Two rings, tight then wide. */
+  box-shadow:0 0 0 1px rgba(154,166,178,.14),
+             0 10px 20px rgba(0,0,0,.45),
+             0 0 60px rgba(154,166,178,.22)}
+.aidock-panel .aidock-scroll,.aidock-panel .aidock-empty h3,.aidock-panel b{color:#F5F7F9}
+.aidock-panel .aidock-sub,.aidock-panel .aidock-empty p{color:#9AA6B2}
+.aidock-panel .aidock-pick{background:#131519;border-color:#333A45;color:#F5F7F9}
+.aidock-panel .aidock-pick:hover{background:#1B1F26;border-color:#4A5462}
+.aidock-panel .aidock-pick em{color:#9AA6B2}
 .aidock-head{display:flex;align-items:center;gap:10px;padding:11px 11px 11px 13px;
-  border-bottom:1px solid var(--rule);background:var(--raise)}
+  border-bottom:1px solid #242932;background:#131519;color:#F5F7F9}
 .aidock-head b{font-size:var(--text-base);display:block}
 .aidock-sub{color:var(--muted);font-size:var(--text-xs)}
 .aidock-head .x{margin-left:auto;flex:none}
@@ -3540,6 +3569,14 @@ const S={
   calMonth:TODAY.slice(0,7),       // provider schedule: month in view, "YYYY-MM"
   schedTab:"month",                // provider schedule sub-tab: month | slots
   coachPromptShown:false,          // auth sheet already offered on the coach side
+  /* The coach's own provider row, mirrored from the server for render. Derived,
+     so it is EPHEMERAL and re-fetched at boot — a stale copy in sessionStorage
+     would let a coach see an approval state the server has since changed. */
+  coachProvider:null,
+  /* Survives the trip to the confirmation email and back, which is why it is
+     NOT ephemeral: signup returns no session, so the provider row cannot be
+     created until the coach clicks the link and comes back authenticated. */
+  pendingBusinessName:"",
   coachQuery:"",                   // coach-side search box
   coachSearchKind:"all",           // all | player | team | camp | staff
   coachSearchFocus:false,          // keep the caret in the box across re-renders
@@ -3677,12 +3714,49 @@ function coachLockHTML(title,what){
    different things: the page CTAs navigated, the Coaches-menu row only raised
    the sheet without ever navigating, and the product-page CTA opened an
    onboarding wizard. All three now come through here. */
+/* The business name to show in the coach portal.
+   ---------------------------------------------------------------------------
+   A real coach's own row wins; the seeded demo business is the fallback, and
+   only that. Every surface used SEED.providerProfile.businessName directly, so
+   a coach who had just signed up and named their business was shown "Apex
+   Performance Club" on their own dashboard. */
+function coachBusinessName(){
+  const p=S.coachProvider;
+  if(p&&p.business_name) return p.business_name;
+  return SEED.providerProfile.businessName;
+}
+
+/* Whether this coach is publicly listed yet, so the portal can say so
+   honestly. A new signup is status='pending' with background_check_status
+   'none', which providers_select_public correctly hides — the dashboard must
+   not imply they are live. */
+function coachPublicState(){
+  return (window.SporveCoach&&S.coachProvider)
+    ? window.SporveCoach.publicState()
+    : {live:true,reason:null};   // the seeded demo coach reads as live
+}
+
 function enterCoachPortal(){
-  S.portal="coach";S.signupRole="coach";S.coachTab="dashboard";S.modal=null;
-  go("dashboard");
-  if(!isVerified()&&!S.coachPromptShown){
-    S.coachPromptShown=true;S.modal={type:"authsheet"};render();
+  /* IDENTITY FIRST. This used to flip S.portal to "coach" and route to the
+     dashboard before asking who you were, so a stranger who had never signed
+     in was shown Apex Performance Club's dashboard — another operator's
+     listings, schedule and earnings — behind a login sheet. The sheet was
+     decoration over a portal that had already opened.
+
+     A guest now gets the coach gate and nothing else. The portal flips in
+     runIntent("coachOnboard") once there is a real session. */
+  S.signupRole="coach";
+  if(!isVerified()){
+    /* coachgate is a ROUTE, not a modal — it is a full-page split with the
+       pitch on the left and the form on the right. Parking the intent as DATA
+       (not a closure) is what lets it survive the Google OAuth redirect. */
+    S.pendingIntent={kind:"coachOnboard"};
+    S.modal=null;
+    go("coachgate");
+    return;
   }
+  S.portal="coach";S.coachTab="dashboard";S.modal=null;
+  go("dashboard");
 }
 
 /* INTENT REGISTRY — the fix for "sign in with Google loses your booking".
@@ -3701,7 +3775,9 @@ const INTENTS = {
   book:    a => { S.modal={type:"book", programId:a.programId}; render(); },
   message: a => { S.modal={type:"message", coachId:a.coachId}; render(); },
   save:    a => { if(!S.favorites.includes(a.id)) S.favorites=[...S.favorites,a.id]; toast("Saved to your list"); },
-  coachOnboard: () => startCoachOnboarding(),
+  /* Was startCoachOnboarding(), which flipped the portal and showed the seeded
+     Apex dashboard. Now creates the coach's OWN provider row first. */
+  coachOnboard: () => enterCoachWorkspace(),
 };
 function runIntent(intent){
   if(!intent) return;
@@ -3770,10 +3846,44 @@ function doSignUp(email, password, meta){
     .catch(e=>{ authFail(e&&e.message); return false; });
 }
 
+/* Coach signup. Same door as doSignUp, plus the two things a coach needs that
+   a family does not: role=provider in the user metadata that handle_new_user()
+   reads to build the profiles row, and a business name carried through to the
+   `providers` record created after confirmation.
+
+   The business name is stashed on S rather than passed forward, because
+   mailer_autoconfirm is FALSE: signup returns NO session, the coach has to
+   click an emailed link, and the provider row cannot be created until there is
+   an authenticated request to attach owner_id = auth.uid() to. S is persisted,
+   so the name survives the trip to the inbox and back. */
+function doCoachSignUp(email, password, businessName){
+  S.pendingBusinessName = businessName || "";
+  return doSignUp(email, password, { role:"provider", business_name: businessName||"" });
+}
+
+/* Called once a coach has a real session. Creates their provider row if it is
+   their first time, then opens the portal on THEIR business. */
+function enterCoachWorkspace(){
+  S.portal="coach"; S.signupRole="coach"; S.modal=null;
+  if(!window.SporveCoach){ S.coachTab="dashboard"; go("dashboard"); return; }
+  window.SporveCoach.ensure(S.pendingBusinessName||"")
+    .then(p=>{
+      S.pendingBusinessName="";
+      S.coachProvider = p || null;
+      /* A coach with an incomplete profile lands on the wizard; one who has
+         finished it lands on the dashboard. */
+      S.coachTab = (p && p.onboarding_completed) ? "dashboard" : (modView("onboard")?"onboard":"dashboard");
+      go("dashboard");
+    })
+    .catch(()=>{ S.coachTab="dashboard"; go("dashboard"); });
+}
+
 function doSignOut(){
   /* Clear the transport FIRST. If only S.auth were reset, the UI would say
      guest while every fetch still carried a valid bearer — the two-store
      disagreement this release exists to remove. */
+  if(window.SporveCoach) window.SporveCoach.clear();
+  S.coachProvider=null; S.pendingBusinessName="";
   if(window.SporveAuth) window.SporveAuth.signOut();
   S.auth={status:"guest",user:null};
   S.pendingIntent=null; S.authError=null; S.authBusy=false;
@@ -5660,7 +5770,7 @@ function coachHTML(){
     <nav class="rail" aria-label="Coach sections">
       <button class="railhead" data-viewas="1">
         <span class="avatar" style="width:38px;height:38px">AP</span>
-        <span><b>${esc(SEED.providerProfile.businessName)}</b>
+        <span><b>${esc(coachBusinessName())}</b>
           <span>View public profile ▸</span></span>
       </button>
       <div class="raildiv"></div>
@@ -8364,9 +8474,18 @@ function coachGateHTML(){
   : `
       <h1 class="cg-h1">Log in or sign up</h1>
       <p class="cg-sub">Coach on Sporve — set your availability, take bookings, and get paid, all in one place.</p>
+      ${/* A real account needs a password and a business name — the single
+           "phone or email" box could never create one, because the form behind
+           it fabricated a session from the seed rather than calling GoTrue.
+           Business name is asked here because providers.business_name is NOT
+           NULL, so it is the one field required to create the row at all. */""}
       <form class="cg-form" id="cgForm">
-        <input class="cg-input" id="cgId" type="text" placeholder="Phone number or email" autocomplete="username" aria-label="Phone number or email" required>
-        <button class="cg-continue" type="submit">Continue</button>
+        <input class="cg-input" id="cgId" type="email" placeholder="Email address" autocomplete="username" aria-label="Email address" required>
+        <input class="cg-input" id="cgPw" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password" minlength="8" required>
+        <input class="cg-input" id="cgBiz" type="text" placeholder="Business or coaching name" autocomplete="organization" aria-label="Business or coaching name">
+        ${S.authError?`<div class="err" role="alert" style="margin:2px 0 6px">${esc(S.authError)}</div>`:""}
+        <button class="cg-continue" type="submit"${S.authBusy?" disabled":""}>${S.authBusy?"Working…":"Continue"}</button>
+        <p class="cg-fine" style="margin-top:10px">New here? Leave the name blank to sign in, or fill it in to create a coaching account.</p>
       </form>
       <div class="cg-or">or</div>
       <div class="cg-oauth">
@@ -8827,10 +8946,20 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
   /* Become a coach opens the signup wizard directly — there is no marketing
      page in front of it any more. */
   $("[data-becomecoach]").forEach(b=>b.onclick=()=>enterCoachPortal());
+  /* REAL coach auth. This used to be
+       completeAuth({...SEED.user, role:"provider"})
+     which fabricated a verified session out of the seed no matter what was
+     typed — no password checked, no account created, nothing persisted. */
   $("#cgForm").forEach(f=>f.onsubmit=e=>{e.preventDefault();
-    const id=(document.getElementById("cgId")||{}).value||"";
-    S.pendingIntent=startCoachOnboarding;
-    completeAuth({...SEED.user,email:id.includes("@")?id:SEED.user.email,role:"provider"});});
+    const email=((document.getElementById("cgId")||{}).value||"").trim();
+    const pw=((document.getElementById("cgPw")||{}).value||"");
+    const biz=((document.getElementById("cgBiz")||{}).value||"").trim();
+    S.pendingIntent={kind:"coachOnboard"};
+    /* A business name is the signal for "create an account". Sign-in has no
+       use for it, and asking an existing coach to retype their business name
+       to log in would be absurd. */
+    if(biz) doCoachSignUp(email,pw,biz); else doSignIn(email,pw);
+  });
   $("[data-cg-google]").forEach(b=>b.onclick=()=>{
     /* Park the intent as DATA before navigating away — a closure would not
        survive the redirect. saveState() is forced because the browser is about
@@ -8840,7 +8969,11 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
     if(window.SporveAuth) window.location.href=window.SporveAuth.oauthUrl("google", window.location.origin);
   });
   $("[data-cg-apple]").forEach(b=>b.onclick=()=>toast("Apple sign-in isn't wired up yet"));
-  $("[data-cg-demo]").forEach(b=>b.onclick=()=>{S.pendingIntent=startCoachOnboarding;completeAuth({...SEED.user,role:"provider"});});
+  /* The demo account stays, and stays a MOCK — it is the only way to look
+     around the coach portal without creating a real provider record. It is
+     labelled as such in the markup, and it is the one place completeAuth() is
+     still called with seed data on purpose. */
+  $("[data-cg-demo]").forEach(b=>b.onclick=()=>{S.pendingIntent={kind:"coachOnboard"};completeAuth({...SEED.user,role:"provider"});});
   $("[data-cg-proceed]").forEach(b=>b.onclick=()=>startCoachOnboarding());
   $("[data-cg-signout]").forEach(b=>b.onclick=()=>{
     /* Drop the pending intent with the identity. Keeping it means the action
@@ -9860,9 +9993,18 @@ document.addEventListener("click",e=>{
     onUnauthorized: function (cb) { onUnauthorized = typeof cb === "function" ? cb : null; },
 
     /* PostgREST. `query` is a raw query string, e.g.
-       "select=id,title&status=eq.published&limit=20" */
-    from: function (table, query) {
-      return request("/rest/v1/" + table + (query ? "?" + query : ""));
+       "select=id,title&status=eq.published&limit=20"
+
+       `opts` is optional and reaches the same {method, headers, body} shape
+       every other call here uses. It was NOT forwarded originally, which made
+       writes fail in the most misleading way available: a caller passing
+       {method:"PATCH", body:{...}} had the whole object dropped, so the
+       request went out as a GET, PostgREST answered 200 with the row
+       UNCHANGED, and the caller's .then() saw a perfectly valid record and
+       reported success. Nothing threw, nothing logged, and the edit simply did
+       not happen. Read paths could never have caught it — they pass no opts. */
+    from: function (table, query, opts) {
+      return request("/rest/v1/" + table + (query ? "?" + query : ""), opts);
     },
 
     /* A SECURITY DEFINER function, e.g. search_listings / search_relax. */
@@ -10510,6 +10652,259 @@ document.addEventListener("click",e=>{
        succeeded — so a test can tell "opted out" from "tried and fell back". */
     enabled: enabled,
   };
+})();
+
+</script>
+<script>
+/* ---- mod-coachaccount.js ---- */
+/* mod-coachaccount.js — a real coach account.
+   ---------------------------------------------------------------------------
+   WHAT WAS THERE BEFORE
+
+   "Become a coach" called enterCoachPortal(), which set S.portal="coach" and
+   routed to the dashboard BEFORE asking who you were. So a stranger who had
+   never signed in saw Apex Performance Club's dashboard — a seeded business
+   that does not exist — with its listings, its schedule and its earnings,
+   behind a login sheet. Signing in did not help: the form called
+
+       completeAuth({...SEED.user, role:"provider"})
+
+   which fabricates a verified session out of the seed regardless of what you
+   typed. No password was checked, no account was created, nothing was written.
+   Whatever a coach filled in vanished on reload, because there was nowhere for
+   it to go.
+
+   WHAT THIS DOES
+
+   Signup and sign-in go to GoTrue for real, with role=provider in the user
+   metadata that handle_new_user() reads to build the profiles row. Then the
+   coach gets a `providers` record they own, and every field they fill in is
+   PATCHed onto it.
+
+   THE BACKEND WAS ALREADY READY, which is worth stating because it is why this
+   file is short. RLS on `providers`, verified 2026-08-12:
+
+     providers_insert_owner   INSERT  authenticated  check (owner_id = auth.uid())
+     providers_select_owner   SELECT  authenticated  using (owner_id = auth.uid())
+     providers_update_owner   UPDATE  authenticated  using (owner_id = auth.uid())
+     providers_select_public  SELECT  anon+auth      using (status='approved'
+                                                       and provider_safety_cleared(id))
+
+   So a coach can create and edit exactly their own row and nobody else's, and
+   the server enforces it — this client could be hostile and the rule holds.
+
+   A NEW COACH IS NOT PUBLIC, AND THAT IS THE POINT. The column defaults are
+   status='pending', background_check_status='none', verification_status=
+   'unverified'. providers_select_public requires 'approved' AND a cleared
+   safety check, so a freshly created coach is invisible to browse and search
+   until a human approves them and the check clears. Signing up does not put an
+   unchecked adult in front of a family, which is the whole product promise.
+
+   IMAGES. `providers.avatar_url` / `logo_url` and the `provider-media` bucket
+   were added 2026-08-12 — the project previously had NO storage buckets at
+   all, so an uploaded photo had nowhere to go. Writes are owner-scoped by path:
+   the first folder segment must equal auth.uid(), so a coach cannot overwrite
+   another coach's headshot by guessing a filename.
+*/
+(function () {
+  "use strict";
+
+  var API = window.SporveAPI, AUTH = window.SporveAuth;
+  if (!API || !AUTH) { return; }
+
+  /* The coach's own provider row, once loaded. Null while signed out or while
+     a signed-in provider has not created one yet. */
+  var provider = null;
+
+  function uid() { return AUTH.userId(); }
+
+  /* Columns a coach may set about themselves. An allowlist rather than passing
+     the form object straight through: `status`, `verification_status` and
+     `background_check_status` all live on this table, and a PATCH built from
+     arbitrary keys is how a coach approves themselves. RLS would still let the
+     write through — it scopes rows, not columns — so this is the guard that
+     matters. Server-side column grants are the belt to this braces. */
+  var EDITABLE = [
+    "business_name", "bio", "sports", "location", "provider_type",
+    "coach_years_coaching", "coach_years_played", "credentials",
+    "avatar_url", "logo_url", "faq", "buffer_minutes",
+  ];
+
+  function pick(patch) {
+    var out = {};
+    Object.keys(patch || {}).forEach(function (k) {
+      if (EDITABLE.indexOf(k) >= 0 && patch[k] !== undefined) out[k] = patch[k];
+    });
+    return out;
+  }
+
+  var ACCOUNT = {
+    /* Sign up as a coach. mailer_autoconfirm is FALSE in this project, so this
+       resolves {needsConfirmation:true} and NO session — the provider row
+       cannot be created until they click the emailed link, because
+       owner_id = auth.uid() requires an authenticated request. */
+    signUp: function (email, password, businessName) {
+      return AUTH.signUp(email, password, {
+        role: "provider",
+        business_name: String(businessName || "").trim(),
+      });
+    },
+
+    signIn: function (email, password) { return AUTH.signIn(email, password); },
+
+    /* The coach's own row. Selected by owner_id rather than trusting a stored
+       id: the session is the source of truth for who you are. */
+    load: function () {
+      if (!uid()) { provider = null; return Promise.resolve(null); }
+      return API.from("providers",
+        "select=id,business_name,bio,sports,location,provider_type,status," +
+        "verification_status,background_check_status,onboarding_completed," +
+        "coach_years_coaching,coach_years_played,credentials,avatar_url,logo_url" +
+        "&owner_id=eq." + encodeURIComponent(uid()) + "&limit=1"
+      ).then(function (rows) {
+        provider = (rows && rows[0]) || null;
+        return provider;
+      });
+    },
+
+    /* Get the coach's provider row, creating it only if it is genuinely absent.
+       ---------------------------------------------------------------------
+       IT USUALLY EXISTS ALREADY. handle_new_user() fires on auth.users insert
+       and, when the metadata says role=provider, inserts a providers row
+       itself — named from raw_user_meta_data->>'name', or 'My Academy' when
+       that is empty. It reads 'name', NOT the 'business_name' this client
+       sends, so a coach who typed "QA Probe Athletics" got a business called
+       "My Academy" and no error anywhere: the row was created, just not by us
+       and not with their name.
+
+       So the job here is mostly to RENAME. If the coach typed a name during
+       signup it is their stated intent and it wins — applied once, then
+       forgotten, so a later rename in settings is not overwritten on next
+       login.
+
+       The insert path is kept for the case the trigger did not run (an account
+       that became a provider later). `on conflict (owner_id)` in the trigger
+       tells us owner_id is UNIQUE, so a race here loses cleanly rather than
+       producing two businesses for one coach. */
+    ensure: function (businessName) {
+      if (!uid()) return Promise.reject(new Error("not signed in"));
+      var wanted = String(businessName || "").trim();
+      return ACCOUNT.load().then(function (existing) {
+        if (existing) {
+          if (wanted && existing.business_name !== wanted) {
+            return ACCOUNT.save({ business_name: wanted });
+          }
+          return existing;
+        }
+        return API.from("providers", "", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: {
+            owner_id: uid(),
+            business_name: String(businessName || "").trim() || "My coaching business",
+            /* Everything else takes its column default: pending, unverified,
+               background check 'none'. Deliberately not set here — a client
+               that names those columns is a client one typo away from
+               self-approval. */
+          },
+        }).then(function (rows) {
+          provider = (rows && rows[0]) || null;
+          return provider;
+        });
+      });
+    },
+
+    /* Persist a patch. This is what makes what a coach types survive a reload,
+       which it previously did not do at all. */
+    save: function (patch) {
+      var body = pick(patch);
+      if (!uid()) return Promise.reject(new Error("not signed in"));
+      if (!Object.keys(body).length) return Promise.resolve(provider);
+      if (!provider) {
+        return ACCOUNT.ensure(body.business_name).then(function () {
+          return ACCOUNT.save(patch);
+        });
+      }
+      return API.from("providers",
+        "id=eq." + encodeURIComponent(provider.id),
+        { method: "PATCH", headers: { Prefer: "return=representation" }, body: body }
+      ).then(function (rows) {
+        provider = (rows && rows[0]) || provider;
+        return provider;
+      });
+    },
+
+    /* Upload a headshot or logo and record its URL.
+
+       The path MUST start with the user's id: the storage policy checks
+       (storage.foldername(name))[1] = auth.uid(), so any other prefix is
+       rejected by the server. The timestamp keeps a re-upload from being
+       cached under the old URL. */
+    uploadImage: function (file, kind) {
+      var id = uid();
+      if (!id) return Promise.reject(new Error("not signed in"));
+      if (!file) return Promise.reject(new Error("no file"));
+      var ok = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+      if (ok.indexOf(file.type) < 0) {
+        return Promise.reject(new Error("Use a JPEG, PNG, WebP or AVIF image."));
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        return Promise.reject(new Error("That image is over 5 MB."));
+      }
+      var ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+      var path = id + "/" + (kind === "logo" ? "logo" : "avatar") + "-" + Date.now() + "." + ext;
+      var sess = AUTH.session();
+
+      /* Raw fetch, not API.from: this is the Storage API, the body is binary
+         rather than JSON, and the shared wrapper always sets
+         Content-Type: application/json. */
+      return fetch(API.url + "/storage/v1/object/" + encodeURIComponent("provider-media") + "/" + path, {
+        method: "POST",
+        headers: {
+          apikey: API.anonKey,
+          Authorization: "Bearer " + (sess && sess.access_token),
+          "Content-Type": file.type,
+          "x-upsert": "true",
+        },
+        body: file,
+      }).then(function (r) {
+        if (!r.ok) {
+          return r.text().then(function (t) {
+            throw new Error("Upload failed" + (t ? ": " + t.slice(0, 120) : "."));
+          });
+        }
+        var url = API.url + "/storage/v1/object/public/provider-media/" + path;
+        var patch = {};
+        patch[kind === "logo" ? "logo_url" : "avatar_url"] = url;
+        return ACCOUNT.save(patch).then(function () { return url; });
+      });
+    },
+
+    current: function () { return provider; },
+    clear: function () { provider = null; },
+
+    /* What the dashboard should call the business. Falls back to the profile
+       name, then to a neutral string — never to the seeded "Apex Performance
+       Club", which is another operator's business. */
+    displayName: function () {
+      if (provider && provider.business_name) return provider.business_name;
+      return "Your coaching business";
+    },
+
+    /* Whether this coach is publicly visible, and if not, why. The dashboard
+       has to be able to say "pending review" honestly rather than implying a
+       new signup is already listed. */
+    publicState: function () {
+      if (!provider) return { live: false, reason: "no-profile" };
+      if (provider.status !== "approved") return { live: false, reason: "pending-approval" };
+      if (provider.background_check_status !== "verified") {
+        return { live: false, reason: "pending-check" };
+      }
+      return { live: true, reason: null };
+    },
+  };
+
+  window.SporveCoach = ACCOUNT;
 })();
 
 </script>
@@ -12177,7 +12572,7 @@ function sampleValues(){
   const u = S.auth && S.auth.user;
   const coach = (u && u.role === "provider" && u.firstName)
     ? (u.firstName + " " + (u.lastName || "")).trim()
-    : SEED.providerProfile.businessName;
+    : ((typeof coachBusinessName==="function")?coachBusinessName():SEED.providerProfile.businessName);
   return {
     athlete_first_name: String(b.athlete || "").split(" ")[0] || b.athlete,
     session_date: fmtDate(b.date),
@@ -16704,6 +17099,35 @@ function submitApplication(){
 
   d.submittedAt = now;
 
+  /* PERSIST. Everything above builds an object inside S and stops there — this
+     whole 1,115-line wizard had ZERO references to the API, so a coach filled
+     in seven steps, hit submit, and every answer lived only in sessionStorage.
+     Close the tab and the application was gone.
+
+     Only the fields the coach owns are sent. `status`, `verification_status`
+     and `background_check_status` are deliberately NOT included: they are the
+     approval decision, they belong to Sporve, and a client that names those
+     columns is one typo from a coach approving themselves. The server defaults
+     (pending / unverified / none) stand until a human moves them.
+
+     Fire-and-report, not fire-and-forget: a failed save tells the coach their
+     application did not reach us, because silently losing an application is
+     how someone waits two weeks for a reply to something we never received. */
+  if (window.SporveCoach && window.SporveAuth && window.SporveAuth.isSignedIn()){
+    window.SporveCoach.save({
+      business_name: trim(d.businessName),
+      bio: trim(d.bio || ""),
+      location: location,
+      sports: d.sports.slice(),
+      coach_years_coaching: intOf(d.years) || null,
+      credentials: (d.credentials || []).slice(),
+    }).then(() => {
+      toast("Application saved to your account");
+    }).catch(() => {
+      toast("Saved on this device, but we could not reach Sporve — reopen to retry");
+    });
+  }
+
   S.portal = "coach";
   S.coachTab = "dashboard";
   S.route = { name: "dashboard", arg: null };
@@ -19321,7 +19745,7 @@ const firstName = s => String(s || "").trim().split(/\s+/)[0] || String(s || "")
 function coachName(){
   const u = S.auth && S.auth.user;
   if (u && u.role === "provider" && u.firstName) return (u.firstName + " " + (u.lastName || "")).trim();
-  return SEED.providerProfile.businessName;
+  return (typeof coachBusinessName==="function")?coachBusinessName():SEED.providerProfile.businessName;
 }
 
 /* ── phrasing ────────────────────────────────────────────────────── */
@@ -21467,6 +21891,7 @@ const EPHEMERAL = new Set([
      as before — but a DESCRIPTOR ({kind:"book",…}) survives, which is what lets
      an intent live through a full-page OAuth redirect. The serialiser does the
      discrimination for us; no type check needed. */
+  "coachProvider",
   "cmdDraft", "cmdSending", "cmdError", "cmdPending", "cmdAction", "cmdModelOpen",
   "chatThinking", "sportOpen", "sportAnchor", "faqOpen", "forgotSent", "mapPick",
   /* From the ported coach-portal work. coachSearchFocus is a one-render flag
