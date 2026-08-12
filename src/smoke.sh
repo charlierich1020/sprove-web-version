@@ -37,17 +37,33 @@ grep -q "NONE FOUND" /tmp/smoke-build.txt && fail "fonts missing -- type contrac
 [ -s index.html ] && pass "index.html emitted ($(wc -c < index.html) bytes)" \
   || { fail "index.html empty or missing"; exit 1; }
 
+# gstack's browse is a developer convenience and lives outside the repo, so it
+# is absent on a CI runner. src/ci-browse.mjs is the in-repo fallback: a
+# Playwright-backed daemon implementing the six subcommands used below. Without
+# it this script exited 0 after 3 of 25 assertions and CI showed a green tick
+# for a run that never opened a page.
+CIB=""
 if [ ! -x "$B" ]; then
-  # This is the honest version of what CI has been doing all along. The build
-  # phase is 3 assertions; the other 22 need a browser. Silently exiting 0 here
-  # made every PR check look like a full pass when it proved almost nothing —
-  # so say the number out loud, and emit a GitHub annotation when running in
-  # Actions so it appears on the PR rather than only in the log.
-  echo "  browse not built -- 22 of 25 checks SKIPPED (only build checks ran)"
-  [ -n "$GITHUB_ACTIONS" ] && \
-    echo "::warning title=Partial smoke::browse harness unavailable; 22 of 25 smoke checks did not run. A green check here does NOT mean the page renders."
-  exit $FAIL
+  if command -v node >/dev/null 2>&1 && node -e "import('playwright')" >/dev/null 2>&1; then
+    node src/ci-browse.mjs serve >/tmp/ci-browse.log 2>&1 &
+    CIB=$!
+    for _ in $(seq 1 50); do [ -f .ci-browse-port ] && break; sleep 0.2; done
+    if [ ! -f .ci-browse-port ]; then
+      fail "ci-browse daemon failed to start:"; sed 's/^/        /' /tmp/ci-browse.log; exit 1
+    fi
+    B="node src/ci-browse.mjs"
+    echo "  using in-repo ci-browse (playwright)"
+  else
+    # Fail, do not skip. A check that goes green without running is the exact
+    # failure this file exists to prevent.
+    fail "no browser harness: gstack browse absent and playwright not installed — 22 of 25 checks cannot run"
+    [ -n "${GITHUB_ACTIONS:-}" ] && \
+      echo "::error title=Smoke incomplete::No browser harness available; 22 of 25 smoke checks did not run."
+    exit 1
+  fi
 fi
+cleanup(){ [ -n "$CIB" ] && { $B stop >/dev/null 2>&1; kill "$CIB" 2>/dev/null; rm -f .ci-browse-port; }; }
+trap cleanup EXIT
 
 echo "── runtime ──────────────────────────────────────────"
 $B viewport 1440x900 >/dev/null 2>&1
@@ -148,6 +164,216 @@ else
   pass "contrast: family portal holding at baseline $FAMILY_CONTRAST_BASELINE"
 fi
 
+# ── CSP script hashes ───────────────────────────────────────────────────
+# The blast radius here is total: a script-src hash that does not match the
+# script it is meant to authorise blocks that script, and blocking the host
+# script serves a blank page. Verified by corrupting one hash and watching the
+# page fail to boot, so this is not a theoretical failure mode.
+#
+# build.py regenerates these on every build, so a mismatch means either the
+# regex silently failed or vercel.json was hand-edited. Both are worth stopping
+# a merge for.
+csp=$(python3 - <<'PY'
+import base64, hashlib, json, re, sys
+page = open("index.html", encoding="utf-8").read()
+cfg = json.load(open("vercel.json", encoding="utf-8"))
+policy = ""
+for rule in cfg.get("headers", []):
+    for h in rule.get("headers", []):
+        if h.get("key") == "Content-Security-Policy":
+            policy = h["value"]
+m = re.search(r"script-src ([^;]*);", policy)
+if not m:
+    print("NOSCRIPTSRC"); sys.exit()
+directive = m.group(1)
+if "'unsafe-inline'" in directive:
+    print("UNSAFEINLINE"); sys.exit()
+want = ["'sha256-" + base64.b64encode(hashlib.sha256(s.encode()).digest()).decode() + "'"
+        for s in re.findall(r"<script>(.*?)</script>", page, re.S)]
+if not want:
+    print("NOSCRIPTS"); sys.exit()
+missing = [h for h in want if h not in directive]
+if missing:
+    print("MISMATCH:%d/%d" % (len(missing), len(want))); sys.exit()
+# Any inline handler attribute, any quoting, any case. The earlier form listed
+# seven names and required double quotes, so onclick='...', onfocus=, ONCLICK=
+# and unquoted values all slipped past a check whose whole job is to guarantee
+# there are none.
+_EVENTS = (r"click|dblclick|submit|reset|change|input|focus|blur|load|error|abort|"
+           r"key(down|up|press)|mouse[a-z]+|pointer[a-z]+|touch[a-z]+|drag[a-z]*|drop|"
+           r"scroll|resize|select|toggle|wheel|paste|copy|cut|contextmenu|"
+           r"animation[a-z]+|transition[a-z]+")
+if re.search(r"\son(" + _EVENTS + r")\s*=", page, re.I):
+    print("INLINEHANDLER"); sys.exit()
+print("OK:%d" % len(want))
+PY
+)
+# The check above can never fail on its own, because smoke runs build.py first
+# and build.py regenerates vercel.json — the tamper is repaired before the
+# assertion reads it. Verified: corrupting a hash and reintroducing
+# 'unsafe-inline' both still passed.
+#
+# The invariant that actually matters is different. There is no buildCommand,
+# so Vercel serves the COMMITTED index.html and vercel.json verbatim. If a
+# source change is committed without regenerating them, production serves a
+# stale page — and a stale vercel.json means hashes that do not match the
+# scripts, which is a blank site. So: after a fresh build, the working tree
+# must be clean. If build.py changed anything, what was committed was wrong.
+#
+# Enforced in CI only. There the tree starts clean at HEAD, so any diff after a
+# build means the committed outputs were stale. Locally the outputs differ from
+# HEAD by design the moment you edit a source file, so this warns instead of
+# failing rather than making the normal edit-build-test loop unusable.
+if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+  dirty=$(git status --porcelain -- index.html vercel.json 2>/dev/null)
+  if [ -z "$dirty" ]; then
+    pass "build outputs in sync with sources"
+  elif [ -n "${GITHUB_ACTIONS:-}" ]; then
+    fail "index.html/vercel.json are STALE — a fresh build differs from what is committed, and Vercel serves the committed files verbatim: $(printf '%s' "$dirty" | tr '\n' ' ')"
+  else
+    printf "  \033[33mWARN\033[0m  %s\n" "build outputs differ from HEAD (expected while editing; enforced in CI)"
+  fi
+fi
+
+# Exercise the policy for real. Everything above compares strings; none of it
+# proves a browser accepts the result, because file:// ignores response headers
+# entirely. This serves the built page with the exact vercel.json headers and
+# asserts it still boots — the only check that would catch a hash mismatch
+# before it blanks production.
+CSPPORT=8749
+python3 src/csp-serve.py "$(pwd)" "$CSPPORT" >/tmp/csp-serve.log 2>&1 &
+CSPPID=$!
+for _ in $(seq 1 40); do
+  curl -s -o /dev/null "http://127.0.0.1:$CSPPORT/index.html" && break; sleep 0.25
+done
+if curl -sI "http://127.0.0.1:$CSPPORT/index.html" | grep -qi "^content-security-policy:"; then
+  $B goto "http://127.0.0.1:$CSPPORT/index.html" >/dev/null 2>&1
+  booted=$($B js "typeof render==='function'&&typeof S==='object'&&document.getElementById('app').children.length>0" 2>/dev/null | tr -d '[:space:]')
+  [ "$booted" = "true" ] \
+    && pass "csp: page boots under the real policy (hashes accepted by the browser)" \
+    || fail "csp: page did NOT boot under the real policy — a script hash is rejected; production would be BLANK"
+  # Leave the harness on a file:// page so later checks are unaffected.
+  $B goto "file://$(pwd)/index.html" >/dev/null 2>&1
+else
+  fail "csp: local header server did not serve a policy — check could not run"
+fi
+{ kill "$CSPPID"; wait "$CSPPID"; } >/dev/null 2>&1
+
+case "$csp" in
+  OK:*)          pass "csp: ${csp#OK:} script hashes match the built page, no 'unsafe-inline'" ;;
+  UNSAFEINLINE)  fail "csp: script-src still allows 'unsafe-inline' — the policy does not stop XSS" ;;
+  MISMATCH:*)    fail "csp: ${csp#MISMATCH:} script hashes do not match the built page — production would serve a BLANK page" ;;
+  INLINEHANDLER) fail "csp: an inline event-handler attribute is back; hashes cannot cover it and it will be blocked" ;;
+  NOSCRIPTSRC)   fail "csp: no script-src directive found in vercel.json" ;;
+  NOSCRIPTS)     fail "csp: no inline scripts found in the built page — the check has gone blind" ;;
+  *)             fail "csp: $csp" ;;
+esac
+
+# ── session persistence ─────────────────────────────────────────────────
+# Two invariants, both verified against a real browser rather than by reading
+# the code. The page is loaded over file:// here, where sessionStorage is
+# available but origin-scoped, which is enough to exercise save and restore.
+#
+# The second assertion is the one that matters: cmdPending is an unconfirmed
+# broadcast to every family on a roster, and it must never come back after a
+# reload. Persisting it would resurrect a message the coach never approved.
+persist=$($B js "
+(()=>{try{
+  if(typeof saveState!=='function'||typeof loadState!=='function')return 'NOAPI';
+  /* Snapshot and restore everything this check touches. Later assertions
+     render marketing pages and would otherwise find the coach dashboard,
+     and a snapshot left in sessionStorage would be restored by any later
+     reload. A test that leaks state fails its neighbours, not itself. */
+  const _p=S.portal,_t=S.coachTab,_r=S.route;
+  S.portal='coach';S.coachTab='inbox';
+  S.messages['__smoke']=[{id:'x',me:false,text:'persisted',at:TODAY}];
+  S.cmdPending={convId:'__smoke',body:'MUST NOT SURVIVE',restated:'x'};
+  saveState();
+  const raw=sessionStorage.getItem('sporve:state:v1');
+  if(!raw)return 'NOWRITE';
+  const snap=JSON.parse(raw);
+  const dataKept = snap.messages && snap.messages['__smoke'] && snap.messages['__smoke'][0].text==='persisted';
+  const ephemeralDropped = !('cmdPending' in snap) && !('modal' in snap);
+  /* Round-trip, not just write. A regression that drops data on RESTORE would
+     leave the snapshot perfect and still lose the user's work, so wipe the
+     in-memory value and prove loadState puts it back. */
+  delete S.messages['__smoke'];
+  loadState();
+  const restored = !!(S.messages['__smoke'] && S.messages['__smoke'][0].text==='persisted');
+  /* A hostile snapshot must not be able to replace S prototype: JSON.parse
+     makes __proto__ an own key, and an in-operator guard is true by
+     inheritance, so the naive loop would assign it.
+     NOTE: no backticks anywhere in this block. It is interpolated inside a
+     double-quoted shell string, where a backtick is command substitution --
+     bash runs it and splices the output into the JavaScript. */
+  /* The payload MUST be a raw JSON string. Writing {__proto__:{...}} as an
+     object literal sets the prototype instead of creating an own key, so
+     JSON.stringify drops it entirely and the test becomes vacuous — it passed
+     against a knowingly vulnerable loader before this was fixed. */
+  sessionStorage.setItem('sporve:state:v1', '{\"__proto__\":{\"PWN\":1},\"portal\":\"coach\"}');
+  loadState();
+  const protoSafe = Object.getPrototypeOf(S)===Object.prototype && S.PWN===undefined;
+  delete S.messages['__smoke'];S.cmdPending=null;
+  S.portal=_p;S.coachTab=_t;S.route=_r;
+  try{sessionStorage.removeItem('sporve:state:v1')}catch(_){}
+  render();
+  if(!dataKept)return 'DATALOST';
+  if(!restored)return 'RESTOREFAILED';
+  if(!protoSafe)return 'PROTO_POLLUTION';
+  if(!ephemeralDropped)return 'EPHEMERAL_PERSISTED';
+  return 'OK';
+}catch(e){return 'THREW:'+e.message}})()" 2>/dev/null | tr -d '"\r')
+case "$persist" in
+  OK)                  pass "persistence: data saved, ephemeral state dropped" ;;
+  NOAPI)               fail "persistence: saveState/loadState missing" ;;
+  NOWRITE)             fail "persistence: nothing written to sessionStorage" ;;
+  DATALOST)            fail "persistence: data did not survive the snapshot" ;;
+  RESTOREFAILED)       fail "persistence: snapshot written but loadState did not restore it — work is still lost" ;;
+  PROTO_POLLUTION)     fail "persistence: a hostile snapshot replaced S's prototype or widened S" ;;
+  EPHEMERAL_PERSISTED) fail "persistence: cmdPending or modal was persisted — an unconfirmed broadcast can resurrect" ;;
+  *)                   fail "persistence: $persist" ;;
+esac
+
+# ── platform fee: one source, one rendered value ────────────────────────
+# The 12% rate was authored in five places and partially migrated twice, so it
+# was fixed three times and still shipped wrong. Two tripwires, because the two
+# failure modes are different: a module re-declaring the constant shadows the
+# host and drifts silently, and a hardcoded percentage in copy drifts without
+# any constant being involved at all.
+# Modules must not re-declare the rate, and NOTHING may hardcode the decimal.
+# The earlier version grepped only src/mod-*.js, so a bare 0.12 in the host --
+# exactly what the ported coach-portal work introduced -- slipped through. The
+# runtime check could not catch it either: that surface renders "$45 gross ·
+# $5 platform fee", a dollar figure with no percent sign for the scan to find.
+redecl=$(grep -cE "^\s*const (FEE_RATE|FEE_PCT|PLATFORM_FEE)\s*=" src/mod-*.js 2>/dev/null | awk -F: '{s+=$2} END{print s+0}')
+# Geometry and style also multiply by 0.12 -- an SVG circle radius at
+# mod-companies.js:149 is not a platform fee -- so those lines are excluded by
+# shape rather than by line number, which would rot on the next edit.
+hardcoded=$(grep -nE "\*\s*0\.12\b" src/sporve-web.html src/sporve-web.host.html src/mod-*.js 2>/dev/null \
+  | grep -vE "Math\.(min|max)\(|opacity|circle|rgba|scale\(|translate" | wc -l | tr -d ' ')
+[ "$hardcoded" -eq 0 ] || fail "fee: $hardcoded hardcoded 0.12 literal(s) in source — use FEE_RATE"
+[ "$redecl" -eq 0 ] && pass "fee: no module re-declares the rate" \
+  || fail "fee: a module re-declares the rate — it shadows the host and will drift"
+
+feep=$($B js "
+(()=>{const pcts=new Set();
+ const scan=()=>{const t=document.getElementById('app').innerText;const re=/(\d{1,2})%/g;let m;
+   while((m=re.exec(t))){const c=t.slice(Math.max(0,m.index-45),m.index+30).toLowerCase();
+     if(c.includes('fee')||c.includes('sporve'))pcts.add(m[1])}};
+ S.auth={status:'verified'};S.portal='family';
+ ['wallet','pricing','coachinfo','bookings'].forEach(r=>{try{S.route={name:r,arg:null};render();scan()}catch(e){}});
+ S.portal='coach';['dashboard','finances','listings'].forEach(t=>{try{S.coachTab=t;render();scan()}catch(e){}});
+ const a=[...pcts];
+ if(typeof FEE_PCT==='undefined')return 'NOFEECONST';
+ if(!a.length)return 'NONE';
+ return a.length===1&&a[0]===String(FEE_PCT)?'OK:'+a[0]:'MIXED:'+a.join(',')})()" 2>/dev/null | tr -d '"\r')
+case "$feep" in
+  OK:*)        pass "fee: every rendered percentage is ${feep#OK:}%" ;;
+  NOFEECONST)  fail "fee: FEE_PCT is not defined in the host — the single source is gone" ;;
+  NONE)        fail "fee: no fee percentage rendered anywhere — the check has gone blind" ;;
+  *)           fail "fee: rendered percentages disagree — $feep" ;;
+esac
+
 # ── §9 sweep — permanent bans, enforced so they cannot silently regress ──
 # Any rule that is only an instruction eventually gets undone by a helpful edit;
 # these are the tripwires. picsum is a URL, not documentation, so a static grep
@@ -159,6 +385,14 @@ c=$(grep -oc "picsum" index.html 2>/dev/null); c=${c:-0}
 # (svg is allowed only in functional chrome), zero scaffolds, and no painted
 # #C2410C (rgb 194,65,12) or #38BDF8 (rgb 56,189,248).
 PAGES="what-is background-checks search map-search instant-booking messaging bookings-receipts saved athlete-progress scheduling payments roster session-notes media-consent insights ai-coach"
+# Reset the portal EXPLICITLY before reloading. This used to be implicit: a
+# reload wiped S back to defaults, so the coach checks above could not leak
+# into the marketing-page checks below. Session persistence deliberately ends
+# that — a reload now restores the previous state, which is the entire point of
+# the feature — so the reset has to be stated rather than assumed. Set it
+# before the goto, because `pagehide` snapshots whatever is in memory as the
+# page unloads and that snapshot is what the next load restores.
+$B js "S.portal='family';S.auth={status:'guest'};S.coachTab='dashboard';render();'reset'" >/dev/null 2>&1
 $B goto "file://$(pwd)/index.html" >/dev/null 2>&1
 sweep=$($B js "
 (()=>{const em=/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu;const bad=[];
@@ -258,8 +492,34 @@ else fail "dark-ground violations: $bad"; fi
 for vp in 1440x900 768x1024 390x844; do
   $B viewport "$vp" >/dev/null 2>&1
   $B goto "file://$(pwd)/index.html" >/dev/null 2>&1
-  o=$($B js "S.route={name:'home',arg:null};render();document.body.scrollWidth>document.body.clientWidth" 2>/dev/null | tr -d '[:space:]')
-  [ "$o" = "false" ] && pass "no horizontal overflow at $vp" || fail "horizontal overflow at $vp"
+  # Reports the overshoot and the widest culprit rather than a bare boolean.
+  # Text shaping differs between platforms, so a sub-pixel difference can round
+  # a passing layout into a failing one; knowing whether it is 1px or 40px is
+  # the difference between a tolerance and a real bug.
+  o=$($B js "S.route={name:'home',arg:null};render();
+(()=>{const b=document.body,over=b.scrollWidth-b.clientWidth;
+ if(over<=1)return 'CLEAN:'+over;
+ // An element only widens the page if nothing between it and <body> clips it.
+ // A marquee inside overflow:hidden sticks out thousands of px and is
+ // harmless; reporting it buries the element that actually scrolls the page.
+ const clipped=el=>{for(let n=el.parentElement;n&&n!==b;n=n.parentElement){
+   const o=getComputedStyle(n).overflowX; if(o!=='visible')return true} return false};
+ const hits=[];document.querySelectorAll('#app *').forEach(el=>{
+   if(clipped(el))return;
+   const r=el.getBoundingClientRect();const x=Math.round(r.right-b.clientWidth);
+   if(x>0)hits.push({x,el})});
+ hits.sort((a,c)=>c.x-a.x);
+ const id=h=>{const e=h.el,p=e.parentElement;
+   return '+'+h.x+'px '+e.tagName+(e.className?'.'+String(e.className).split(' ')[0]:'')
+     +' w='+Math.round(e.getBoundingClientRect().width)
+     +' in '+(p?p.tagName+(p.className?'.'+String(p.className).split(' ')[0]:''):'?')
+     +' ['+e.outerHTML.slice(0,60).replace(/\s+/g,' ')+']'};
+ return 'OVER:'+over+' '+(hits.length?hits.slice(0,2).map(id).join(' || ')
+   :'no unclipped culprit — sub-pixel accumulation')})()" 2>/dev/null | tr -d '\r')
+  case "$(printf '%s' "$o" | tr -d '"')" in
+    CLEAN*) pass "no horizontal overflow at $vp" ;;
+    *)      fail "horizontal overflow at $vp — $o" ;;
+  esac
 done
 
 # Type scale. 21/22px are the documented unboxed-glyph exceptions.

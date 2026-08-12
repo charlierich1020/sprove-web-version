@@ -5,7 +5,7 @@ Idempotent: always rebuilds from the pristine host (sporve-web.html), so
 re-running after a new module lands simply re-inlines the full current set.
 Outputs the built page to every distribution target.
 """
-import glob, os, re, shutil, sys
+import base64, glob, hashlib, json, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -258,14 +258,73 @@ STANDALONE = (
     "</head>\n<body>\n__SPORVE_BODY__\n</body>\n</html>\n"
 )
 
+# Build stamp: a content hash of the emitted page, embedded in the page.
+#
+# Verifying a deploy by comparing `wc -c` of the live response against the local
+# file is fragile — it depends on transfer encoding and cannot survive a byte
+# that changes without changing length. A stamp lets any check ask the live
+# site "which build are you serving?" and get an exact answer, which is what
+# post-deploy verification and rollback both need.
+_page = STANDALONE.replace("__SPORVE_BODY__", built)
+_stamp = hashlib.sha256(_page.encode("utf-8")).hexdigest()[:16]
+_page = _page.replace(
+    "</head>", f'<meta name="sporve-build" content="{_stamp}">\n</head>', 1
+)
+
 for t in TARGETS:
     os.makedirs(os.path.dirname(t), exist_ok=True)
     with open(t, "w", encoding="utf-8") as f:
-        f.write(STANDALONE.replace("__SPORVE_BODY__", built))
+        f.write(_page)
+
+# ── CSP script hashes ────────────────────────────────────────────────────
+# The CSP shipped with script-src 'self' 'unsafe-inline', which is barely a CSP
+# at all: 'unsafe-inline' is exactly what an injected <script> needs. It was
+# there because the build inlines a dozen script blocks and a static policy
+# cannot know their contents.
+#
+# It can if the build writes it. Each inline block is hashed and the digests
+# are written into vercel.json's script-src. Browsers IGNORE 'unsafe-inline'
+# once a hash or nonce is present, so dropping it is the point rather than a
+# side effect.
+#
+# Hashes cover <script> bodies only, never inline event-handler attributes or
+# javascript: URLs, so smoke asserts the built page has none. style-src keeps
+# 'unsafe-inline' because the page uses inline style="" attributes throughout,
+# which hashes cannot cover; a style injection is a defacement risk, not code
+# execution, so that trade is deliberate.
+#
+# Failure mode to respect: a stale hash blocks EVERY script and serves a blank
+# page. That is why this is generated on every build and asserted in smoke,
+# rather than hand-maintained.
+_scripts = re.findall(r"<script>(.*?)</script>", _page, re.S)
+_hashes = [
+    "'sha256-" + base64.b64encode(hashlib.sha256(s.encode("utf-8")).digest()).decode() + "'"
+    for s in _scripts
+]
+_vercel = os.path.join(ROOT, "vercel.json")
+if os.path.exists(_vercel) and _hashes:
+    with open(_vercel, encoding="utf-8") as f:
+        _cfg = json.load(f)
+    _src = "script-src 'self' " + " ".join(_hashes) + ";"
+    _changed = False
+    for _rule in _cfg.get("headers", []):
+        for _h in _rule.get("headers", []):
+            if _h.get("key") == "Content-Security-Policy":
+                _new = re.sub(r"script-src [^;]*;", _src, _h["value"], count=1)
+                if _new != _h["value"]:
+                    _h["value"] = _new
+                    _changed = True
+    if _changed:
+        with open(_vercel, "w", encoding="utf-8") as f:
+            json.dump(_cfg, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+    print("csp: %d inline script hash(es) %s"
+          % (len(_hashes), "written to vercel.json" if _changed else "already current"))
 
 print("inlined %d module(s):" % len(names))
 print("\n".join(report) if report else "  (none yet)")
 print("built size: %d bytes" % len(built))
+print("build stamp: %s" % _stamp)
 print("targets:")
 for t in TARGETS:
     print("  %s  %s" % ("OK " if os.path.exists(t) else "FAIL", t))

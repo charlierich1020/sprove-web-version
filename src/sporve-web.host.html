@@ -2405,7 +2405,13 @@ h2.ctr{margin-bottom:10px}
    .lstats keeps three columns -- they are two-digit figures and fit at 360px;
    stacking them added ~180px of near-empty card on a phone. */
 @media(max-width:980px){
-  .lgrid,.dual{grid-template-columns:1fr;gap:28px}
+  /* minmax(0,1fr), not 1fr. A bare `1fr` is `minmax(auto,1fr)`, and that `auto`
+     floor is min-content — so the track refuses to shrink below its widest
+     unbreakable child and pushes the whole page sideways. The desktop rule
+     above already guards this; the mobile collapse did not, which is why the
+     phone layout overflowed by 5px on Linux while fitting on macOS, where the
+     same text measured slightly narrower. */
+  .lgrid,.dual{grid-template-columns:minmax(0,1fr);gap:28px}
   .stepgrid{grid-template-columns:1fr}
   .amq::before,.amq::after{width:48px}
 }
@@ -3244,6 +3250,23 @@ function ptypeOf(p){
    booking became review-eligible the instant it was paid for, the family
    Schedule read as history, and no card could show a next opening. */
 const TODAY="2026-08-03";
+
+/* ── platform fee: the single source of truth ──────────────────────────
+   Flat 12%, deducted from the coach (owner decision 2026-08-06; incidence
+   2026-08-10). See docs/decisions/2026-08-10-fee-incidence.md.
+
+   This lives here, at the top level of the host script, because every module
+   is inlined AFTER it inside its own IIFE and therefore resolves these names
+   from the enclosing scope. Declaring a module-local copy shadows this one and
+   silently reintroduces drift, which is exactly how the rate was left at 9% in
+   two files after PR #35 and again after #47 — the same constant was fixed
+   three times because it was authored in five places. Read these; do not
+   redeclare them, and do not write the bare decimal anywhere.
+
+   src/smoke.sh enforces both halves: no stray fee literal, and every rendered
+   percentage equal to FEE_PCT. */
+const FEE_PCT = 12;
+const FEE_RATE = FEE_PCT / 100;
 function dayAfter(n){
   const d=new Date(TODAY+"T12:00:00Z");
   d.setUTCDate(d.getUTCDate()+n);
@@ -3741,7 +3764,7 @@ function pricingHTML(){
       </div>
       <div class="panel">
         <div class="eyebrow">For coaches</div>
-        <h2 style="margin-top:8px">A flat 12% platform fee</h2>
+        <h2 style="margin-top:8px">A flat ${FEE_PCT}% platform fee</h2>
         <p style="color:var(--muted);margin-top:8px;font-size:var(--t-small)">
           Taken only when a booking is paid, and itemized on every payout — gross,
           fee, and your net on each one. Joining and listing are free.</p>
@@ -4246,7 +4269,7 @@ function coachLandingHTML(){
   const faq=[
     ["How does the background check work?","Every individual clears their own check — not the business. Your listings stay unbookable and hidden from search until yours clears, and an org being approved never vouches for a trainer on its roster."],
     ["When do I get paid?","Payouts run automatically after a completed session. Each one itemizes gross, the platform fee, and your net."],
-    ["What does Sporve take?","A flat 12% platform fee, taken only when you get paid and itemized on every payout — gross, fee, and your net on each booking. Joining, listing, and messaging are free."],
+    ["What does Sporve take?",`A flat ${FEE_PCT}% platform fee, taken only when you get paid and itemized on every payout — gross, fee, and your net on each booking. Joining, listing, and messaging are free.`],
     ["What happens when someone cancels?","The cancellation policy copied onto the booking at purchase governs the refund — not whatever your listing says later. You pick flexible, moderate, or strict per service."],
     ["Who owns the client relationship?","You do. Families you bring keep booking you, and your roster and notes are yours."],
     ["Can I leave and take my data?","Yes. Request an export at any time. Deletion is reviewed as a case so financial and safety records required by law are retained, and everything else is removed."]];
@@ -4721,7 +4744,7 @@ function detailHTML(id){
       </div>
       <div style="margin-top:18px">
         <div class="linerow"><span>${money(p.price)} × 1 session</span><span class="num">${money(p.price)}</span></div>
-        <div class="linerow"><span>Sporve's 12% (paid by the coach)</span><span class="num">−${money(Math.round(p.price*0.12))}</span></div>
+        <div class="linerow"><span>Sporve's ${FEE_PCT}% (paid by the coach)</span><span class="num">−${money(Math.round(p.price*FEE_RATE))}</span></div>
         <div class="linerow total"><span>Total</span><span class="num">${money(p.price)}</span></div>
       </div>
       ${spots>0
@@ -5237,7 +5260,7 @@ function coachSearchHTML(){
   return `<div class="sec-head" style="margin-top:18px"><h1>Search</h1>
       <span class="num" style="color:var(--faint);font-size:var(--t-small)">
         ${scope.length} searchable record${scope.length===1?"":"s"}</span></div>
-    <form class="cs-bar" id="coSearchForm" role="search" onsubmit="return false">
+    <form class="cs-bar" id="coSearchForm" role="search">
       <span class="cs-icon" aria-hidden="true">${ICON.search}</span>
       <input id="coSearchQ" value="${esc(S.coachQuery||"")}" autocomplete="off"
              placeholder="Search players, teams, camps or staff"
@@ -5479,7 +5502,9 @@ function dashboardHTML(){
       <div class="panel">
         <h3>Earnings</h3>
         ${(()=>{const gAll=S.bookings.filter(b=>S.listings.includes(b.programId)).reduce((s,b)=>s+b.price,0);
-          const g=isCoachGuest()?0:gAll,f=Math.round(g*0.12);
+          /* FEE_RATE, not a bare 0.12 — the rate is declared once at the top of
+             this file and smoke fails if any surface hardcodes it again. */
+          const g=isCoachGuest()?0:gAll,f=Math.round(g*FEE_RATE);
           return `<div class="num" style="font-size:var(--text-2xl);font-weight:700;letter-spacing:-.03em;margin-top:6px">${veil(money(g-f))}</div>
           <div class="num" style="color:var(--muted);font-size:var(--text-sm)">${isCoachGuest()?"Sign in to see payouts":money(g)+" gross · "+money(f)+" platform fee"}</div>
           <div class="payflow">
@@ -5916,7 +5941,7 @@ function coachBody(t){
   }
   if(t==="finances"){
     const gross=S.bookings.filter(b=>S.listings.includes(b.programId)).reduce((s,b)=>s+b.price,0);
-    const fee=Math.round(gross*0.12), net=gross-fee;
+    const fee=Math.round(gross*FEE_RATE), net=gross-fee;
     return `<div class="sec-head" style="margin-top:18px"><h1>Finances</h1></div>
       <div class="stats">
         ${[["Gross",money(gross),"all bookings"],["Platform fee",money(fee),"itemized per booking"],
@@ -5928,8 +5953,8 @@ function coachBody(t){
           <thead><tr><th>Date</th><th>Program</th><th>Athlete</th><th>Gross</th><th>Fee</th><th>Net</th><th>Status</th></tr></thead>
           <tbody>${S.bookings.map(b=>`<tr>
             <td class="num">${fmtDate(b.createdAt)}</td><td>${esc(b.program)}</td><td>${esc(b.athlete)}</td>
-            <td class="num">${money(b.price)}</td><td class="num">${money(Math.round(b.price*0.12))}</td>
-            <td class="num"><b>${money(b.price-Math.round(b.price*0.12))}</b></td>
+            <td class="num">${money(b.price)}</td><td class="num">${money(Math.round(b.price*FEE_RATE))}</td>
+            <td class="num"><b>${money(b.price-Math.round(b.price*FEE_RATE))}</b></td>
             <td><span class="pill good">${esc(b.paymentStatus)}</span></td></tr>`).join("")}
           </tbody></table></div></div>`;
   }
@@ -6149,7 +6174,7 @@ function modalHTML(){
   if(m.type==="book"){
     const p=PROGRAMS.find(x=>x.id===m.programId);
     const slots=slotsFor(p.id);
-    const fee=Math.round(p.price*0.12);
+    const fee=Math.round(p.price*FEE_RATE);
     return wrap("Request to book",`
       <div style="display:flex;gap:14px;align-items:center;padding-bottom:17px;border-bottom:1px solid var(--rule)">
         <img src="${p.img}" alt="" style="width:70px;height:70px;border-radius:var(--r-m);object-fit:cover">
@@ -6404,16 +6429,14 @@ function modalHTML(){
   if(m.type==="onboard"){
     const step=S.onboardStep;
     const sports=Object.keys(SPORT_COLOR).sort();
-    if(step===0) return wrap("How will you use Sporve?",`
-      <p style="color:var(--muted);margin-bottom:20px">Choose a role before creating an account.</p>
-      ${[["family","I'm looking for training","Discover background-check-verified coaches, compare programs, and book training."],
-         ["coach","I provide training","Create listings, manage sessions, and communicate with families."]]
-        .map(([k,t,d])=>`<button class="onbcard ${S.signupRole===k?"on":""}" data-srole="${k}">
-          <b>${t}</b><span>${d}</span></button>`).join("")}
-      <button class="btn wide" data-onbnext="1" style="margin-top:20px">Continue</button>`);
-    if(step===1) return wrap("Pick your sports",`
+    /* The role-picker step that used to sit here is gone. It was the third
+       place in the app asking a question the codebase already decided to infer
+       (:5720-5722), and it was the only way a coach could reach this modal —
+       which is now the family create-account path exclusively. Coaches go
+       through coachgate to the 7-step wizard in mod-coachonboard.js. */
+    if(step===0) return wrap("Pick your sports",`
       <p style="color:var(--muted);margin-bottom:18px">
-        ${S.signupRole==="coach"?"Which sports do you coach?":"What does your athlete play?"}
+        What does your athlete play?
         Select as many as apply.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px;max-height:280px;overflow:auto;padding:2px">
         ${sports.map(s=>`<button class="sportpick ${S.onboardSports.includes(s)?"on":""}" data-pick="${esc(s)}"
@@ -6423,8 +6446,7 @@ function modalHTML(){
       <button class="btn wide" data-onbnext="1" style="margin-top:14px" ${S.onboardSports.length?"":"disabled"}>Continue</button>
       <button class="btn ghost wide" data-onbback="1" style="margin-top:9px">Back</button>`);
     return wrap("Create your account",`
-      <p class="eyebrow" style="margin-bottom:16px">
-        ${S.signupRole==="coach"?"Coach account · Final step":"Athlete &amp; family · Final step"}</p>
+      <p class="eyebrow" style="margin-bottom:16px">Athlete &amp; family · Final step</p>
       <form id="signupForm">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="field"><label>First name</label><input name="first" placeholder="Alex" required></div>
@@ -6985,7 +7007,12 @@ function sig_insights(){ return `<div class="sig-insights" aria-label="Business 
 </div>`; }
 function sig_ai_coach(){ return `<div class="sig-ai-coach" aria-label="Coach finder demo">
   <div class="ac-head"><span class="ac-dot"></span><span class="ac-title">Coach finder · Chicago, IL</span><span class="ac-pill">Demo data</span></div>
-  <form class="ac-bar" onsubmit="return false">
+  <!-- No inline onsubmit: the submit is already cancelled in JS a few hundred
+       lines below (addEventListener('submit', e => { e.preventDefault(); … })),
+       so the attribute was redundant. It was also the single inline event
+       handler in the built page, and script hashes cannot cover those — it
+       alone would have forced 'unsafe-inline' to stay in the CSP. -->
+  <form class="ac-bar">
     <input class="ac-input" type="text" value="a martial arts coach for my 9-year-old" aria-label="Ask the coach finder">
     <button class="ac-go" type="submit">Ask</button>
   </form>
@@ -7959,8 +7986,11 @@ if(id==="messaging"){
    footer for this route). Colour law: black ground, white/slate literals. */
 function startCoachOnboarding(){
   S.portal="coach";S.signupRole="coach";
-  if(!isVerified()){S.onboardStep=0;S.modal={type:"onboard"};}
-  else {S.coachTab=modView("onboard")?"onboard":"dashboard";}
+  /* One wizard for everyone. This used to fork on isVerified() — a guest got
+     the 3-step signup modal, a signed-in user got the 7-step wizard — which
+     also meant the string "onboard" resolved to two unrelated surfaces
+     depending on whether it reached S.modal.type or modView(). */
+  S.coachTab=modView("onboard")?"onboard":"dashboard";
   S.route={name:"dashboard",arg:null};window.scrollTo(0,0);render();
 }
 function coachGateHTML(){
@@ -8309,9 +8339,16 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
     S.portal=b.dataset.portal;S.modal=null;S.sportOpen=false;
     S.route=S.portal==="coach"?{name:"dashboard",arg:null}:{name:"explore",arg:null};
     window.scrollTo(0,0);render();});
-  /* through the normalizer, so a stale "reviews"/"insights"/"policies" target
-     resolves to its sub-tab inside Operations */
-  $("[data-ctab]").forEach(b=>b.onclick=()=>{setCoachTab(b.dataset.ctab);window.scrollTo(0,0);render();});
+  /* Through the normalizer, so a stale "reviews"/"insights"/"policies" target
+     resolves to its sub-tab inside Operations.
+
+     The cmdPending/cmdError clear is ours and must survive this rewrite: the
+     command bar renders only inside dashboardHTML(), so an unconfirmed AI
+     broadcast left behind on tab change has no UI to approve or cancel it and
+     would ambush the coach on their next visit to the dashboard. */
+  $("[data-ctab]").forEach(b=>b.onclick=()=>{
+    S.cmdPending=null;S.cmdError="";
+    setCoachTab(b.dataset.ctab);window.scrollTo(0,0);render();});
   /* Operations sub-tabs. Owned by the host, not mod-coachops, because the tab
      now mixes host-rendered Reviews with views from two different modules. */
   $("[data-opstab]").forEach(b=>b.onclick=()=>{S.opsTab=b.dataset.opstab;window.scrollTo(0,0);render();});
@@ -8320,6 +8357,12 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
      every keystroke because #app's innerHTML is replaced wholesale. */
   $("[data-cskind]").forEach(b=>b.onclick=()=>{S.coachSearchKind=b.dataset.cskind;render();});
   $("[data-csclear]").forEach(b=>b.onclick=()=>{S.coachQuery="";S.coachSearchFocus=true;render();});
+  /* Submit cancelled here rather than with an inline onsubmit attribute:
+     script hashes cannot cover handler attributes, and our CSP carries no
+     'unsafe-inline', so an inline handler would be blocked in production and
+     fails smoke outright. Without this, Enter reloads the page. */
+  const csf=document.getElementById("coSearchForm");
+  if(csf) csf.onsubmit=e=>e.preventDefault();
   const csq=document.getElementById("coSearchQ");
   if(csq){
     csq.oninput=()=>{S.coachQuery=csq.value;S.coachSearchFocus=true;render();};
@@ -8338,15 +8381,15 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
      points across the 32x32 X button did nothing, including dead centre. Split
      into two handlers so the visible glyph is the hit target. */
   const dismiss=()=>{S.modal=null;S.pendingIntent=null;render();};
-  /* Escape closes the sheet. The only existing keydown listener closes the
-     product nav, not modals, so a keyboard user had no way out of the auth
-     sheet at all. Assigned rather than added, because wire() runs on every
-     render and addEventListener would stack a duplicate handler each time. */
-  document.onkeydown=e=>{ if(e.key==="Escape"&&S.modal) dismiss(); };
+  /* No Escape handler here on purpose. The top-level listener near the end of
+     this file already closes the modal on Escape and clears pendingIntent, and
+     being registered at script-eval time it runs first — a second handler bound
+     during wire() would always find S.modal already null. It would also be a
+     property assignment, silently clobbering any future document.onkeydown. */
   $("[data-close]").forEach(b=>b.onclick=()=>dismiss());
   $("[data-scrim]").forEach(b=>b.onclick=e=>{if(e.target===b) dismiss();});
   $("[data-modal]").forEach(b=>b.onclick=()=>{S.modal={type:b.dataset.modal};render();});
-  $("[data-srole]").forEach(b=>b.onclick=()=>{S.signupRole=b.dataset.srole;render();});
+  /* [data-srole] handler removed with the role-picker step it drove. */
   $("[data-signin]").forEach(b=>b.onclick=()=>{S.modal={type:"authsheet"};render();});
   $("[data-acct]").forEach(b=>b.onclick=()=>{S.modal={type:"account"};render();});
   $("[data-addchild]").forEach(b=>b.onclick=()=>{S.modal={type:"addchild"};render();});
@@ -8431,7 +8474,10 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
   $("[data-cg-apple]").forEach(b=>b.onclick=()=>toast("Apple sign-in isn't wired up yet"));
   $("[data-cg-demo]").forEach(b=>b.onclick=()=>{S.pendingIntent=startCoachOnboarding;completeAuth({...SEED.user,role:"provider"});});
   $("[data-cg-proceed]").forEach(b=>b.onclick=()=>startCoachOnboarding());
-  $("[data-cg-signout]").forEach(b=>b.onclick=()=>{S.auth={status:"guest",user:null};render();});
+  $("[data-cg-signout]").forEach(b=>b.onclick=()=>{
+    /* Drop the pending intent with the identity. Keeping it means the action
+       queued by the previous user fires for whoever signs in next. */
+    S.auth={status:"guest",user:null};S.pendingIntent=null;render();});
   $("[data-cg-back]").forEach(b=>b.onclick=()=>{S.portal="family";go("home");});
   $("[data-coachdash]").forEach(b=>b.onclick=()=>{
     S.portal="coach";S.coachTab="dashboard";go("dashboard");});
@@ -8513,7 +8559,12 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
     if(side==="co"){S.portal="coach";S.coachTab=key;go("dashboard");}
     else go(key);
   });
-  $("[data-onboard]").forEach(b=>b.onclick=()=>{S.onboardStep=0;S.modal={type:"onboard"};render();});
+  /* This modal is the family/searcher create-account path only, so the role is
+     pinned here rather than asked. Without this, a visitor who had clicked
+     "Become a coach" earlier (which sets signupRole="coach" at :7992) and then
+     backed out would silently create a provider account from the family form. */
+  $("[data-onboard]").forEach(b=>b.onclick=()=>{
+    S.onboardStep=0;S.signupRole="family";S.modal={type:"onboard"};render();});
 
   /* PART 7 — one identifier field, then branch. An address we've seen goes to
      the password step; anything else creates an account. */
@@ -8660,7 +8711,7 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
   });
   $("[data-soon]").forEach(b=>b.onclick=()=>toast(b.dataset.soon+" isn't wired up yet"));
   $("[data-demoacct]").forEach(b=>b.onclick=()=>{completeAuth({...SEED.user});toast("Signed in to the demo account");});
-  $("[data-onbnext]").forEach(b=>b.onclick=()=>{S.onboardStep=Math.min(2,S.onboardStep+1);render();});
+  $("[data-onbnext]").forEach(b=>b.onclick=()=>{S.onboardStep=Math.min(1,S.onboardStep+1);render();});
   $("[data-onbback]").forEach(b=>b.onclick=()=>{
     if(S.onboardStep===0){S.modal={type:"authsheet"};} else S.onboardStep--; render();});
   $("[data-pick]").forEach(b=>b.onclick=()=>{
@@ -8709,8 +8760,7 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
     if(d.password.length<8) return show("Password must be at least 8 characters.");
     if(!d.privacy) return show("Please acknowledge Sporve's Privacy Policy to continue.");
     completeAuth({firstName:d.first,lastName:d.last,email:d.email,phone:d.phone||"",
-      role:S.signupRole==="coach"?"provider":"searcher",preferredSports:S.onboardSports.slice()});
-    if(S.signupRole==="coach") S.portal="coach";
+      role:"searcher",preferredSports:S.onboardSports.slice()});
     toast("Account created");
   };
 
@@ -9277,7 +9327,106 @@ document.addEventListener("click",e=>{
 <!--MODULES-->
 
 <script>
-/* boot: merge module state + css, then first paint */
+/* ── session persistence ───────────────────────────────────────────────
+   Everything the page knows lives in the in-memory object S, so a refresh
+   used to discard every booking, message, note and onboarding step on a
+   product whose pitch is "run your business on it".
+
+   sessionStorage, not localStorage, on purpose: work survives a reload and a
+   navigation, and a closed tab returns to the seeded demo. Persisting demo
+   data forever would strand people in a stale sandbox with no reset.
+
+   Four properties make a bad snapshot safe to load:
+
+   1. A VERSION in the key. Change the shape of S, bump it, and every old
+      snapshot is ignored rather than half-applied.
+   2. MERGE, never replace. Only keys that already exist in S are restored,
+      so a key added after a snapshot was written keeps its default instead
+      of becoming undefined, and a foreign or tampered key cannot inject
+      state that no code expects.
+   3. EPHEMERAL keys are excluded in BOTH directions. Restoring an open
+      modal, an in-flight spinner, or a half-typed command is confusing at
+      best. cmdPending matters most: it is an unconfirmed broadcast to every
+      family on a roster, and it must not outlive the screen that made it —
+      the same reason leaving the tab drops it.
+   4. Every path is wrapped. Quota exhaustion, private-mode denial, or a
+      corrupt entry must degrade to "no persistence", never to a blank page.
+      A failed parse also clears the entry so the next load starts clean. */
+const PERSIST_KEY = "sporve:state:v1";
+const EPHEMERAL = new Set([
+  "modal", "toast", "pendingIntent",
+  "cmdDraft", "cmdSending", "cmdError", "cmdPending", "cmdAction", "cmdModelOpen",
+  "chatThinking", "sportOpen", "sportAnchor", "faqOpen", "forgotSent", "mapPick",
+  /* From the ported coach-portal work. coachSearchFocus is a one-render flag
+     that puts the caret back after #app's innerHTML is replaced; restoring it
+     from storage would steal focus into the search box on every page load.
+     coachPromptShown is deliberately NOT here — "we already offered you the
+     sign-in sheet" should survive a refresh, or a guest is re-prompted every
+     time they reload. */
+  "coachSearchFocus", "aiOpen",
+]);
+
+function saveState(){
+  try{
+    const out = {};
+    for(const k of Object.keys(S)) if(!EPHEMERAL.has(k)) out[k] = S[k];
+    sessionStorage.setItem(PERSIST_KEY, JSON.stringify(out));
+  }catch(e){ /* quota, private mode, or a cycle — persistence is optional */ }
+}
+
+function loadState(){
+  try{
+    const raw = sessionStorage.getItem(PERSIST_KEY);
+    if(!raw) return false;
+    const saved = JSON.parse(raw);
+    if(!saved || typeof saved !== "object" || Array.isArray(saved)) return false;
+    /* Iterate the keys S ALREADY has, not the keys storage offers. The
+       inverted form is not a style preference — it closes a real hole.
+       JSON.parse creates `__proto__` as an OWN property, so it survives
+       Object.keys(saved); and `'__proto__' in S` is true by inheritance, so a
+       `k in S` guard lets it through and `S[k] = ...` then replaces S's
+       prototype. Driving the loop from Object.keys(S) means a key S does not
+       already own can never be assigned, whatever storage contains.
+
+       Types are checked too: a snapshot whose `messages` is a string, or whose
+       `bookings` is an object, would render into exceptions all over the app.
+       Shape mismatch means the snapshot is not ours — skip that key and keep
+       the default rather than trusting it. */
+    const kind = v => Array.isArray(v) ? "array" : v === null ? "null" : typeof v;
+    for(const k of Object.keys(S)){
+      if(EPHEMERAL.has(k)) continue;
+      if(!Object.prototype.hasOwnProperty.call(saved, k)) continue;
+      if(kind(saved[k]) !== kind(S[k])) continue;
+      S[k] = saved[k];
+    }
+    return true;
+  }catch(e){
+    try{ sessionStorage.removeItem(PERSIST_KEY); }catch(_){}
+    return false;
+  }
+}
+
+/* Coalesced: render() runs on every interaction, and serialising 28KB on each
+   one is wasted work. One write per frame-ish window is enough, because the
+   only reader is the next page load. */
+let saveTimer = null;
+function scheduleSave(){
+  if(saveTimer) return;
+  saveTimer = setTimeout(() => { saveTimer = null; saveState(); }, 250);
+}
+
+/* boot: merge module state, restore the session, then first paint.
+   Order is load-critical — bootModules() seeds module keys with
+   `if(!(k in S))`, so restoring before it would have those defaults
+   overwrite the saved values. */
 bootModules();
+loadState();
 render();
+
+/* Wrap render rather than editing it: every mutation path in the host and in
+   every module already ends in render(), so this catches all of them without
+   touching a single call site. */
+const _renderNoPersist = render;
+render = function(){ _renderNoPersist.apply(this, arguments); scheduleSave(); };
+window.addEventListener("pagehide", saveState);
 </script>

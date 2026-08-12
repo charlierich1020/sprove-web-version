@@ -668,6 +668,20 @@ function demandCard(){
 }
 
 function watchlistCard(){
+  /* Guest gate lives HERE, not at the call site.
+     The Insights TAB is locked for a signed-out coach, but this same widget is
+     also embedded directly on the dashboard, and that second path was not
+     gated — a guest saw real client names on the first screen after entering
+     the coach portal. Gating the renderer covers every embed, present and
+     future; gating the navigation only covered the one route someone thought
+     of. Verified by sweeping rendered text on 11 coach surfaces for seeded
+     names. */
+  if (typeof isCoachGuest === "function" && isCoachGuest()) {
+    return `<div class="in-card"><div class="in-cardhead">
+        <b>Clients to follow up</b></div>
+      <p style="color:var(--muted);font-size:var(--text-sm);margin-top:8px">
+        Sign in to see which families have stopped booking.</p></div>`;
+  }
   const rows = watchlistRows().filter(r => r.broken).slice(0, 3);
   const total = watchlistRows().filter(r => r.broken).length;
   return `<div class="in-card">
@@ -698,6 +712,16 @@ function watchlistCard(){
 
 /* ═══════════════════ VIEW ═══════════════════ */
 function insightsView(){
+  /* The Insights tab is hidden from a signed-out coach's Operations menu, but
+     hiding a control is not a guard. S.coachTab is persisted to sessionStorage,
+     so a coach who viewed Insights and then signed out is restored straight
+     onto this view as a guest. The watchlist names real families, so the view
+     refuses to render rather than relying on nobody finding the route. */
+  if (typeof isCoachGuest === "function" && isCoachGuest()) {
+    return typeof coachLockHTML === "function"
+      ? coachLockHTML("Insights", "demand, retention and the families to follow up")
+      : `<div class="empty" style="margin-top:18px"><h3>Sign in to see Insights</h3></div>`;
+  }
   const rows = watchlistRows();
   const positions = myPricePositions();
   const d = state.demand;

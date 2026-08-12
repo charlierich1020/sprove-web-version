@@ -465,6 +465,15 @@ function policiesView(){
 }
 
 function waitlistView(){
+  /* Third instance of the same gap: the dashboard's waitlist widget was
+     withheld from guests, but this tab view -- which lists the same families
+     by name, plus their parents -- was not. S.coachTab persists, so a guest can
+     be restored directly onto it. Gate the view, not the route to it. */
+  if (typeof isCoachGuest === "function" && isCoachGuest()) {
+    return typeof coachLockHTML === "function"
+      ? coachLockHTML("Waitlist", "who is waiting on a seat, and the families to contact")
+      : `<div class="empty" style="margin-top:18px"><h3>Sign in to see the waitlist</h3></div>`;
+  }
   const c = statusCounts();
   const rows = state.waitlistEntries.slice().sort((a, b) => {
     const pa = prog(a.programId), pb = prog(b.programId);
