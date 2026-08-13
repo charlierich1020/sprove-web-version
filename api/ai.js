@@ -82,16 +82,36 @@ const clientIp = (req) =>
 function sameOrigin(req) {
   const host = req.headers["x-forwarded-host"] || req.headers.host;
   if (!host) return false;
+
+  /* Sec-Fetch-Site is set by the browser and is a forbidden header name, so
+     page JS cannot forge it. When present it is the strongest signal we get.
+     Measured against this app's own fetch: it arrives as "same-origin", with
+     Origin and Referer alongside it. */
+  const site = req.headers["sec-fetch-site"];
+  if (site && site !== "same-origin") return false;
+
   const raw = req.headers.origin || req.headers.referer;
-  /* A same-origin fetch from a page may omit Origin. Referer is the fallback;
-     if both are absent we allow it, because blocking would break legitimate
-     privacy configurations, and Content-Type is the real CSRF gate. */
-  if (!raw) return true;
-  try {
-    return new URL(raw).host === host;
-  } catch {
-    return false;
+  if (raw) {
+    try {
+      return new URL(raw).host === host;
+    } catch {
+      return false;
+    }
   }
+
+  /* Previously this returned true — "if both are absent we allow it". That
+     reasoning held for CSRF (a browser cannot send cross-origin
+     application/json without a preflight this route never answers) but not for
+     billing: curl and any server-side script simply omit both headers, and this
+     route spends money per call. A real browser always sends at least one of
+     Origin, Referer or Sec-Fetch-Site for a POST, so rejecting the empty case
+     costs no legitimate client and removes the free path for a scripted one.
+     Verified across the three combinations in the unit test beside this file.
+
+     Honest limit, unchanged: curl can also SET these headers. This raises the
+     cost of casual abuse; it is not authentication. A signed per-session token
+     is still the real fix, and a WAF rate-limit rule is still the real quota. */
+  return site === "same-origin";
 }
 
 const ACTION_SCHEMA = {
