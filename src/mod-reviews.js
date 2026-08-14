@@ -161,7 +161,9 @@ function ensure(){
 }
 const allReviews=()=>{ensure();return (typeof S!=="undefined"&&Array.isArray(S.reviews))?S.reviews:REVIEWS;};
 const allGoals=()=>{ensure();return (typeof S!=="undefined"&&Array.isArray(S.goals))?S.goals:GOALS;};
-const prog=id=>PROGRAMS.find(p=>p.id===id);
+/* Seeded reviews carry seeded program ids, so this must still resolve after
+   mod-catalog.js swaps PROGRAMS for live rows — see mod-coachops.js. */
+const prog=id=>PROGRAMS.find(p=>p.id===id)||DEMO_CATALOGUE.find(p=>p.id===id);
 
 const initialsOf=name=>String(name).trim().split(/\s+/).map(w=>w[0]||"").slice(0,2).join("").toUpperCase();
 const authorName=u=>u?`${u.firstName} ${u.lastName?u.lastName[0]+".":""}`.trim():"You";
@@ -513,7 +515,7 @@ function planCard(g){
             <b>${esc(p.title)}</b>
             <div class="num rv-sub">${esc(p.biz)} · ${ICON.star} ${p.rating} · ages ${p.minAge}–${p.maxAge} · ${esc(p.skill)}</div>
             <div class="num rv-sub">${money(p.price)} ${esc(MODEL_LABEL[p.model]||p.model)} · ${esc(costLine(p,weeks,sessions))}</div>
-            <span class="pill gold" style="margin-top:6px">${ICON.shield} Verification pending</span>
+            ${p.verified?`<span class="pill gold" style="margin-top:6px">${ICON.shield} Background-checked</span>`:""}
           </div>
           <button class="btn ghost sm" data-open="${esc(p.id)}">View</button>
         </div>`).join("")}

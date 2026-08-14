@@ -58,8 +58,10 @@ function median(list){
 const money2 = n => (Number(n) % 1 === 0 ? money(n) : "$" + Number(n).toFixed(2));
 
 /* ── catalogue helpers ───────────────────────────────────────────── */
-const prog = id => PROGRAMS.find(p => p.id === id) || null;
-const myListings = () => PROGRAMS.filter(p => S.listings.indexOf(p.id) >= 0);
+/* Live catalogue first, seeded second — see the note in mod-coachops.js. */
+const prog = id => PROGRAMS.find(p => p.id === id) ||
+                   DEMO_CATALOGUE.find(p => p.id === id) || null;
+const myListings = () => DEMO_CATALOGUE.filter(p => S.listings.indexOf(p.id) >= 0);
 const mySports = () => {
   const out = [];
   myListings().forEach(p => { if (out.indexOf(p.sport) < 0) out.push(p.sport); });
@@ -69,7 +71,7 @@ const firstName = s => String(s || "").trim().split(/\s+/)[0] || String(s || "")
 function coachName(){
   const u = S.auth && S.auth.user;
   if (u && u.role === "provider" && u.firstName) return (u.firstName + " " + (u.lastName || "")).trim();
-  return SEED.providerProfile.businessName;
+  return (typeof coachBusinessName==="function")?coachBusinessName():SEED.providerProfile.businessName;
 }
 
 /* ── phrasing ────────────────────────────────────────────────────── */
