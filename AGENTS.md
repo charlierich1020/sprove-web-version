@@ -134,3 +134,17 @@ If push, deployment, or live verification fails, report the task as blocked or
 incomplete—never as done. Never force-push, bypass a failed smoke test, include
 another agent's unfinished files, or deploy a critical-path change without its
 required review.
+
+## Agent lane rules (2026-09-15)
+
+- Read `docs/specs/00-MASTER.md` and `docs/specs/README.md` before any work.
+- `docs/decisions/2026-09-15-decisions.md` is binding. Do not re-litigate.
+- Fable migration block: 20260915_001050-001099.
+- Codex migration block: 20260915_001100-001149. Never use another range.
+- Never edit: GATES.md, docs/specs/00-MASTER.md, docs/specs/README.md.
+- Never touch files outside the assigned spec's surface. If you believe you
+  must, stop and report instead.
+- Every PR produces the migrations AND every test file named in the spec's DoD.
+- A write that returns success without a receipt proving a row changed is a
+  CI failure, not a bug.
+- Rebase onto main before opening a PR. One spec, one branch, one PR.
