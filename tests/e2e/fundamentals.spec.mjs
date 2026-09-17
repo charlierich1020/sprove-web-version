@@ -86,7 +86,8 @@ test('2+3. signup: every button works, and what is entered is saved and shown af
   await click('[data-obresend]', '1b · Resend'); assert.equal(log.filter((l) => l.kind === 'otp').length, 2);
   await click('[data-obwrong]', '1b · different email'); assert.equal((await state(page)).step, '1');
   await page.fill('#obEm', 'coach@example.com'); await click('#obSend', '1 · Continue'); await click('[data-obcode]', '1b · enter code');
-  await page.fill('#obTok', '000000'); await page.locator('#obCode button[type=submit]').click(); await settle(page, 600);
+  await page.fill('#obTok', '000000'); await page.locator('#obCode button[type=submit]').click();
+  await page.waitForFunction(() => !!S.ob?.err, null, { timeout: 8000 }); // two verify round trips on CI can exceed a fixed pause
   assert.match((await state(page)).text, /not accepted/, 'a wrong code says so');
   await page.fill('#obTok', '123456'); await page.locator('#obCode button[type=submit]').click(); clicked.add('1b · Sign in');
   await page.waitForFunction(() => S.auth?.status === 'verified' && S.ob?.step === '2', null, { timeout: 8000 });
@@ -110,6 +111,7 @@ test('2+3. signup: every button works, and what is entered is saved and shown af
   await click('#obNext', '3 · Continue'); await page.waitForFunction(() => S.ob?.step === '4', null, { timeout: 8000 });
   assert.equal(db.profiles[0].first_name, 'Marcus'); assert.equal(db.profiles[0].last_name, 'Reed');
   assert.equal(db.providers[0].business_name, 'Rivertown FC'); assert.deepEqual(db.providers[0].sports, ['Soccer']); assert.equal(db.providers[0].location, 'Chicago');
+  assert.equal(db.providers[0].provider_type, 'organization', 'a team org is an organization, so staff can be added (audit P1-7)');
   // ── step 4: connect ──
   await noteButtons('4');
   for (const k of ['gmail', 'google_calendar', 'google_sheets', 'google_drive']) {
