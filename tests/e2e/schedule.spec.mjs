@@ -7,8 +7,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { mount, freshDb, session, UID, PID, SUPABASE } from './fake-supabase.mjs';
-const INDEX = 'file://' + new URL('../../index.html', import.meta.url).pathname;
-let browser; test.before(async () => { browser = await chromium.launch(); }); test.after(async () => { await browser?.close(); });
+import { serve } from './serve.mjs';
+let browser, site, INDEX;   // a real http origin: the offline test must prove the queue SURVIVES a reload, and file:// storage does not on CI's Chromium
+test.before(async () => { browser = await chromium.launch(); site = await serve(); INDEX = site.index; }); test.after(async () => { await browser?.close(); await site?.close(); });
 const H = 3600e3, D = 86400e3;
 const iso = (ms) => new Date(ms).toISOString();
 function orgDb() {
@@ -106,9 +107,12 @@ test('offline: the mark is queued locally, survives a reload, and replays with t
   assert.equal(s.log.filter((l) => l.kind === 'mark_attendance').length, 0, 'nothing reached the server');
   await s.page.reload({ waitUntil: 'domcontentloaded' });
   await s.page.waitForFunction(() => typeof S === 'object' && S.auth?.status === 'verified' && !!S.coachProvider, null, { timeout: 15000 });
+  const afterReload = await s.page.evaluate(() => localStorage.getItem('sporv:attendance-queue:v1'));
+  assert.ok(afterReload !== null, 'the queue key must survive the reload (a null key would read as "nothing to send")'); assert.equal(JSON.parse(afterReload).length, 1, afterReload);
   offline = false; await s.page.evaluate(() => window.dispatchEvent(new Event('online')));
+  for (let i = 0; i < 100 && !s.log.some((l) => l.kind === 'mark_attendance'); i++) await s.page.waitForTimeout(100);   // the replay is what we wait for, not an empty key
+  const sent = s.log.filter((l) => l.kind === 'mark_attendance'); assert.equal(sent.length, 1, 'exactly one replay reached the server'); assert.equal(sent[0].client_id, cid); assert.equal(sent[0].state, 'absent');
   await s.page.waitForFunction(() => { try { return JSON.parse(localStorage.getItem('sporv:attendance-queue:v1') || '[]').length === 0; } catch { return false; } }, null, { timeout: 8000 });
-  const sent = s.log.filter((l) => l.kind === 'mark_attendance'); assert.equal(sent.length, 1); assert.equal(sent[0].client_id, cid); assert.equal(sent[0].state, 'absent');
   await s.page.evaluate(() => { S.coachTab = 'schedule'; S.schedulePageTab = 'calendar'; render(); }); await s.page.waitForFunction(() => S.sched && S.sched.events, null, { timeout: 8000 });
   await s.page.locator('[data-evatt="e1"]').click(); await s.page.waitForFunction(() => /Saved \d/.test(document.querySelector('[data-attrow="a2"]')?.innerText || ''), null, { timeout: 5000 });
   await s.ctx.close();
