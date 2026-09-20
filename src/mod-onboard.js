@@ -38,6 +38,9 @@
   const isPlaceholderOrg = (n) => !n || PLACEHOLDER_ORG.includes(String(n).trim());
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const EMAIL_RX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  /* Generation counter for the resend "Sent again" flash: the fade-out must
+     not clobber a newer resend's flash. */
+  let resentSeq = 0;
   const API = () => window.SporveAPI, AUTH = () => window.SporveAuth;
   const signedIn = () => !!(AUTH() && AUTH().isSignedIn && AUTH().isSignedIn());
   /* S is the host's top-level `const` — a global lexical binding, NOT a window
@@ -177,10 +180,10 @@
     return `<section class="step on" data-s="4"><h1>Connect what you already use</h1>
       <p class="sub">Read-only where it can be. Nothing is sent from any of these — Sporv drafts, you approve. Skip anything; add it later from Settings.</p>
       <div class="conn">
-        ${tile("gmail", "GM", "Gmail", "Inbound parent email, tournament PDFs, league notices. Read-only scope — it cannot send.", 'data-cxgoogle="gmail"')}
-        ${tile("google_calendar", "GC", "Google Calendar", "Practices, games, conflicts. Changes you approve are written back.", 'data-cxgoogle="google_calendar"')}
-        ${tile("google_sheets", "SH", "Google Sheets", "The spreadsheet your club actually runs on. Read-only.", 'data-cxgoogle="google_sheets"')}
-        ${tile("google_drive", "DR", "Google Drive", "Waivers, forms and PDFs you already store. Read-only.", 'data-cxgoogle="google_drive"')}
+        ${tile("gmail", "GM", "Gmail", "Inbound parent email, tournament PDFs, league notices. Read-only scope — it cannot send.", 'data-cxconnect="gmail"')}
+        ${tile("google_calendar", "GC", "Google Calendar", "Practices, games, conflicts. Changes you approve are written back.", 'data-cxconnect="google_calendar"')}
+        ${tile("google_sheets", "SH", "Google Sheets", "The spreadsheet your club actually runs on. Read-only.", 'data-cxconnect="google_sheets"')}
+        ${tile("google_drive", "DR", "Google Drive", "Waivers, forms and PDFs you already store. Read-only.", 'data-cxconnect="google_drive"')}
         <button class="cn" data-obgo="5"><span class="ic">CSV</span><span class="b"><b>A roster export or CSV</b><small>SportsEngine, TeamSnap, LeagueApps, Spond, or a plain sheet. Next step.</small></span><span class="st">Upload</span></button>
       </div>
       <p class="note"><b>Stripe</b> is connected from Money once you are in — identity checks for payouts take days, so start it early, but it never blocks setup.</p>
@@ -215,6 +218,11 @@
     const o = ob(); if (signedIn() && !o.loaded) resume(); if (!signedIn() && !o.providers) loadProviders();
     if (!signedIn() && o.step !== "1" && o.step !== "1b") o.step = "1";
     const s = o.step, full = s !== "1";
+    /* The step-4 tiles use the same server-gated [data-cxconnect] flow as
+       every other surface: a tile only offers Connect when the server handed
+       it a working connect_url. Warm the cache here so the tiles are live
+       when the step renders; loadConnectors() no-ops once loaded/loading. */
+    if (s === "4" && typeof loadConnectors === "function") loadConnectors();
     const body = { "1": step1, "1b": step1b, "2": step2, "3": step3, "4": step4, "5": step5, "6": step6, "7": step7 }[s]();
     const w = why(s), next = s === "5" ? "Run Sporv" : s === "7" ? "Open dashboard" : "Continue";
     const showNext = !(s === "1" || s === "1b" || (s === "6" && !(S.agentRun && S.agentRun.done)));
@@ -303,7 +311,13 @@
     q("[data-oblogin]").forEach((a) => a.onclick = (e) => { e.preventDefault(); S.modal = { type: "authsheet" }; render(); });
     q("[data-obpw]").forEach((a) => a.onclick = (e) => { e.preventDefault(); S.authIdentifier = o.email; S.modal = { type: "login" }; render(); });
     q("[data-obfoot]").forEach((a) => a.onclick = (e) => { e.preventDefault(); const arg = a.dataset.obfoot.split(":")[1]; if(!arg) return; window.open(location.origin + "/?page=" + encodeURIComponent(arg), "_blank", "noopener"); });
-    q("[data-obresend]").forEach((b) => b.onclick = () => { o.resent = true; AUTH().magicLink(o.email, window.location.origin + "/", { role: "provider" }).catch(() => {}); render(); setTimeout(() => { o.resent = false; render(); }, 1800); });
+    /* The "Sent again" flash fade-out must NOT re-render the form: render()
+       rebuilds #obTok from state, so a re-render landing between an
+       automation's focus and its text entry (or a fast typist's keystrokes)
+       silently drops the typed code — the field keeps its previous value and
+       the submit then fails as a wrong code. Only the button label changes
+       here, so update it in place (flaky test 14, 2026-09-20). */
+    q("[data-obresend]").forEach((b) => b.onclick = () => { o.resent = true; AUTH().magicLink(o.email, window.location.origin + "/", { role: "provider" }).catch(() => {}); render(); const my = ++resentSeq; setTimeout(() => { if (my !== resentSeq) return; o.resent = false; const rb = document.querySelector('[data-obresend]'); if (rb) rb.textContent = "Resend link"; }, 1800); });
     q("[data-obwrong]").forEach((b) => b.onclick = () => { o.step = "1"; o.sent = false; o.err = null; o.code = false; o.tok = ""; render(); });
     q("[data-obcode]").forEach((b) => b.onclick = () => { o.code = true; render(); });
     /* AUDIT 2026-09-17 (self-caught while fixing P1-1): the code field kept its

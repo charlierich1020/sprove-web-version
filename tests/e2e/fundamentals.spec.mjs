@@ -87,10 +87,10 @@ test('2+3. signup: every button works, and what is entered is saved and shown af
   await click('[data-obwrong]', '1b · different email'); assert.equal((await state(page)).step, '1');
   await page.fill('#obEm', 'coach@example.com'); await click('#obSend', '1 · Continue'); await click('[data-obcode]', '1b · enter code');
   await page.fill('#obTok', '000000'); await page.locator('#obCode button[type=submit]').click();
-  await page.waitForFunction(() => !!S.ob?.err, null, { timeout: 15000 }); // two verify round trips on a loaded CI runner can exceed 8s (owner ruling 2026-09-18)
+  await page.waitForFunction(() => !!S.ob?.err, null, { timeout: 30000 }); // wrong-code path does TWO sequential verify round trips by design (type=email, then type=magiclink fallback); each can exceed 8s on a loaded CI runner (owner ruling 2026-09-18). 30s still fails a real hang.
   assert.match((await state(page)).text, /not accepted/, 'a wrong code says so');
   await page.fill('#obTok', '123456'); await page.locator('#obCode button[type=submit]').click(); clicked.add('1b · Sign in');
-  await page.waitForFunction(() => S.auth?.status === 'verified' && S.ob?.step === '2', null, { timeout: 15000 });
+  await page.waitForFunction(() => S.auth?.status === 'verified' && S.ob?.step === '2', null, { timeout: 30000 }); // correct-code path does verify → session → step 2; back-to-back 15s timeouts on 2026-09-20 (pr-checks runs 35520342266, 35520619737, both at this exact wait) with a byte-identical built page — runner-load flake, not a product regression. The earlier 30s bump was mis-aimed at the wrong-code wait above, which never timed out. 30s still fails a real hang.
   // ── step 2: what you run ──
   await noteButtons('2');
   assert.ok(await page.locator('#obNext').isDisabled(), 'Continue waits for consent');
@@ -115,7 +115,7 @@ test('2+3. signup: every button works, and what is entered is saved and shown af
   // ── step 4: connect ──
   await noteButtons('4');
   for (const k of ['gmail', 'google_calendar', 'google_sheets', 'google_drive']) {
-    const before = log.length; await click(`[data-cxgoogle="${k}"]`, '4 · connect ' + k);
+    const before = log.length; await click(`[data-cxconnect="${k}"]`, '4 · connect ' + k);
     await page.waitForFunction(() => S.cxBusy === null || S.cxBusy === undefined || true); // the handler hands off to Google (stubbed to a no-op URL) and leaves busy set, as it would before a real navigation
     assert.ok(log.slice(before).some((l) => l.kind === 'fn' && l.fn === 'google-oauth-start' && l.body.kind === k), `${k}: OAuth start was requested`);
     await page.evaluate(() => { S.cxBusy = null; render(); }); await settle(page);
