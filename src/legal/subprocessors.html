@@ -1,0 +1,42 @@
+<p>Sporv uses the third parties below to operate the service. Each one may
+process personal data on our behalf, under contract and on our instructions.
+This page is the authoritative list; we keep it current rather than describing
+vendors only in prose elsewhere.</p>
+
+<div class="note">
+<strong>Status is stated honestly.</strong> Some entries are contracted and
+carrying live data today. Others are provisioned for a capability that is not
+switched on yet. A subprocessor list that names a vendor we do not use is as
+misleading as one that omits a vendor we do, so the status column says which is
+which, and the date above says when it was last checked.
+</div>
+
+<h2>Current subprocessors</h2>
+<table>
+  <tr><th>Subprocessor</th><th>Purpose</th><th>Data processed</th><th>Status</th></tr>
+  <tr><td><strong>Vercel Inc.</strong> (USA)</td><td>Application hosting, CDN, edge functions</td><td>Request metadata, IP address, anything submitted through the site in transit</td><td>In use</td></tr>
+  <tr><td><strong>Supabase Inc.</strong> (USA)</td><td>Database, authentication, file storage</td><td>Account identity, provider and family profiles, bookings, messages, uploaded media</td><td>In use</td></tr>
+  <tr><td><strong>Stripe, Inc.</strong> (USA)</td><td>Payment processing and provider payouts</td><td>Payment details, amounts, billing identity, payout account details. Card numbers are handled by Stripe and are never stored by Sporv.</td><td>In use</td></tr>
+  <tr><td><strong>Anthropic PBC</strong> (USA)</td><td>AI features: interpreting a coach's typed instruction into a proposed action</td><td>The text of the instruction and the names of the coach's own groups. Not used to train models.</td><td>In use</td></tr>
+  <tr><td><strong>Google LLC</strong> (USA)</td><td>Sign-in with Google, where a user chooses it</td><td>Email address and basic profile from the Google account presented at sign-in</td><td>In use</td></tr>
+  <tr><td><strong>OpenAI, L.L.C.</strong> (USA)</td><td>Alternative model provider for the same AI features</td><td>As Anthropic above, when routed to this provider</td><td>Provisioned, not currently routed</td></tr>
+  <tr><td><strong>Resend, Inc.</strong> (USA)</td><td>Transactional email: sign-in links, booking confirmations, receipts</td><td>Email address, name, and the contents of the message sent</td><td>Provisioned, not currently enabled</td></tr>
+  <tr><td><strong>Twilio Inc.</strong> (USA)</td><td>SMS notifications about bookings and sessions</td><td>Mobile number, and the contents of the message sent</td><td>Contracted, not yet integrated</td></tr>
+</table>
+
+<h2>What we require of them</h2>
+<ul>
+  <li>Each subprocessor is bound by a written agreement that limits use of the data to providing its service to us.</li>
+  <li>None of them is permitted to sell personal data, or to use it for their own advertising.</li>
+  <li>We do not permit a subprocessor to use data about a child for targeted advertising, or to train a model on it.</li>
+</ul>
+
+<h2>Where data is processed</h2>
+<p>All subprocessors listed are United States entities and process data in the
+United States. If that changes, this page changes with it.</p>
+
+<h2>Changes</h2>
+<p>We will update this page before a new subprocessor begins processing personal
+data, or when one is removed. If you want to be told when it changes, email
+<a href="mailto:support@sporv.ai">support@sporv.ai</a> and we will add you to the
+notification list.</p>

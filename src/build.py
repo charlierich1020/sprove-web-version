@@ -441,6 +441,39 @@ if _changed:
 print("csp: %d inline script hash(es) %s"
       % (len(_hashes), "written to vercel.json" if _changed else "already current"))
 
+# ── legal pages ──────────────────────────────────────────────────────────
+# /privacy, /terms, /refunds and /subprocessors are emitted as STANDALONE
+# files, not as routes inside the SPA. The reason is who reads them: Stripe,
+# the A2P 10DLC carrier review and the app stores fetch these URLs with a plain
+# HTTP client that runs no JavaScript. A policy that only appears after the
+# bundle boots reads to them as a policy that does not exist.
+#
+# They carry no <script>, so they add nothing to the CSP hash set above; the
+# page-level policy still applies and simply has no script to authorise.
+# cleanUrls in vercel.json is what serves privacy.html at /privacy.
+_legal_dir = os.path.join(HERE, "legal")
+_shell = open(os.path.join(_legal_dir, "_shell.html"), encoding="utf-8").read()
+_updated = os.environ.get("SPORV_LEGAL_DATE", "24 August 2026")
+_pages = [
+    ("privacy", "Privacy Notice", "How Sporv collects, uses and shares personal data, including SMS."),
+    ("terms", "Terms of Service", "The terms governing use of the Sporv marketplace."),
+    ("refunds", "Refunds & Cancellations", "When a booking is refunded, how cancellations work, and how long refunds take."),
+    ("subprocessors", "Subprocessors", "The third parties that process personal data on Sporv's behalf."),
+]
+for _slug, _title, _desc in _pages:
+    _body = open(os.path.join(_legal_dir, _slug + ".html"), encoding="utf-8").read()
+    _out = (_shell.replace("{{TITLE}}", _title)
+                  .replace("{{DESC}}", _desc)
+                  .replace("{{UPDATED}}", _updated)
+                  .replace("{{BODY}}", _body))
+    if "{{" in _out:
+        sys.exit("FATAL: unreplaced placeholder in legal page %s" % _slug)
+    if "<script" in _out.lower():
+        sys.exit("FATAL: legal page %s contains a script; these must render without JS" % _slug)
+    with open(os.path.join(ROOT, _slug + ".html"), "w", encoding="utf-8") as f:
+        f.write(_out)
+print("legal: %d standalone page(s) emitted (no JS)" % len(_pages))
+
 # Emit only after every required source injection and security-header update has
 # validated. A failed build must not leave a fresh index beside stale CSP hashes.
 for t in TARGETS:

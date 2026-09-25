@@ -100,5 +100,6 @@
       "source": "/:path((?!api/|assets/|r$|r/|unsubscribe$|unsubscribe/|[^/]*\\.[^/]*$).*)",
       "destination": "/"
     }
-  ]
+  ],
+  "cleanUrls": true
 }

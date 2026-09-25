@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}} · Sporv</title>
+<meta name="description" content="{{DESC}}">
+<meta name="robots" content="index,follow">
+<!-- No script on this page, by design. Stripe, A2P and app-store reviewers
+     fetch these URLs with a plain HTTP client; a policy that needs JavaScript
+     to appear reads as a missing policy. Everything below is in the HTML. -->
+<style>
+  :root{color-scheme:light}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:#14171a;
+    font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  .wrap{max-width:46rem;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+  header{border-bottom:1px solid #e6e8eb;padding-bottom:1.25rem;margin-bottom:2rem}
+  .brand{font-weight:800;letter-spacing:-.02em;font-size:1.05rem;color:#14171a;text-decoration:none}
+  h1{font-size:1.9rem;line-height:1.2;letter-spacing:-.022em;margin:1.25rem 0 .4rem}
+  h2{font-size:1.15rem;letter-spacing:-.015em;margin:2.25rem 0 .5rem}
+  .meta{color:#5b6570;font-size:.875rem;margin:0}
+  p,li{color:#2b3138}
+  a{color:#1a4f8a}
+  ul{padding-left:1.15rem}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.925rem}
+  th,td{text-align:left;padding:.55rem .6rem;border-bottom:1px solid #e6e8eb;vertical-align:top}
+  th{font-weight:700;color:#14171a;background:#f7f8fa}
+  .note{background:#f7f8fa;border:1px solid #e6e8eb;border-radius:.5rem;padding:.9rem 1rem;margin:1.5rem 0}
+  footer{margin-top:3rem;padding-top:1.25rem;border-top:1px solid #e6e8eb;color:#5b6570;font-size:.875rem}
+  footer a{margin-right:1rem;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><a class="brand" href="/">Sporv</a></header>
+<main>
+<h1>{{TITLE}}</h1>
+<p class="meta">Last updated {{UPDATED}} · Sporv Inc., Chicago, IL · <a href="mailto:support@sporv.ai">support@sporv.ai</a></p>
+{{BODY}}
+</main>
+<footer>
+<a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refunds">Refunds &amp; Cancellations</a><a href="/subprocessors">Subprocessors</a>
+</footer>
+</div>
+</body>
+</html>
