@@ -459,6 +459,8 @@ _pages = [
     ("terms", "Terms of Service", "The terms governing use of the Sporv marketplace."),
     ("refunds", "Refunds & Cancellations", "When a booking is refunded, how cancellations work, and how long refunds take."),
     ("subprocessors", "Subprocessors", "The third parties that process personal data on Sporv's behalf."),
+    # Stripe activation asks for a support URL; app review asks for one too.
+    ("support", "Support", "How to reach Sporv, and what to expect when you do."),
 ]
 for _slug, _title, _desc in _pages:
     _body = open(os.path.join(_legal_dir, _slug + ".html"), encoding="utf-8").read()
