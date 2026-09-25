@@ -29,7 +29,7 @@
 <link rel="manifest" href="/site.webmanifest">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Sporv","url":"https://sporv.ai/","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Sporv runs the club for you — roster, scheduling, waivers, dues and payouts, with an agent that drafts the busywork and a human who approves it.","publisher":{"@type":"Organization","name":"Sporv","url":"https://sporv.ai/","logo":"https://sporv.ai/icon-512.png"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Sporv AI","url":"https://sporv.ai/"}</script>
-<meta name="sporve-build" content="041ea27f3963c488">
+<meta name="sporve-build" content="df793b9b84ad6ea6">
 </head>
 <body>
 <script>
@@ -7460,12 +7460,19 @@ const S={
   onboardSports:[],
   forgotSent:false,
   forgotEmail:"",
+  /* SMS defaults to OFF on every category. booking and waitlist used to default
+     to sms:true, which pre-ticks a channel the law treats as requiring express
+     written consent — a pre-checked box is not consent under the TCPA, and A2P
+     campaign review rejects an opt-in that the form grants by default. Email
+     and push keep their defaults; those are not the regulated channel. SMS is
+     switched on only where the user turns it on, or by the registration consent
+     tick-box that grants it explicitly. */
   notifPrefs:{
-    booking:{email:true,sms:true,push:true},
+    booking:{email:true,sms:false,push:true},
     reminder:{email:true,sms:false,push:true},
     messages:{email:true,sms:false,push:true},
     progress:{email:true,sms:false,push:false},
-    waitlist:{email:true,sms:true,push:true},
+    waitlist:{email:true,sms:false,push:true},
     payment:{email:true,sms:false,push:false},
     marketing:{email:false,sms:false,push:false},
   },
@@ -14871,7 +14878,14 @@ function modalHTML(){
       ${pwField("Password",'<input name="password" type="password" autocomplete="new-password" placeholder="Min. 12 characters" required>')}
       <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin:6px 0 4px">
         <input type="checkbox" name="privacy" required style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate-ink)">
-        <span style="font-size:var(--text-sm);color:var(--muted)">I have read Sporv's <button type="button" class="lnk" data-foot="info:privacy" style="font-size:inherit;font-weight:700">Privacy Policy</button> and <button type="button" class="lnk" data-foot="info:terms" style="font-size:inherit;font-weight:700">Terms of Service</button>.</span></label>
+<span style="font-size:var(--text-sm);color:var(--muted)">I have read Sporv's <button type="button" class="lnk" data-foot="info:privacy" style="font-size:inherit;font-weight:700">Privacy Policy</button> and <button type="button" class="lnk" data-foot="info:terms" style="font-size:inherit;font-weight:700">Terms of Service</button>.</span></label>
+      <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin:2px 0 4px">
+        ${/* A2P 10DLC: the campaign's declared opt-in is a tick-box at registration, so one has
+             to exist. Unchecked by default because a pre-ticked box is not express written consent,
+             and NOT required because SMS is optional — a mandatory box is not consent either. */""}
+        <input type="checkbox" name="smsConsent" value="1" style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate-ink)">
+        <span style="font-size:var(--text-sm);color:var(--muted)">Text me about my bookings — schedule changes, cancellations, payment reminders and registration notices. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe, HELP for help. Optional.</span>
+      </label>
       <div id="signupErr" class="err hide" style="margin:8px 0"></div>
       <button class="btn wide" type="submit" style="margin-top:12px">Continue →</button>
     </form>`);
@@ -15379,7 +15393,14 @@ function modalHTML(){
         ${pwField("Password",'<input name="password" type="password" autocomplete="off" placeholder="Min. 12 characters" required>')}
         <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin:6px 0 4px">
           <input type="checkbox" name="privacy" required style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate-ink)">
-          <span style="font-size:var(--text-sm);color:var(--muted)">I have read Sporv's <button type="button" class="lnk" data-foot="info:privacy" style="font-size:inherit;font-weight:700">Privacy Policy</button> and <button type="button" class="lnk" data-foot="info:terms" style="font-size:inherit;font-weight:700">Terms of Service</button>.</span></label>
+<span style="font-size:var(--text-sm);color:var(--muted)">I have read Sporv's <button type="button" class="lnk" data-foot="info:privacy" style="font-size:inherit;font-weight:700">Privacy Policy</button> and <button type="button" class="lnk" data-foot="info:terms" style="font-size:inherit;font-weight:700">Terms of Service</button>.</span></label>
+        <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer;margin:2px 0 4px">
+          ${/* A2P 10DLC: the campaign's declared opt-in is a tick-box at registration, so one has
+               to exist. Unchecked by default because a pre-ticked box is not express written consent,
+               and NOT required because SMS is optional — a mandatory box is not consent either. */""}
+          <input type="checkbox" name="smsConsent" value="1" style="width:17px;height:17px;margin-top:2px;flex:0 0 auto;accent-color:var(--slate-ink)">
+          <span style="font-size:var(--text-sm);color:var(--muted)">Text me about my bookings — schedule changes, cancellations, payment reminders and registration notices. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe, HELP for help. Optional.</span>
+        </label>
         <div id="signupErr" class="err hide" style="margin:8px 0"></div>
         <button class="btn wide" type="submit" style="margin-top:12px">Create account →</button>
         <button class="btn ghost wide" type="button" data-onbback="1" style="margin-top:9px">Back</button>
@@ -19907,6 +19928,18 @@ document.querySelectorAll('.sig-ai-coach').forEach(sigAiCoachWire);
        verified state. Role is NOT sent from here beyond the searcher default;
        profiles.role is the authority. */
     err.classList.add("hide");
+    /* SMS consent captured at registration. notifPrefs now defaults sms:false on
+       every category (a pre-ticked channel is not express written consent), so
+       ticking the box here is what actually grants it — otherwise the checkbox
+       would be decorative and the A2P campaign's declared opt-in would not be
+       true of the form. A phone number is required for it to mean anything: no
+       number, no consent to record. */
+    if(d.smsConsent && String(d.phone||"").trim()){
+      ["booking","reminder","payment","waitlist"].forEach(k=>{
+        if(S.notifPrefs[k]) S.notifPrefs[k].sms=true;
+      });
+      S.smsConsentAt=new Date().toISOString();
+    }
     const btn=sf.querySelector('button[type="submit"]');
     if(btn){btn.disabled=true;btn.textContent="Creating account…";}
     doSignUp(d.email, d.password, {name:(d.first+" "+d.last).trim(), phone:d.phone||"", role:"searcher"})

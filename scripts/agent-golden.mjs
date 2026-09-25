@@ -17,9 +17,21 @@ if (/tseszaprvtvqrkfpditu/.test(SB) && process.env.SPORV_ALLOW_PROD_SEED !== "1"
   console.error("Refusing to seed the production project. The audit found the last seed org readable anonymously. Set SPORV_ALLOW_PROD_SEED=1 only with the owner's explicit say-so.");
   process.exit(2);
 }
-const ANON = process.env.SUPABASE_ANON_KEY || "sb_publishable_FFlP7chwxsb3BSPRQDMomQ_TsLfPe8S";
-const EMAIL = process.env.GOLDEN_EMAIL || "sporve123+goldeneval@gmail.com";
-const PW = process.env.GOLDEN_PW || "GoldenSetEval-2026-Sporv!";
+// FAIL CLOSED ON CREDENTIALS. These three used to carry hardcoded fallbacks,
+// and GOLDEN_PW's literal reached a PUBLIC repo — readable at commit 06db7d6
+// long after the file was believed removed. A default is what made rotating
+// the password insufficient: the next run would have re-used the old value.
+// Requiring them means a missing secret stops the run instead of silently
+// authenticating as whatever was committed months ago.
+const ANON = process.env.SUPABASE_ANON_KEY || "";
+const EMAIL = process.env.GOLDEN_EMAIL || "";
+const PW = process.env.GOLDEN_PW || "";
+for (const [name, value] of [["SUPABASE_ANON_KEY", ANON], ["GOLDEN_EMAIL", EMAIL], ["GOLDEN_PW", PW]]) {
+  if (!value) {
+    console.error(`${name} is not set. Export it from Supabase Vault or Vercel env; this script no longer carries a default.`);
+    process.exit(2);
+  }
+}
 const day = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 
 let token = null;
